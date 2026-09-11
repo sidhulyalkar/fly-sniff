@@ -95,11 +95,11 @@ def probe_candidate(
 ) -> ProbeResult:
     """Run model-level E002 probes without claiming physiological validation.
 
-    The probe tests whether the *modeled dynamics over the extracted topology*
-    produce bilateral discrimination, deterministic behavior, a steering-output
-    dependence, and persistence through a short odor blank. These are engineering
-    qualification gates, not evidence that MaleCNS neurons exhibit these exact
-    rates or time constants in vivo.
+    Core E002 asks whether modeled dynamics over the extracted topology produce
+    bilateral discrimination, deterministic behavior, and steering-output
+    dependence. Blank persistence is reported as a *separate memory hypothesis*
+    because recent work implicates persistent local-FB circuitry that need not be
+    identical to the hDeltaC/PFL3 steering pathway.
     """
     bundle.validate(require_sign=True, require_qualified=False)
     left_seq = [_observation(1.0, 0.0)] * pulse_steps
@@ -109,18 +109,13 @@ def probe_candidate(
     left_turn = float(np.mean(left_turns[-max(4, pulse_steps // 4) :]))
     right_turn = float(np.mean(right_turns[-max(4, pulse_steps // 4) :]))
 
-    # Determinism is exact-seed replay of the same modeled circuit.
     replay, _ = _rollout_turn(bundle, left_seq, seed=seed)
     deterministic_error = float(np.max(np.abs(left_turns - replay))) if len(replay) else 0.0
 
-    # Lesion both steering readouts by cutting their incoming structural drive.
     lesioned = _lesion_incoming(bundle, ("steer_left", "steer_right"))
     lesioned_turns, _ = _rollout_turn(lesioned, left_seq, seed=seed)
     lesioned_peak = float(np.max(np.abs(lesioned_turns))) if len(lesioned_turns) else 0.0
 
-    # Blank-bridging assay: establish a directional state, then remove odor while
-    # retaining wind. Retention is the late blank turn magnitude relative to the
-    # pulse-end magnitude. This is intentionally a dimensionless model diagnostic.
     controller = left_ctl
     pulse_end = max(abs(float(left_turns[-1])), 1e-12)
     blank = _observation(0.0, 0.0)
@@ -164,7 +159,7 @@ def qualify_candidate(
     steer_right_reached = bool(roles.get("steer_right", set()) & reached)
 
     probe = probe_candidate(bundle, seed=seed)
-    gates = [
+    core_gates = [
         Gate("required_roles", not missing_roles, ",".join(missing_roles) if missing_roles else "complete", "all bilateral odor and steering roles are non-empty"),
         Gate("role_disjointness", steering_disjoint and sensory_disjoint, int(steering_disjoint and sensory_disjoint), "left/right odor and steering role sets do not overlap"),
         Gate("body_id_closure", all(x in ids for values in roles.values() for x in values), len(ids), "all role body IDs exist in nodes.parquet"),
@@ -175,20 +170,31 @@ def qualify_candidate(
         Gate("bilateral_turn_opposition", probe.opposite_sign, int(probe.opposite_sign), "mirrored odor perturbations produce opposite steering signs"),
         Gate("steering_lesion", probe.lesioned_peak_turn <= max_lesioned_turn, probe.lesioned_peak_turn, f"<= {max_lesioned_turn:.3f} after bilateral steering-input lesion"),
         Gate("determinism", probe.deterministic_error <= 1e-12, probe.deterministic_error, "exact-seed replay max error <= 1e-12"),
-        Gate("blank_bridge", probe.blank_retention >= min_blank_retention, probe.blank_retention, f">= {min_blank_retention:.3f} late-blank / pulse-end modeled turn magnitude"),
     ]
-    passed = all(gate.passed for gate in gates)
+    memory_gate = Gate(
+        "blank_bridge_memory_hypothesis",
+        probe.blank_retention >= min_blank_retention,
+        probe.blank_retention,
+        f">= {min_blank_retention:.3f} late-blank / pulse-end modeled turn magnitude",
+    )
+    core_passed = all(gate.passed for gate in core_gates)
+    all_gates = core_gates + [memory_gate]
     return {
         "protocol": "E002-circuit-sanity-v0",
         "dataset": (bundle.manifest or {}).get("dataset", "unknown"),
-        "passed": passed,
-        "gate_count": len(gates),
-        "passed_gate_count": sum(g.passed for g in gates),
-        "gates": [asdict(g) for g in gates],
+        "passed": core_passed,
+        "core_passed": core_passed,
+        "memory_hypothesis_passed": memory_gate.passed,
+        "core_gate_count": len(core_gates),
+        "core_passed_gate_count": sum(g.passed for g in core_gates),
+        "gate_count": len(all_gates),
+        "passed_gate_count": sum(g.passed for g in all_gates),
+        "gates": [asdict(g) for g in all_gates],
         "probe": asdict(probe),
         "warning": (
-            "E002 passing qualifies modeled propagation sanity only. It does not validate physiological "
-            "dynamics, receptor kinetics, or the functional identity of candidate sensory pathways."
+            "E002 core passing qualifies modeled propagation sanity only. The blank-bridge result is a "
+            "separate memory hypothesis and is not required for steering qualification. Neither result "
+            "validates physiological dynamics, receptor kinetics, or sensory-pathway identity."
         ),
     }
 
@@ -214,5 +220,5 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps(report, indent=2, sort_keys=True))
-    if not report["passed"]:
+    if not report["core_passed"]:
         raise SystemExit(2)
