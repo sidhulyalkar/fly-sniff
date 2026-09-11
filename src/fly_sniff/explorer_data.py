@@ -5,9 +5,10 @@ import hashlib
 import json
 import re
 import urllib.request
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pandas as pd
 
@@ -27,7 +28,6 @@ BODY_ID_KEYS = (
     "rootid",
     "segment_id",
     "segmentId",
-    "id",
 )
 TYPE_KEYS = ("type", "cell_type", "cellType", "celltype")
 INSTANCE_KEYS = ("instance", "name", "instance_name", "instanceName", "cell_name", "cellName")
@@ -66,7 +66,7 @@ def _read_bytes(source: str) -> bytes:
             source,
             headers={"User-Agent": "fly-sniff/0.1 MaleCNS authority importer"},
         )
-        with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=60) as response:
             return response.read()
     return Path(source).read_bytes()
 
@@ -93,11 +93,12 @@ def _as_body_id(value: Any) -> int | None:
 
 
 def _iter_candidate_dicts(value: Any, *, map_key: str | None = None) -> Iterable[dict[str, Any]]:
-    """Yield record-like dicts while supporting lists, nested containers, and ID-keyed maps.
+    """Yield record-like dicts with explicit body IDs or numeric body-ID map keys.
 
-    If a JSON object is keyed by numeric body IDs and its values are metadata dicts,
-    the numeric map key is injected as ``__map_body_id``. The raw source object is
-    otherwise left untouched.
+    Generic metadata fields such as ``id`` are intentionally *not* accepted as
+    body-level authority. If a JSON object is keyed by numeric body IDs and its
+    values are metadata dicts, the numeric map key is injected as
+    ``__map_body_id``. The raw source object is otherwise left untouched.
     """
     if isinstance(value, list):
         for item in value:
@@ -129,8 +130,6 @@ def _normalize_side(value: Any, *, type_name: str | None, instance: str | None) 
             return "R"
         if token in {"m", "midline", "center", "central"}:
             return "M"
-    # Conservative inference: only exact terminal side markers, never arbitrary
-    # occurrences of L/R inside a type name.
     for text in (instance, type_name):
         if not text:
             continue
@@ -147,7 +146,7 @@ def _as_float(value: Any) -> float | None:
         result = float(value)
     except (TypeError, ValueError, OverflowError):
         return None
-    if not (result == result):  # NaN
+    if result != result:  # NaN
         return None
     return result
 
@@ -157,7 +156,10 @@ def normalize_explorer_document(document: Any) -> pd.DataFrame:
     for raw in _iter_candidate_dicts(document):
         explicit = _first_value(raw, BODY_ID_KEYS)
         body_id = _as_body_id(explicit)
-        id_source = next((key for key in BODY_ID_KEYS if key in raw and _as_body_id(raw[key]) is not None), None)
+        id_source = next(
+            (key for key in BODY_ID_KEYS if key in raw and _as_body_id(raw[key]) is not None),
+            None,
+        )
         if body_id is None:
             body_id = _as_body_id(raw.get("__map_body_id"))
             id_source = "json-map-key" if body_id is not None else None
@@ -189,7 +191,7 @@ def normalize_explorer_document(document: Any) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
     duplicated = frame.bodyId[frame.bodyId.duplicated(keep=False)]
     if not duplicated.empty:
-        sample = sorted(set(int(x) for x in duplicated.head(10)))
+        sample = sorted({int(x) for x in duplicated.head(10)})
         raise ValueError(f"Explorer document produced duplicate body IDs; sample={sample}")
     return frame.sort_values("bodyId", kind="stable").reset_index(drop=True)
 
@@ -238,8 +240,8 @@ def import_explorer(
         "upstream_repository": authority.upstream_repository,
         "upstream_blob_sha": authority.upstream_blob_sha,
         "selection_regex": pattern,
-        "normalized_neuron_count": int(len(all_neurons)),
-        "selected_neuron_count": int(len(selected)),
+        "normalized_neuron_count": len(all_neurons),
+        "selected_neuron_count": len(selected),
         "selected_body_ids": [int(x) for x in selected.bodyId.tolist()],
         "schema": {
             "body_id_candidates": list(BODY_ID_KEYS),
@@ -257,7 +259,11 @@ def import_explorer(
     return selected, manifest
 
 
-def write_candidate_artifact(frame: pd.DataFrame, manifest: dict[str, Any], output_dir: str | Path) -> Path:
+def write_candidate_artifact(
+    frame: pd.DataFrame,
+    manifest: dict[str, Any],
+    output_dir: str | Path,
+) -> Path:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(out / "candidates.parquet", index=False)
@@ -268,7 +274,10 @@ def write_candidate_artifact(frame: pd.DataFrame, manifest: dict[str, Any], outp
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Normalize the upstream MaleCNS Cell Type Explorer neuron manifest and select exact v1.0 candidates"
+        description=(
+            "Normalize the upstream MaleCNS Cell Type Explorer neuron manifest "
+            "and select exact v1.0 candidates"
+        )
     )
     parser.add_argument("--source", default=DEFAULT_EXPLORER_URL)
     parser.add_argument("--patterns", required=True, help="Case-insensitive regex over type + instance")
