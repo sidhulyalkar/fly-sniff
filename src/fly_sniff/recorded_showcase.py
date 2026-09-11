@@ -87,6 +87,21 @@ def _precompute_histories(payload: dict[str, Any]) -> dict[str, np.ndarray]:
     return histories
 
 
+def _first_found_time(payload: dict[str, Any], label: str) -> float | None:
+    for frame in payload["frames"]:
+        if _agent(frame, label)["found"]:
+            return float(frame["t"])
+    return None
+
+
+def _outcome_text(payload: dict[str, Any], label: str) -> str:
+    found_time = _first_found_time(payload, label)
+    if found_time is not None:
+        return f"{label}: FOUND SOURCE IN {found_time:.1f}s"
+    final_time = float(payload["frames"][-1]["t"])
+    return f"{label}: NO SOURCE IN {final_time:.0f}s"
+
+
 def _badge_style(alpha: float = 0.9) -> dict[str, Any]:
     return {
         "boxstyle": "round,pad=0.25",
@@ -145,6 +160,7 @@ def _draw_room(
             zorder=2,
         )
 
+    states: list[dict[str, Any]] = []
     for controller in payload["controllers"][:2]:
         label = controller["label"]
         color = controller_colors[label]
@@ -158,7 +174,28 @@ def _draw_room(
             zorder=6,
         )
         state = _agent(current, label)
+        states.append(state)
         _draw_fly_marker(ax, state, color)
+
+    if len(states) >= 2:
+        separation = float(
+            np.hypot(
+                states[0]["x"] - states[1]["x"],
+                states[0]["y"] - states[1]["y"],
+            )
+        )
+        if separation < 0.18:
+            ax.text(
+                states[0]["x"] - 0.05,
+                states[0]["y"] + 0.62,
+                "BOTH START HERE",
+                ha="center",
+                color=TEXT,
+                fontsize=8.8,
+                fontweight="bold",
+                bbox=_badge_style(alpha=0.82),
+                zorder=12,
+            )
 
     first_controller = payload["controllers"][0]
     second_controller = payload["controllers"][1]
@@ -168,7 +205,7 @@ def _draw_room(
     ax.text(
         0.025,
         0.965,
-        first_controller["label"],
+        "SNIFFING PROXY",
         transform=ax.transAxes,
         va="top",
         fontsize=11.5,
@@ -179,7 +216,7 @@ def _draw_room(
     ax.text(
         0.975,
         0.965,
-        second_controller["label"],
+        "RANDOM",
         transform=ax.transAxes,
         ha="right",
         va="top",
@@ -273,7 +310,7 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
     ax.text(
         0.03,
         0.91,
-        "PROXY SENSORY → STEERING TRACE",
+        "WHAT THE MODELED FLY ACTUALLY GETS",
         color=TEXT,
         fontsize=11.5,
         fontweight="bold",
@@ -298,7 +335,7 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
     ax.text(
         0.55,
         0.80,
-        "BODY-FRAME WIND",
+        "AIRFLOW AT THE FLY",
         color=MUTED,
         fontsize=9.5,
         fontweight="bold",
@@ -338,9 +375,9 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
 
     if "mode_surge" in diag:
         if float(diag["mode_surge"]) > 0.5:
-            mode = "ODOR-GATED UPWIND"
+            mode = "SMELL DETECTED → GO UPWIND"
         else:
-            mode = "CROSSWIND CAST"
+            mode = "SMELL LOST → CAST CROSSWIND"
         ax.text(
             0.55,
             0.16,
@@ -353,17 +390,10 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
     ax.text(
         0.03,
         0.04,
-        "Only modeled antenna + airflow signals drive this proxy. "
-        "Green plume is audience-only.",
+        "No source coordinates. No culprit ID. No green-plume image.",
         color=MUTED,
         fontsize=8.8,
     )
-
-
-def _status(state: dict[str, Any]) -> str:
-    if state["found"]:
-        return "FOUND SOURCE"
-    return "DID NOT REACH SOURCE"
 
 
 def render_recorded_showcase(
@@ -384,6 +414,12 @@ def render_recorded_showcase(
     recorded_frames = payload["frames"]
     histories = _precompute_histories(payload)
     video_frames = max(1, seconds * fps)
+    first_label = payload["controllers"][0]["label"]
+    second_label = payload["controllers"][1]["label"]
+    outcome = (
+        f"{_outcome_text(payload, first_label)}   •   "
+        f"{_outcome_text(payload, second_label)}"
+    )
 
     fig = plt.figure(
         figsize=(
@@ -410,9 +446,6 @@ def render_recorded_showcase(
         bottom=0.028,
     )
 
-    first_label = payload["controllers"][0]["label"]
-    second_label = payload["controllers"][1]["label"]
-
     def draw(video_index: int):
         if video_frames == 1:
             record_index = len(recorded_frames) - 1
@@ -438,13 +471,18 @@ def render_recorded_showcase(
             color=TEXT,
             fontweight="bold",
         )
+        subtitle = (
+            "BUSTED • THESE ARE THE ACTUAL RECORDED PATHS"
+            if reveal
+            else "YOU CAN SEE THE GREEN SMELL • THE FLY CAN'T"
+        )
         title_ax.text(
             0.5,
             0.30,
-            "SAME RECORDED PLUME • WATCH THE ANTENNA SIGNALS DRIVE THE TURN",
+            subtitle,
             ha="center",
             va="center",
-            fontsize=11.5,
+            fontsize=12.5,
             color=MUTED,
             fontweight="bold",
         )
@@ -476,7 +514,7 @@ def render_recorded_showcase(
             footer_ax.text(
                 0.5,
                 0.68,
-                f"CULPRIT: {culprit}",
+                f"BUSTED: {culprit}",
                 ha="center",
                 va="center",
                 fontsize=18,
@@ -486,8 +524,7 @@ def render_recorded_showcase(
             footer_ax.text(
                 0.5,
                 0.16,
-                f"{first_label}: {_status(first)}   •   "
-                f"{second_label}: {_status(second)}",
+                outcome,
                 ha="center",
                 va="center",
                 fontsize=10.5,
@@ -498,7 +535,7 @@ def render_recorded_showcase(
             footer_ax.text(
                 0.5,
                 0.56,
-                "source coordinates and culprit identity are never controller inputs",
+                "same recorded plume • both strategies start from the same state",
                 ha="center",
                 va="center",
                 fontsize=9.5,
