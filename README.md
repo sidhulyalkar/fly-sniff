@@ -6,11 +6,25 @@
 
 > **Important:** this project does not claim to simulate a complete biological fly. MaleCNS provides structural connectivity and annotations, not complete membrane dynamics, receptor kinetics, synaptic physiology, neuromodulatory state, or plasticity rules. Every modeled assumption is explicit and every public visualization distinguishes measured connectome structure from simulated neural dynamics.
 
+## Try the public development showcase
+
+The ridiculous wrapper is **WHO FARTED?** Six suspects, one simulated odor source, a visible turbulent plume, and two search trajectories running from the same starting state.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+fly-sniff-doctor
+fly-sniff-showcase --output artifacts/showcase/who-farted-4x5.mp4 --seconds 15 --fps 30
+```
+
+The social canvas is exactly **1080×1350 (4:5)**. The current public clip is permanently labelled **DEVELOPMENT PROXY • NOT A MALECNS RESULT**. It is a real run of the benchmark environment and controller interface, but the blue controller is still a transparent biology-inspired proxy while the actual MaleCNS circuit is being qualified.
+
+See [`docs/SHOWCASE_QUICKSTART.md`](docs/SHOWCASE_QUICKSTART.md) for the fastest local path and the exact claim boundary.
+
 ## Public result we are building toward
 
 > **We gave the newly mapped fruit-fly connectome a smell to follow. Then we scrambled its wiring. Can the real brain still find the source?**
-
-The fast social wrapper is intentionally ridiculous: **Who Farted?** Six people stand in a room, one emits the hidden odor source, and the viewer can see the simulated smell plume. The controller cannot see the culprit or source coordinates. It receives only the same bilateral odor/wind observations used by the benchmark.
 
 The final shareable comparison will replay the *same frozen plume* for:
 
@@ -18,7 +32,7 @@ The final shareable comparison will replay the *same frozen plume* for:
 2. **Degree-preserving rewire** — same nodes and exact directed in/out degrees, topology disrupted.
 3. **Classical cast-and-surge** — transparent engineering baseline.
 
-A top-down room makes the causal comparison obvious, while a small fly-centered inset shows the plume in body coordinates with odor made visible for the audience. Proxy renders are permanently watermarked and cannot be used as MaleCNS evidence.
+The controller cannot see the culprit or source coordinates. It receives only the same bilateral odor/wind observations used by the benchmark. A top-down room makes the causal comparison obvious, while a small fly-centered inset shows the plume in body coordinates with odor made visible for the audience. Proxy renders are permanently watermarked and cannot be used as MaleCNS evidence.
 
 ## Install
 
@@ -46,17 +60,10 @@ fly-sniff-choice --controller random --trials 100
 
 This is not a separate throwaway game. It uses the production `Controller.act(observation)` interface and asks one question: when odor is stronger on one antenna, does the controller commit a turn toward that side? Chance accuracy is 50%.
 
-Then render the room concept using development-only controllers:
+The original room renderer and benchmark remain available:
 
 ```bash
 fly-sniff-party --output artifacts/who-farted-proxy.mp4
-```
-
-The video is hard-labelled **DEVELOPMENT PROXY • NOT A MALECNS RESULT**. Its only purpose is to tune scene readability while the real E001/E002 MaleCNS circuit is qualified.
-
-The original scientific development renderer and benchmark remain available:
-
-```bash
 fly-sniff-benchmark --episodes 64
 fly-sniff-demo --output artifacts/fly-sniff-proxy.mp4
 ```
@@ -65,11 +72,13 @@ No final connectome claim is allowed from these runs.
 
 ## Start from the real MaleCNS resource
 
-A small-first, token-free path downloads Janelia's public ~13 MB v1.0 annotation table:
+A small-first, token-free path downloads Janelia's public v1.0 annotation table:
 
 ```bash
 fly-sniff-download-annotations
-fly-sniff-offline-discover data/raw/body-annotations-male-cns-v1.0.feather
+fly-sniff-offline-discover \
+  data/raw/body-annotations-male-cns-v1.0.feather \
+  --patterns configs/circuit_discovery_v0.json
 ```
 
 Then, with a neuPrint token, discover and extract candidate connectivity directly from `male-cns:v1.0`:
@@ -80,7 +89,13 @@ fly-sniff-extract-malecns \
   --extract-induced
 ```
 
-The full public connection-weight table is roughly 1.1 GB, so the project does not download it by default. Exact upstream URLs and qualification rules live in [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
+For full offline structural tracing, explicitly fetch the roughly 1.1 GB public connection-weight table:
+
+```bash
+fly-sniff-download-weights --yes-large-download
+```
+
+Exact upstream URLs and qualification rules live in [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
 
 ## Primary benchmark claim
 
