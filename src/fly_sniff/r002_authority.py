@@ -121,7 +121,7 @@ def build_r002_authority(
             "cell_type_explorer": {
                 "repository": EXPLORER_REPOSITORY,
                 "commit": EXPLORER_COMMIT,
-                "pages": {side: pages[side].as_dict() for side in ("L", "R")},
+                "pages": {side: asdict(pages[side]) for side in ("L", "R")},
                 "membership_authority": False,
                 "structural_summary_authority": True,
             },
