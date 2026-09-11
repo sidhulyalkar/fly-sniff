@@ -41,6 +41,7 @@ fly-sniff-final = "fly_sniff.qualified_eval:main"
 fly-sniff-render-final = "fly_sniff.final_social:main"
 fly-sniff-showcase = "fly_sniff.showcase:main"
 fly-sniff-replay = "fly_sniff.replay:main"
+fly-sniff-loom-stimulus = "fly_sniff.looming:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
