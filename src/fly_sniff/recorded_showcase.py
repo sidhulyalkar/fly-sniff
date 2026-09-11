@@ -72,16 +72,19 @@ def _draw_fly_marker(ax, state: dict[str, Any], color: str) -> None:
     )
 
 
-def _history(
-    frames: list[dict[str, Any]],
-    label: str,
-    end_index: int,
-) -> np.ndarray:
-    points = []
-    for frame in frames[: end_index + 1]:
-        state = _agent(frame, label)
-        points.append([state["x"], state["y"]])
-    return np.asarray(points, dtype=float)
+def _precompute_histories(payload: dict[str, Any]) -> dict[str, np.ndarray]:
+    frames = payload["frames"]
+    histories: dict[str, np.ndarray] = {}
+    for controller in payload["controllers"]:
+        label = controller["label"]
+        histories[label] = np.asarray(
+            [
+                [_agent(frame, label)["x"], _agent(frame, label)["y"]]
+                for frame in frames
+            ],
+            dtype=float,
+        )
+    return histories
 
 
 def _badge_style(alpha: float = 0.9) -> dict[str, Any]:
@@ -96,6 +99,7 @@ def _badge_style(alpha: float = 0.9) -> dict[str, Any]:
 def _draw_room(
     ax,
     payload: dict[str, Any],
+    histories: dict[str, np.ndarray],
     frame_index: int,
     *,
     reveal: bool,
@@ -144,7 +148,7 @@ def _draw_room(
     for controller in payload["controllers"][:2]:
         label = controller["label"]
         color = controller_colors[label]
-        history = _history(frames, label, frame_index)
+        history = histories[label][: frame_index + 1]
         ax.plot(
             history[:, 0],
             history[:, 1],
@@ -378,6 +382,7 @@ def render_recorded_showcase(
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     recorded_frames = payload["frames"]
+    histories = _precompute_histories(payload)
     video_frames = max(1, seconds * fps)
 
     fig = plt.figure(
@@ -454,7 +459,13 @@ def render_recorded_showcase(
             fontweight="bold",
         )
 
-        _draw_room(room_ax, payload, record_index, reveal=reveal)
+        _draw_room(
+            room_ax,
+            payload,
+            histories,
+            record_index,
+            reveal=reveal,
+        )
         _draw_sensor_hud(sensor_ax, first)
 
         footer_ax.clear()
