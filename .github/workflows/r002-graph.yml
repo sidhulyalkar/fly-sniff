@@ -1,0 +1,57 @@
+name: r002-graph
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/fly_sniff/r002_graph.py"
+      - "tests/test_r002_graph.py"
+      - "authority/r002_malecns_v1_candidate.json"
+      - ".github/workflows/r002-graph.yml"
+      - "pyproject.toml"
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - name: Cache MaleCNS v1.0 flat tables
+        uses: actions/cache@v4
+        with:
+          path: data/raw/r002
+          key: male-cns-v1.0-flat-r002-v1
+      - name: Extract bounded body-level graph
+        run: |
+          fly-sniff-r002-graph \
+            --authority authority/r002_malecns_v1_candidate.json \
+            --download \
+            --output artifacts/r002/graph
+      - name: Show validation summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path('artifacts/r002/graph/manifest.json').read_text())
+          print('selected bodies:', manifest['selected_body_count'])
+          print('selected edges:', manifest['selected_edge_count'])
+          for row in manifest['direct_edge_validation']:
+              print(
+                  f"{row['source_population']} -> {row['target_population']}: "
+                  f"{row['observed_connections']} / {row['expected_connections']} "
+                  f"exact={row['exact_match']}"
+              )
+          print('qualification:', manifest['qualification_status'])
+          print('readout:', manifest['behavioral_readout_status'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r002-malecns-graph
+          path: artifacts/r002/graph
+          if-no-files-found: error
