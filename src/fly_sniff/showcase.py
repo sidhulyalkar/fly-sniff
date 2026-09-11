@@ -74,11 +74,13 @@ SPECS: dict[str, ShowcaseSpec] = {
         key="loom-escape",
         title="Incoming!",
         archetype="native-behavior",
-        required_roles=("loom_left", "loom_right", "steer_left", "steer_right"),
-        optional_roles=("escape",),
-        public_question="Can connectome-constrained circuitry turn away from an approaching object?",
-        scientific_use="Visually legible sensorimotor reflex assay with lesion and rewiring controls.",
-        status="role-trace-pending",
+        required_roles=("loom_left", "loom_right", "escape_left", "escape_right"),
+        optional_roles=("steer_left", "steer_right"),
+        public_question="Does modeled fly escape circuitry respond selectively to an approaching object?",
+        scientific_use=(
+            "Second-domain causal topology assay using approaching, receding, lesion, and rewiring controls."
+        ),
+        status="stimulus-implemented-role-authority-pending",
     ),
 }
 
