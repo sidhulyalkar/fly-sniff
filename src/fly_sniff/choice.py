@@ -12,6 +12,7 @@ from .controllers import (
     RandomWalkController,
 )
 from .env import Observation
+from .graph import GraphBundle, MaleCNSRateController
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ def benchmark_choice(
     *,
     trials: int = 100,
     seed: int = 13013,
+    claim_status: str = "development-only",
 ) -> dict:
     """Run balanced left/right E002A trials and summarize accuracy."""
     if trials < 2:
@@ -111,25 +113,67 @@ def benchmark_choice(
         "commitment_rate": commitment_rate,
         "mean_signed_turn_margin": margin,
         "chance_accuracy": 0.5,
-        "claim_status": "development-only",
+        "claim_status": claim_status,
         "results": [asdict(result) for result in results],
     }
 
 
+def _graph_controller(path: str, *, allow_candidate: bool) -> tuple[Controller, str]:
+    bundle = GraphBundle.load(path)
+    status = (bundle.manifest or {}).get("qualification_status")
+    if status != "qualified" and not allow_candidate:
+        raise SystemExit(
+            "MaleCNS graph is not qualified. Pass --allow-candidate only for E001/E002 research; "
+            "candidate output is not eligible for public MaleCNS claims."
+        )
+    controller = MaleCNSRateController(bundle, require_qualified=not allow_candidate)
+    claim_status = (
+        "qualified-malecns"
+        if status == "qualified"
+        else "candidate-malecns-development"
+    )
+    return controller, claim_status
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the development E002A two-choice sniff assay")
-    parser.add_argument("--controller", choices=["proxy", "classical", "random"], default="proxy")
+    parser = argparse.ArgumentParser(description="Run the E002A two-choice sniff assay")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--controller", choices=["proxy", "classical", "random"], default="proxy")
+    source.add_argument("--circuit", help="GraphBundle directory for a MaleCNS E002A run")
+    parser.add_argument(
+        "--allow-candidate",
+        action="store_true",
+        help="allow an unqualified MaleCNS bundle for research-only E001/E002 diagnostics",
+    )
     parser.add_argument("--trials", type=int, default=100)
     parser.add_argument("--seed", type=int, default=13013)
     args = parser.parse_args()
-    factories = {
-        "proxy": BilateralProxyController,
-        "classical": CastSurgeController,
-        "random": RandomWalkController,
-    }
-    report = benchmark_choice(factories[args.controller](), trials=args.trials, seed=args.seed)
+
+    if args.circuit:
+        controller, claim_status = _graph_controller(
+            args.circuit,
+            allow_candidate=args.allow_candidate,
+        )
+    else:
+        if args.allow_candidate:
+            parser.error("--allow-candidate is only valid with --circuit")
+        factories = {
+            "proxy": BilateralProxyController,
+            "classical": CastSurgeController,
+            "random": RandomWalkController,
+        }
+        controller = factories[args.controller]()
+        claim_status = "development-only"
+
+    report = benchmark_choice(
+        controller,
+        trials=args.trials,
+        seed=args.seed,
+        claim_status=claim_status,
+    )
     print(
         f"{report['controller']}: accuracy={report['accuracy']:.3f} "
         f"committed={report['commitment_rate']:.3f} "
-        f"margin={report['mean_signed_turn_margin']:+.3f} trials={report['trials']}"
+        f"margin={report['mean_signed_turn_margin']:+.3f} trials={report['trials']} "
+        f"status={report['claim_status']}"
     )
