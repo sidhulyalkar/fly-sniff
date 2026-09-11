@@ -8,16 +8,17 @@
 
 ## Public result we are building toward
 
-**FlyBrain Plume Hunt**
+> **We gave the newly mapped fruit-fly connectome a smell to follow. Then we scrambled its wiring. Can the real brain still find the source?**
 
-A single 24–30 second split-screen video shows the *same frozen turbulent plume* driving matched controllers:
+The fast social wrapper is intentionally ridiculous: **Who Farted?** Six people stand in a room, one emits the hidden odor source, and the viewer can see the simulated smell plume. The controller cannot see the culprit or source coordinates. It receives only the same bilateral odor/wind observations used by the benchmark.
+
+The final shareable comparison will replay the *same frozen plume* for:
 
 1. **MaleCNS topology** — reviewed sensory/navigation/descending subgraph.
 2. **Degree-preserving rewire** — same nodes and exact directed in/out degrees, topology disrupted.
 3. **Classical cast-and-surge** — transparent engineering baseline.
-4. **Matched artificial recurrent controller** — added before final freeze.
 
-The viewer sees the odor plume, fly trajectories, left/right antennal activity, selected navigation-population activity, steering output, distance-to-source, path efficiency, and final success/SPL. The final seconds switch from a visually intuitive episode to statistics across the complete held-out cohort.
+A top-down room makes the causal comparison obvious, while a small fly-centered inset shows the plume in body coordinates with odor made visible for the audience. Proxy renders are permanently watermarked and cannot be used as MaleCNS evidence.
 
 ## Install
 
@@ -34,9 +35,26 @@ pip install -e '.[malecns,dev]'
 export NEUPRINT_TOKEN='...'
 ```
 
-## Run the development system now
+## Fast development path
 
-The current runnable controller is intentionally labelled as a **biology-inspired proxy**, not MaleCNS:
+Before asking the connectome to cross a turbulent room, run the deliberately tiny E002A left/right steering test:
+
+```bash
+fly-sniff-choice --controller proxy --trials 100
+fly-sniff-choice --controller random --trials 100
+```
+
+This is not a separate throwaway game. It uses the production `Controller.act(observation)` interface and asks one question: when odor is stronger on one antenna, does the controller commit a turn toward that side? Chance accuracy is 50%.
+
+Then render the room concept using development-only controllers:
+
+```bash
+fly-sniff-party --output artifacts/who-farted-proxy.mp4
+```
+
+The video is hard-labelled **DEVELOPMENT PROXY • NOT A MALECNS RESULT**. Its only purpose is to tune scene readability while the real E001/E002 MaleCNS circuit is qualified.
+
+The original scientific development renderer and benchmark remain available:
 
 ```bash
 fly-sniff-benchmark --episodes 64
@@ -79,6 +97,7 @@ If the biological graph does not beat the controls, that is a valid result. We d
 
 - **E001 Data authority** — real v1.0 annotations/body IDs and reproducible connectivity extraction.
 - **E002 Circuit sanity** — sensory injection propagates and bilateral steering readouts behave coherently.
+- **E002A Sniff choice** — smallest controller-level left/right odor steering assay.
 - **E003 Easy plume** — qualified graph exceeds random navigation.
 - **E004 Turbulent plume** — source localization under intermittent evidence.
 - **E005 Causal topology controls** — MaleCNS vs exact degree-preserving rewires.
@@ -86,6 +105,15 @@ If the biological graph does not beat the controls, that is a valid result. We d
 - **E007 Final** — run once, issue receipt, render from that receipt.
 
 See [`docs/CIRCUIT_CANDIDATES.md`](docs/CIRCUIT_CANDIDATES.md), [`docs/BENCHMARK_CONTRACT.md`](docs/BENCHMARK_CONTRACT.md), and [`docs/VISUALIZATION_GOAL.md`](docs/VISUALIZATION_GOAL.md).
+
+## Reuse policy
+
+We keep the social path deliberately light:
+
+- **PomPy (MIT)** is a useful reference for puff-plume mathematics and API design.
+- **FlyGym 2.x** is the future embodiment target once the circuit itself earns a result.
+- Published navigation-model repositories are scientific references unless their licenses are compatible with this MIT project; GPL code is not copied into `fly-sniff`.
+- No full game engine is required for social v0. The first MP4 is generated directly from benchmark state with Matplotlib. A browser renderer can reuse the same scene contract later.
 
 ## Reproducibility rule
 
