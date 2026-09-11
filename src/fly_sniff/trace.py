@@ -1,0 +1,187 @@
+from __future__ import annotations
+
+import argparse
+import json
+import re
+from pathlib import Path
+
+import pandas as pd
+
+
+def resolve_edge_columns(frame: pd.DataFrame) -> tuple[str, str, str]:
+    source = next((c for c in ["source", "bodyId_pre", "pre", "pre_root_id"] if c in frame.columns), None)
+    target = next((c for c in ["target", "bodyId_post", "post", "post_root_id"] if c in frame.columns), None)
+    weight = next((c for c in ["weight", "syn_count", "count", "n_synapses"] if c in frame.columns), None)
+    if not all([source, target, weight]):
+        raise ValueError(f"cannot resolve edge columns from {list(frame.columns)}")
+    return source, target, weight
+
+
+def body_ids_matching(annotations: pd.DataFrame, patterns: list[str]) -> set[int]:
+    if "bodyId" not in annotations.columns:
+        raise ValueError("annotations require bodyId")
+    cols = [c for c in ["type", "instance", "class", "subclass"] if c in annotations.columns]
+    if not cols:
+        raise ValueError("annotations lack searchable type/instance/class/subclass columns")
+    text = annotations[cols].fillna("").astype(str).agg(" | ".join, axis=1)
+    union = "(?:" + ")|(?:".join(patterns) + ")"
+    mask = text.str.contains(re.compile(union, re.IGNORECASE), regex=True)
+    return set(annotations.loc[mask, "bodyId"].astype(int))
+
+
+def _frontier_depths(
+    edges: pd.DataFrame,
+    seeds: set[int],
+    *,
+    source_col: str,
+    target_col: str,
+    weight_col: str,
+    reverse: bool,
+    max_hops: int,
+    min_weight: float,
+    fanout_per_node: int,
+) -> dict[int, int]:
+    depths = {int(x): 0 for x in seeds}
+    frontier = set(depths)
+    src_col, dst_col = (target_col, source_col) if reverse else (source_col, target_col)
+    eligible = edges.loc[edges[weight_col] >= min_weight, [src_col, dst_col, weight_col]].copy()
+    for depth in range(1, max_hops + 1):
+        if not frontier:
+            break
+        step = eligible[eligible[src_col].isin(frontier)]
+        if step.empty:
+            break
+        step = step.sort_values([src_col, weight_col], ascending=[True, False])
+        step = step.groupby(src_col, sort=False).head(fanout_per_node)
+        discovered = set(step[dst_col].astype(int)) - set(depths)
+        for body_id in discovered:
+            depths[int(body_id)] = depth
+        frontier = discovered
+    return depths
+
+
+def trace_corridor(
+    annotations: pd.DataFrame,
+    weights: pd.DataFrame,
+    source_ids: set[int],
+    target_ids: set[int],
+    *,
+    max_hops: int = 6,
+    min_weight: float = 5,
+    fanout_per_node: int = 30,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Extract a bounded bidirectional structural corridor between seed populations.
+
+    Forward and reverse searches retain only the strongest local fanout at each
+    expansion step. A node survives if its forward distance plus reverse distance
+    can participate in a path no longer than max_hops. This is a discovery tool,
+    not proof of functional influence.
+    """
+    source_col, target_col, weight_col = resolve_edge_columns(weights)
+    normalized = weights[[source_col, target_col, weight_col]].rename(
+        columns={source_col: "source", target_col: "target", weight_col: "weight"}
+    )
+    normalized["source"] = normalized.source.astype(int)
+    normalized["target"] = normalized.target.astype(int)
+    forward = _frontier_depths(
+        normalized,
+        source_ids,
+        source_col="source",
+        target_col="target",
+        weight_col="weight",
+        reverse=False,
+        max_hops=max_hops,
+        min_weight=min_weight,
+        fanout_per_node=fanout_per_node,
+    )
+    reverse = _frontier_depths(
+        normalized,
+        target_ids,
+        source_col="source",
+        target_col="target",
+        weight_col="weight",
+        reverse=True,
+        max_hops=max_hops,
+        min_weight=min_weight,
+        fanout_per_node=fanout_per_node,
+    )
+    corridor = {
+        node
+        for node in set(forward) & set(reverse)
+        if forward[node] + reverse[node] <= max_hops
+    }
+    corridor |= source_ids & set(reverse)
+    corridor |= target_ids & set(forward)
+    edges = normalized[
+        normalized.source.isin(corridor) & normalized.target.isin(corridor)
+    ].copy()
+    edges = edges[
+        edges.apply(
+            lambda row: forward.get(int(row.source), max_hops + 1)
+            + 1
+            + reverse.get(int(row.target), max_hops + 1)
+            <= max_hops,
+            axis=1,
+        )
+    ]
+    nodes = annotations[annotations.bodyId.astype(int).isin(corridor)].copy()
+    provenance = pd.DataFrame(
+        {
+            "bodyId": sorted(corridor),
+            "forward_depth": [forward.get(x) for x in sorted(corridor)],
+            "reverse_depth": [reverse.get(x) for x in sorted(corridor)],
+            "is_source_seed": [x in source_ids for x in sorted(corridor)],
+            "is_target_seed": [x in target_ids for x in sorted(corridor)],
+        }
+    )
+    return nodes, edges, provenance
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Trace a bounded MaleCNS structural corridor offline")
+    parser.add_argument("annotations", help="MaleCNS body annotation Feather file")
+    parser.add_argument("weights", help="MaleCNS connection-weight Feather file")
+    parser.add_argument("--source", action="append", required=True, help="source annotation regex; repeatable")
+    parser.add_argument("--target", action="append", required=True, help="target annotation regex; repeatable")
+    parser.add_argument("--max-hops", type=int, default=6)
+    parser.add_argument("--min-weight", type=float, default=5)
+    parser.add_argument("--fanout", type=int, default=30)
+    parser.add_argument("--output", default="data/cache/corridor-v0")
+    args = parser.parse_args()
+
+    annotations = pd.read_feather(args.annotations)
+    weights = pd.read_feather(args.weights)
+    source_ids = body_ids_matching(annotations, args.source)
+    target_ids = body_ids_matching(annotations, args.target)
+    if not source_ids or not target_ids:
+        raise SystemExit(
+            f"empty seed set: {len(source_ids)} source IDs, {len(target_ids)} target IDs; inspect regexes"
+        )
+    nodes, edges, provenance = trace_corridor(
+        annotations,
+        weights,
+        source_ids,
+        target_ids,
+        max_hops=args.max_hops,
+        min_weight=args.min_weight,
+        fanout_per_node=args.fanout,
+    )
+    out = Path(args.output)
+    out.mkdir(parents=True, exist_ok=True)
+    nodes.to_parquet(out / "nodes.parquet", index=False)
+    edges.to_parquet(out / "edges.parquet", index=False)
+    provenance.to_csv(out / "path_provenance.csv", index=False)
+    report = {
+        "source_regex": args.source,
+        "target_regex": args.target,
+        "source_seed_count": len(source_ids),
+        "target_seed_count": len(target_ids),
+        "corridor_nodes": len(nodes),
+        "corridor_edges": len(edges),
+        "max_hops": args.max_hops,
+        "min_weight": args.min_weight,
+        "fanout_per_node": args.fanout,
+        "warning": "structural corridor only; not evidence of functional influence",
+    }
+    (out / "trace_report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(report, indent=2))

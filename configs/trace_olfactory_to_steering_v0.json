@@ -1,0 +1,15 @@
+{
+  "hypothesis": "olfactory-candidate to bilateral steering structural corridor",
+  "source_regex": [
+    "ORN",
+    "^Or",
+    "^Ir"
+  ],
+  "target_regex": [
+    "^DNa02"
+  ],
+  "max_hops": 6,
+  "min_weight": 5,
+  "fanout_per_node": 30,
+  "warning": "Discovery hypothesis only. Broad receptor regexes must be reviewed before role sealing."
+}

@@ -17,6 +17,7 @@ class GraphBundle:
     nodes: pd.DataFrame
     edges: pd.DataFrame
     roles: dict[str, list[int]]
+    manifest: dict | None = None
 
     @classmethod
     def load(cls, directory: str | Path) -> "GraphBundle":
@@ -24,15 +25,37 @@ class GraphBundle:
         nodes = pd.read_parquet(root / "nodes.parquet")
         edges = pd.read_parquet(root / "edges.parquet")
         roles = json.loads((root / "roles.json").read_text())
-        return cls(nodes=nodes, edges=edges, roles={k: [int(x) for x in v] for k, v in roles.items()})
+        manifest_path = root / "manifest.json"
+        manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
+        return cls(
+            nodes=nodes,
+            edges=edges,
+            roles={k: [int(x) for x in v] for k, v in roles.items()},
+            manifest=manifest,
+        )
 
-    def validate(self) -> None:
+    def validate(self, require_sign: bool = False, require_qualified: bool = False) -> None:
         required_nodes = {"bodyId"}
         required_edges = {"source", "target", "weight"}
         if not required_nodes.issubset(self.nodes.columns):
             raise ValueError(f"nodes missing columns: {required_nodes - set(self.nodes.columns)}")
         if not required_edges.issubset(self.edges.columns):
             raise ValueError(f"edges missing columns: {required_edges - set(self.edges.columns)}")
+        if require_sign and "sign" not in self.edges.columns:
+            raise ValueError(
+                "qualified neural dynamics require an explicit edge sign column; "
+                "unsigned synapse counts cannot silently become excitatory weights"
+            )
+        if "sign" in self.edges.columns:
+            signs = set(pd.Series(self.edges.sign).dropna().astype(int).unique())
+            if not signs.issubset({-1, 0, 1}):
+                raise ValueError(f"sign must be in -1/0/+1; observed {sorted(signs)}")
+        if require_qualified:
+            if not self.manifest or self.manifest.get("qualification_status") != "qualified":
+                raise ValueError(
+                    "graph is not sealed as qualification_status='qualified'; "
+                    "candidate graphs may be explored but not labelled as a MaleCNS result"
+                )
         ids = set(self.nodes.bodyId.astype(int))
         missing = (set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))) - ids
         if missing:
@@ -46,14 +69,22 @@ class GraphBundle:
 class MaleCNSRateController(Controller):
     """Explicit rate-model assumption over an extracted MaleCNS topology.
 
-    Structural connectivity comes from MaleCNS. Dynamics below are a model,
-    not measurements. The distinction is written into diagnostics and receipts.
+    Structural connectivity comes from MaleCNS. The state update is a modeled
+    dynamical assumption, not a biological recording. Qualified mode refuses
+    unsigned or unreviewed graph bundles.
     """
 
     name = "malecns-rate-v0"
 
-    def __init__(self, bundle: GraphBundle, leak: float = 0.82, gain: float = 1.6):
-        bundle.validate()
+    def __init__(
+        self,
+        bundle: GraphBundle,
+        leak: float = 0.82,
+        gain: float = 1.6,
+        *,
+        require_qualified: bool = True,
+    ):
+        bundle.validate(require_sign=True, require_qualified=require_qualified)
         self.bundle = bundle
         self.leak = float(leak)
         self.gain = float(gain)
@@ -63,10 +94,9 @@ class MaleCNSRateController(Controller):
         src = bundle.edges.source.astype(int).map(self.index).to_numpy()
         dst = bundle.edges.target.astype(int).map(self.index).to_numpy()
         raw = np.log1p(bundle.edges.weight.astype(float).to_numpy())
-        sign = bundle.edges.get("sign", pd.Series(np.ones(len(bundle.edges)))).astype(float).to_numpy()
-        values = raw * np.sign(sign)
+        sign = bundle.edges.sign.astype(float).to_numpy()
+        values = raw * sign
         mat = sparse.coo_matrix((values, (dst, src)), shape=(len(ids), len(ids))).tocsr()
-        # Normalize each postsynaptic row to bound the deliberately simple dynamics.
         row_norm = np.asarray(np.abs(mat).sum(axis=1)).ravel()
         inv = np.divide(1.0, row_norm, out=np.ones_like(row_norm), where=row_norm > 0)
         self.w = sparse.diags(inv) @ mat
