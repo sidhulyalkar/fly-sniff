@@ -74,25 +74,6 @@ def _assert_shared_plume(agents: list[PartyAgent], max_points: int) -> None:
             raise RuntimeError("paired showcase agents no longer share the same exogenous plume state")
 
 
-def _advance_agents_one_step(agents: list[PartyAgent]) -> list[dict[str, float]]:
-    """Advance every paired agent exactly one environment tick.
-
-    A completed agent stays fixed, but its private deterministic plume continues
-    advancing so every paired controller remains aligned to the same exogenous
-    plume time. This matters when one controller reaches the source first.
-    """
-    actions: list[dict[str, float]] = []
-    for live in agents:
-        if live.done:
-            live.env.plume.step()
-            actions.append({"turn": 0.0, "speed": 0.0})
-            continue
-        action = live.controller.act(live.obs)
-        actions.append({"turn": float(action.turn), "speed": float(action.speed)})
-        live.obs, live.done = live.env.step(action.turn, action.speed)
-    return actions
-
-
 def build_recording(
     *,
     seed: int = 13013,
@@ -127,7 +108,8 @@ def build_recording(
             actions = [{"turn": 0.0, "speed": 0.0} for _ in agents]
         frames.append(
             {
-                "t": float(agents[0].env.plume.t),
+                "t": float(agents[0].env.agent.steps * arena.dt),
+                "plume_t": float(agents[0].env.plume.t),
                 "plume": _plume_payload(agents[0], plume_points),
                 "agents": [
                     _agent_payload(live, action=action)
@@ -138,9 +120,6 @@ def build_recording(
 
     capture()
     for _ in range(steps):
-        # Capture the sensory observation and command at the state that generated
-        # it, then advance to the next state. The following frame contains the
-        # resulting position and next observation.
         actions: list[dict[str, float]] = []
         for live in agents:
             if live.done:
@@ -148,7 +127,8 @@ def build_recording(
             else:
                 action = live.controller.act(live.obs)
                 actions.append({"turn": float(action.turn), "speed": float(action.speed)})
-        # Store the causally aligned input -> command pair before moving.
+
+        # Store the exact observation -> command pair at the state that generated it.
         _assert_shared_plume(agents, plume_points)
         frames[-1]["agents"] = [
             _agent_payload(live, action=action)
@@ -157,6 +137,8 @@ def build_recording(
 
         for live, action in zip(agents, actions, strict=True):
             if live.done:
+                # The animal stays fixed after success, but exogenous plume time
+                # keeps moving so paired controllers remain on one frozen plume.
                 live.env.plume.step()
             else:
                 live.obs, live.done = live.env.step(action["turn"], action["speed"])
