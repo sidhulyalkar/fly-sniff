@@ -413,9 +413,7 @@ def render_recorded_showcase(
             record_index = len(recorded_frames) - 1
         else:
             fraction = video_index / (video_frames - 1)
-            record_index = int(
-                round(fraction * (len(recorded_frames) - 1))
-            )
+            record_index = round(fraction * (len(recorded_frames) - 1))
         current = recorded_frames[record_index]
         first = _agent(current, first_label)
         second = _agent(current, second_label)
