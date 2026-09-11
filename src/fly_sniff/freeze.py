@@ -4,11 +4,12 @@ import argparse
 import hashlib
 import json
 import subprocess
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
 
-from .config import default_config_dict
+from .config import PlumeConfig, default_config_dict
 
 
 def canonical_sha256(payload: dict) -> str:
@@ -27,8 +28,24 @@ def current_git_ref() -> str:
 
 def make_seed_split(seed: int, n_id: int, n_ood: int) -> tuple[list[int], list[int]]:
     rng = np.random.default_rng(seed)
-    values = rng.choice(np.arange(1, 2_000_000_000, dtype=np.int64), size=n_id + n_ood, replace=False)
+    values = rng.choice(
+        np.arange(1, 2_000_000_000, dtype=np.int64),
+        size=n_id + n_ood,
+        replace=False,
+    )
     return [int(x) for x in values[:n_id]], [int(x) for x in values[n_id:]]
+
+
+def default_ood_plume() -> dict:
+    # Frozen distribution shift: faster, more intermittent, more crosswind wandering.
+    return asdict(
+        PlumeConfig(
+            wind_speed=0.90,
+            emission_rate_hz=6.0,
+            crosswind_noise=0.22,
+            meander_amplitude=0.30,
+        )
+    )
 
 
 def build_manifest(
@@ -49,6 +66,8 @@ def build_manifest(
         "heldout_seeds": id_seeds,
         "ood_seeds": ood_seeds,
         "config": default_config_dict(),
+        "ood_plume": default_ood_plume(),
+        "rewire": {"seed": 913013, "swaps_per_edge": 8},
         "gold": {
             "success_rate_min": 0.70,
             "spl_delta_vs_rewire_min": 0.10,
@@ -61,7 +80,9 @@ def build_manifest(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seal a one-way FlyBrain Plume Hunt final-test manifest")
+    parser = argparse.ArgumentParser(
+        description="Seal a one-way FlyBrain Plume Hunt final-test manifest"
+    )
     parser.add_argument("--output", default="manifests/final-sealed-v1.json")
     parser.add_argument("--seed", type=int, default=48151623)
     parser.add_argument("--heldout", type=int, default=1000)

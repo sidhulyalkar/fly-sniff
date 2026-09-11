@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 from .graph import GraphBundle
 
@@ -20,11 +20,10 @@ def degree_preserving_rewire(
     are swapped. Roles remain on the same neurons. Self-loops and duplicate edges
     are rejected. This is a topology control, not a perfect null for every graph statistic.
     """
-    bundle.validate()
+    bundle.validate(require_sign="sign" in bundle.edges.columns)
     rng = np.random.default_rng(seed)
     edges = bundle.edges.copy().reset_index(drop=True)
-    pairs = [(int(s), int(t)) for s, t in zip(edges.source, edges.target, strict=True)]
-    occupied = set(pairs)
+    occupied = set(zip(edges.source.astype(int), edges.target.astype(int), strict=True))
     n = len(edges)
     target_swaps = swaps_per_edge * n
     accepted = 0
@@ -47,9 +46,23 @@ def degree_preserving_rewire(
         occupied.add(p1)
         occupied.add(p2)
         accepted += 1
-    edges.attrs["rewire_accepted"] = accepted
-    edges.attrs["rewire_attempts"] = attempts
-    return GraphBundle(bundle.nodes.copy(), edges, {k: list(v) for k, v in bundle.roles.items()})
+
+    manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else None
+    if manifest is not None:
+        manifest["graph_role"] = "degree-preserving-rewire"
+        manifest["rewire"] = {
+            "seed": int(seed),
+            "swaps_per_edge": int(swaps_per_edge),
+            "accepted_swaps": int(accepted),
+            "attempted_swaps": int(attempts),
+            "exact_in_out_degree_preserved": True,
+        }
+    return GraphBundle(
+        bundle.nodes.copy(),
+        edges,
+        {k: list(v) for k, v in bundle.roles.items()},
+        manifest,
+    )
 
 
 def save_bundle(bundle: GraphBundle, directory: str | Path) -> None:
@@ -58,3 +71,7 @@ def save_bundle(bundle: GraphBundle, directory: str | Path) -> None:
     bundle.nodes.to_parquet(root / "nodes.parquet", index=False)
     bundle.edges.to_parquet(root / "edges.parquet", index=False)
     (root / "roles.json").write_text(json.dumps(bundle.roles, indent=2, sort_keys=True) + "\n")
+    if bundle.manifest is not None:
+        (root / "manifest.json").write_text(
+            json.dumps(bundle.manifest, indent=2, sort_keys=True) + "\n"
+        )
