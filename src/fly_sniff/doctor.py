@@ -5,8 +5,9 @@ import json
 import os
 import shutil
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 ANNOTATIONS_PATH = Path("data/raw/body-annotations-male-cns-v1.0.feather")
 WEIGHTS_PATH = Path("data/raw/connectome-weights-male-cns-v1.0-minconf-0.5.feather")
