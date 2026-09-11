@@ -8,7 +8,12 @@ from typing import Any
 
 import numpy as np
 
-from .controllers import BilateralProxyController, CastSurgeController, Controller, RandomWalkController
+from .controllers import (
+    BilateralProxyController,
+    CastSurgeController,
+    Controller,
+    RandomWalkController,
+)
 from .party_social import PartyAgent, _make_agent
 
 SCHEMA_VERSION = 1
@@ -23,7 +28,12 @@ _CONTROLLER_FACTORIES: dict[str, tuple[str, type[Controller], str]] = {
 
 
 def _canonical_bytes(payload: dict[str, Any]) -> bytes:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 def recording_sha256(payload: dict[str, Any]) -> str:
@@ -42,7 +52,11 @@ def _obs_payload(obs) -> dict[str, float]:
     }
 
 
-def _agent_payload(live: PartyAgent, *, action: dict[str, float] | None = None) -> dict[str, Any]:
+def _agent_payload(
+    live: PartyAgent,
+    *,
+    action: dict[str, float] | None = None,
+) -> dict[str, Any]:
     agent = live.env.agent
     return {
         "label": live.label,
@@ -56,7 +70,10 @@ def _agent_payload(live: PartyAgent, *, action: dict[str, float] | None = None) 
         "done": bool(live.done),
         "observation": _obs_payload(live.obs),
         "action": action or {"turn": 0.0, "speed": 0.0},
-        "diagnostics": {key: float(value) for key, value in live.controller.diagnostics().items()},
+        "diagnostics": {
+            key: float(value)
+            for key, value in live.controller.diagnostics().items()
+        },
     }
 
 
@@ -70,8 +87,17 @@ def _assert_shared_plume(agents: list[PartyAgent], max_points: int) -> None:
     reference = agents[0].env.plume.snapshot(max_points=max_points)
     for live in agents[1:]:
         candidate = live.env.plume.snapshot(max_points=max_points)
-        if reference.shape != candidate.shape or not np.allclose(reference, candidate, rtol=0.0, atol=0.0):
-            raise RuntimeError("paired showcase agents no longer share the same exogenous plume state")
+        same_shape = reference.shape == candidate.shape
+        same_values = same_shape and np.allclose(
+            reference,
+            candidate,
+            rtol=0.0,
+            atol=0.0,
+        )
+        if not same_values:
+            raise RuntimeError(
+                "paired showcase agents no longer share the same exogenous plume state"
+            )
 
 
 def build_recording(
@@ -126,7 +152,12 @@ def build_recording(
                 actions.append({"turn": 0.0, "speed": 0.0})
             else:
                 action = live.controller.act(live.obs)
-                actions.append({"turn": float(action.turn), "speed": float(action.speed)})
+                actions.append(
+                    {
+                        "turn": float(action.turn),
+                        "speed": float(action.speed),
+                    }
+                )
 
         # Store the exact observation -> command pair at the state that generated it.
         _assert_shared_plume(agents, plume_points)
@@ -141,7 +172,10 @@ def build_recording(
                 # keeps moving so paired controllers remain on one frozen plume.
                 live.env.plume.step()
             else:
-                live.obs, live.done = live.env.step(action["turn"], action["speed"])
+                live.obs, live.done = live.env.step(
+                    action["turn"],
+                    action["speed"],
+                )
         capture()
         if all(live.done for live in agents):
             break
@@ -178,7 +212,9 @@ def build_recording(
 def write_recording(path: str | Path, bundle: dict[str, Any]) -> Path:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(bundle, indent=2, sort_keys=True, allow_nan=False) + "\n")
+    output.write_text(
+        json.dumps(bundle, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    )
     return output
 
 
@@ -190,15 +226,24 @@ def load_recording(path: str | Path) -> dict[str, Any]:
         raise ValueError("invalid recording bundle")
     actual = recording_sha256(payload)
     if actual != expected:
-        raise ValueError(f"recording SHA-256 mismatch: expected {expected}, got {actual}")
+        raise ValueError(
+            f"recording SHA-256 mismatch: expected {expected}, got {actual}"
+        )
     if payload.get("schema_version") != SCHEMA_VERSION:
-        raise ValueError(f"unsupported recording schema {payload.get('schema_version')!r}")
+        raise ValueError(
+            f"unsupported recording schema {payload.get('schema_version')!r}"
+        )
     return bundle
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Record an auditable fly-sniff social episode")
-    parser.add_argument("--output", default="artifacts/showcase/who-farted-run.json")
+    parser = argparse.ArgumentParser(
+        description="Record an auditable fly-sniff social episode"
+    )
+    parser.add_argument(
+        "--output",
+        default="artifacts/showcase/who-farted-run.json",
+    )
     parser.add_argument("--seed", type=int, default=13013)
     parser.add_argument("--sim-seconds", type=float, default=DEFAULT_SIM_SECONDS)
     parser.add_argument("--plume-points", type=int, default=DEFAULT_PLUME_POINTS)
