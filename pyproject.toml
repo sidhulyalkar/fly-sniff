@@ -25,6 +25,7 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 fly-sniff-demo = "fly_sniff.cli:demo_main"
+fly-sniff-demo-pack = "fly_sniff.demo_pack:main"
 fly-sniff-benchmark = "fly_sniff.cli:benchmark_main"
 fly-sniff-choice = "fly_sniff.choice:main"
 fly-sniff-party = "fly_sniff.party_social:main"
