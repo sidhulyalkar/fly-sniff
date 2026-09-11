@@ -1,0 +1,42 @@
+name: demo-pack
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/flybrain-plume-hunt-v0
+    paths:
+      - "src/fly_sniff/**"
+      - "pyproject.toml"
+      - ".github/workflows/demo.yml"
+  pull_request:
+    paths:
+      - "src/fly_sniff/**"
+      - "pyproject.toml"
+      - ".github/workflows/demo.yml"
+
+jobs:
+  render-development-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Build demo pack
+        run: fly-sniff-demo-pack --output-dir artifacts/demo --seconds 6 --fps 10 --trials 100 --format gif
+      - name: Show manifest
+        run: cat artifacts/demo/demo-manifest.json
+      - name: Upload demo pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: who-farted-development-demo
+          path: artifacts/demo/
+          if-no-files-found: error
+          retention-days: 14
