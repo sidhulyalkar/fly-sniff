@@ -3,12 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import animation
 
 from .config import ArenaConfig, PlumeConfig
-from .controllers import BilateralProxyController, CastSurgeController, Controller, RandomWalkController
+from .controllers import (
+    BilateralProxyController,
+    CastSurgeController,
+    Controller,
+    RandomWalkController,
+)
 from .env import FlySniffEnv
 
 
@@ -53,7 +58,13 @@ def render_social_video(output: str | Path, seed: int = 13013, seconds: int = 24
     ax = fig.add_subplot(gs[0, :])
     metric_axes = [fig.add_subplot(gs[1, i]) for i in range(2)]
     fig.suptitle("FLYBRAIN PLUME HUNT • DEVELOPMENT PROXY", fontsize=18, fontweight="bold")
-    fig.text(0.5, 0.955, "SIMULATED PLUME + PROXY CONTROL • NOT YET A MALECNS RESULT", ha="center", fontsize=11)
+    fig.text(
+        0.5,
+        0.955,
+        "SIMULATED PLUME + PROXY CONTROL • NOT YET A MALECNS RESULT",
+        ha="center",
+        fontsize=11,
+    )
 
     colors = ["tab:blue", "tab:orange", "tab:gray"]
 
@@ -72,8 +83,21 @@ def render_social_video(output: str | Path, seed: int = 13013, seconds: int = 24
         ax.set_ylabel("crosswind")
         snap = agents[0].env.plume.snapshot()
         if len(snap):
-            ax.scatter(snap[:, 0], snap[:, 1], s=np.clip(22 * snap[:, 2], 3, 28), alpha=0.14, c="purple")
-        ax.scatter([arena.source_x], [arena.source_y], marker="*", s=260, c="black", label="hidden odor source")
+            ax.scatter(
+                snap[:, 0],
+                snap[:, 1],
+                s=np.clip(22 * snap[:, 2], 3, 28),
+                alpha=0.14,
+                c="purple",
+            )
+        ax.scatter(
+            [arena.source_x],
+            [arena.source_y],
+            marker="*",
+            s=260,
+            c="black",
+            label="hidden odor source",
+        )
         for live, color in zip(agents, colors, strict=True):
             hist = np.asarray(live.env.agent.history)
             ax.plot(hist[:, 0], hist[:, 1], lw=2.2, color=color, label=live.label)
@@ -91,7 +115,12 @@ def render_social_video(output: str | Path, seed: int = 13013, seconds: int = 24
         metric_axes[1].clear()
         proxy = agents[0]
         d = proxy.controller.diagnostics()
-        neural = [proxy.obs.left_odor, proxy.obs.right_odor, d.get("dn_left", 0), d.get("dn_right", 0)]
+        neural = [
+            proxy.obs.left_odor,
+            proxy.obs.right_odor,
+            d.get("dn_left", 0),
+            d.get("dn_right", 0),
+        ]
         metric_axes[1].bar(["ORN-L", "ORN-R", "DN-L*", "DN-R*"], neural)
         metric_axes[1].set_ylim(0, 1)
         metric_axes[1].set_title("Development activity channels (*proxy)")
