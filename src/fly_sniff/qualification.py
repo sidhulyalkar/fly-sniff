@@ -75,7 +75,7 @@ def _reachable(edges, starts: set[int]) -> set[int]:
         if float(row.weight) <= 0:
             continue
         adjacency.setdefault(int(row.source), []).append(int(row.target))
-    seen = set(int(x) for x in starts)
+    seen = {int(x) for x in starts}
     queue = deque(seen)
     while queue:
         node = queue.popleft()
@@ -146,7 +146,7 @@ def qualify_candidate(
     """Return an auditable E002 report; never mutates a graph into qualified state."""
     bundle.validate(require_sign=True, require_qualified=False)
     ids = set(bundle.nodes.bodyId.astype(int))
-    roles = {k: set(int(x) for x in v) for k, v in bundle.roles.items()}
+    roles = {k: {int(x) for x in v} for k, v in bundle.roles.items()}
     missing_roles = [role for role in REQUIRED_ROLES if not roles.get(role)]
     steering_disjoint = roles.get("steer_left", set()).isdisjoint(roles.get("steer_right", set()))
     sensory_disjoint = roles.get("odor_left", set()).isdisjoint(roles.get("odor_right", set()))
