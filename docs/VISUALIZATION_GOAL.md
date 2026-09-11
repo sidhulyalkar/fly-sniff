@@ -1,77 +1,127 @@
-# Visualization goal: the 24-second result
+# Visualization goal: make the experiment obvious before the caption
 
-The social artifact should make the experiment understandable with the sound off in under five seconds.
+The social artifact should be understandable with the sound off in under three seconds.
 
-## Final composition
+## Public question
 
-**Format:** 1080×1080, 24–30 s, 30 fps. Designed to survive X/Threads compression.
+> **We gave the newly mapped fruit-fly connectome a smell to follow. Then we scrambled its wiring. Can the real brain still find the source?**
 
-### 0–3 s — hook
+The comedic wrapper is **WHO FARTED?** Six stylized people stand in a room; exactly one person occupies the simulated odor-source location. The viewer sees the smell plume. The agent does not receive the culprit identity, source coordinates, or distance-to-source.
 
-Large text:
+Scientific claim boundary: this is **odor-source localization**, not chemical identity recognition or person identification. `WHO FARTED?` is the visual metaphor, not a claim that the model recognizes a human-specific odor signature.
 
-> CAN A FRUIT-FLY CONNECTOME FIND AN INVISIBLE ODOR SOURCE?
+## Fast social cut
 
-Immediately show a turbulent plume drifting downwind. The source is marked for the viewer but hidden from the controllers.
+**Primary format:** 1080×1350 (4:5), 15–18 s, 30 fps. Also preserve a square-safe crop for X/Threads.
 
-### 3–16 s — paired experiment
+### 0–2 s — hook
 
-Show four synchronized arenas using the **identical plume seed**:
+Huge text:
 
-- `MALECNS CONNECTOME`
-- `DEGREE-PRESERVING REWIRE`
-- `CLASSICAL CONTROLLER`
-- `MATCHED ARTIFICIAL RNN` (after implemented)
+> WHO FARTED?
 
-Every pane shows the current position and path trace. Use one shared plume visualization so the causal comparison is visually obvious.
+Immediately show six suspects and a visible drifting odor plume.
 
-Along the bottom, show only interpretable channels:
+Small subtitle:
 
-- left ORN activity;
-- right ORN activity;
-- selected central-complex population activity;
-- left descending steering activity;
-- right descending steering activity.
+> real fly wiring vs the same brain scrambled
 
-Never call modeled activity a recording.
+### 2–12 s — the experiment is the joke
 
-### 16–22 s — cohort result
+Show two synchronized rooms using the **identical frozen plume**:
 
-Transition from the pretty episode to the actual experiment:
+- `REAL BRAIN WIRING`
+- `SCRAMBLED WIRING`
 
-- `1,000 HELD-OUT PLUMES`
-- success rate for each controller;
-- mean SPL for each controller;
+Both start from the same state. Thick trails make the paths readable on a phone. A compact timer and source-distance indicator update live.
+
+The culprit is not highlighted until the reveal. The odor plume remains visible to the audience with an always-legible qualifier:
+
+> smell visible to you • source hidden from the fly
+
+A small lower inset may show:
+
+> FLY POV • ODOR MADE VISIBLE
+
+This is a body-centered visualization of the modeled odor field, **not visual perception and not what a fly literally sees**. Show left/right antenna activity so the audience can connect smell to steering without reading a methods paragraph.
+
+### 12–15 s — culprit reveal
+
+Circle the source person and reveal the outcome generated from the actual trajectory.
+
+Possible labels, selected only from the result:
+
+- `CASE CLOSED 💨` — source reached.
+- `FALSE ACCUSATION` — controller reaches a decoy if a future discrete accusation mechanic is added.
+- `STILL SNIFFING...` — timeout / no source found.
+
+Show elapsed time and path efficiency. Never invent a successful ending for a failed controller.
+
+### 15–18 s — the scientific punchline
+
+When a qualified MaleCNS result exists, finish with the cohort rather than only the hero clip:
+
+- held-out plume count;
+- MaleCNS success rate;
+- rewired success rate;
 - paired MaleCNS − rewire SPL delta and 95% CI;
-- OOD success.
+- OOD success if space permits.
 
-A single episode earns attention. The cohort earns credibility.
+Positive ending only if supported:
 
-### 22–24 s — claim
+> BIOLOGICAL WIRING HELPED
 
-The final card is generated from the frozen receipt. Example *only if supported*:
+Null ending:
 
-> BIOLOGICAL WIRING IMPROVED PATH EFFICIENCY BY +0.14 SPL
-> 95% paired bootstrap CI [+0.09, +0.19]
+> SAME NEURONS. DIFFERENT WIRING. NO ADVANTAGE.
 
-Below it:
+A clean null is better than moving the goalposts.
 
-`github.com/sidhulyalkar/fly-sniff`
+## Development cut
 
-If the primary result is negative, say so clearly and show the failure. A surprising null is better than a decorative overclaim.
+`fly-sniff-party` renders the scene now using development-only controllers. It is permanently labelled:
 
-## Development visualization
+> DEVELOPMENT PROXY • NOT A MALECNS RESULT
 
-`fly-sniff-demo` currently renders a deliberately watermarked **biology-inspired proxy** alongside classical and random baselines. This exists to validate the entire visual pipeline before MaleCNS circuit qualification. It is forbidden to crop away or relabel the proxy watermark.
+This lets us tune composition, plume visibility, mobile readability, comedy, and animation while E001/E002 circuit qualification proceeds.
 
-## Why this should travel better than “fly plays game X”
+The final renderer must refuse unqualified graph bundles and must be receipt-driven exactly like the existing scientific renderer.
 
-The viewer simultaneously sees:
+## No fake room physics
 
-1. an intuitive challenge;
-2. an invisible/noisy sensory signal;
-3. biological neural activity proxies/outputs;
-4. a causal topology control;
-5. a quantitative result.
+The current plume is a 2-D stochastic puff benchmark, not room CFD. Therefore social v0 should use an open room with decorative humans and no furniture/walls that appear to deflect odor. If future visuals include airflow-blocking obstacles, the plume model must first be upgraded to model those interactions.
 
-The spectacle and the scientific control are the same picture.
+## Why top-down first
+
+A top-down comparison wins for v0 because the viewer can simultaneously see:
+
+1. where the odor actually goes;
+2. where both agents go;
+3. that the plume is identical;
+4. who the hidden source is after reveal;
+5. whether real and scrambled wiring diverge.
+
+A full first-person 3-D game adds camera, geometry, collision, asset, and renderer work while making the causal comparison less obvious. The fly-centered inset gives us the fun POV without paying that complexity tax.
+
+## Renderer architecture
+
+Scientific simulation remains authoritative Python code. Presentation is downstream:
+
+```text
+MaleCNS / rewire controller
+        ↓
+FlySniffEnv + TurbulentPlume
+        ↓
+recorded episode state / receipt
+        ↓
+┌──────────────────────┬────────────────────────┐
+│ Matplotlib social v0 │ browser replay later   │
+│ fastest MP4          │ Canvas / Phaser/WebGL  │
+└──────────────────────┴────────────────────────┘
+```
+
+The browser renderer, if built, should replay saved scientific trajectories rather than reimplement controller dynamics in JavaScript.
+
+## Scientific long-form cut
+
+Keep the existing 24-second square result available for researchers. It can show `MALECNS CONNECTOME`, `DEGREE-PRESERVING REWIRE`, and `CLASSICAL PLUME SEARCH`, modeled ORN/descending channels, followed by the complete 1,000-episode cohort. The funny 4:5 cut earns attention; the square scientific cut earns scrutiny.
