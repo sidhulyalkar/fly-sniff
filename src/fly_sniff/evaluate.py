@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
-import numpy as np
 import pandas as pd
 
 from .config import ArenaConfig, PlumeConfig, SensorConfig
@@ -81,7 +80,7 @@ def summarize(frame: pd.DataFrame) -> pd.DataFrame:
 def paired_spl_report(frame: pd.DataFrame, a: str, b: str) -> dict[str, float]:
     pivot = frame.pivot(index="seed", columns="label", values="spl").dropna(subset=[a, b])
     mean, lo, hi = paired_bootstrap_delta(pivot[a].to_numpy(), pivot[b].to_numpy())
-    return {"mean_delta": mean, "ci95_low": lo, "ci95_high": hi, "n": int(len(pivot))}
+    return {"mean_delta": mean, "ci95_low": lo, "ci95_high": hi, "n": len(pivot)}
 
 
 def manifest_digest(payload: dict) -> str:
