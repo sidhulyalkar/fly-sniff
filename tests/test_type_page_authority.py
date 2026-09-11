@@ -3,7 +3,7 @@ import pytest
 from fly_sniff.type_page_authority import find_partner, parse_type_page
 
 
-PAGE = b'''<!doctype html>
+PAGE = '''<!doctype html>
 <h1 id=top>DNp01<span class=soma-side>(L)</span></h1>
 <p>AKA: GF (<a href=x>paper</a>) ,</p>
 <script>const config = { visibleNeurons: ["10010"] };</script>
@@ -13,7 +13,7 @@ PAGE = b'''<!doctype html>
 </tbody></table>
 <table id=downstream-table><tbody>
 <tr id=d0><td class=p-c data-body-ids=[800146]><a href=TTMn_L.html#s-c>TTMn (L)</a><td>1<td><abbr title=glutamate>Glu</abbr><td title="∑ connections: 81">81<td class=dg title=6.1%>6.1%<td>0.0
-</tbody></table>'''
+</tbody></table>'''.encode()
 
 
 def test_representative_body_ids_are_not_population_membership():
