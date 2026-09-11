@@ -46,6 +46,7 @@ class FlySniffEnv:
         self.sensor_config = sensors or SensorConfig()
         self.rng = np.random.default_rng(self.seed + 17)
         self.plume = TurbulentPlume(self.arena, self.plume_config, self.seed)
+        self.plume.warmup()
         self.agent = self._new_agent()
 
     def _new_agent(self) -> AgentState:
@@ -58,7 +59,6 @@ class FlySniffEnv:
     def _antenna_positions(self) -> tuple[tuple[float, float], tuple[float, float]]:
         a = self.agent
         half = 0.5 * self.arena.antenna_separation
-        # Lateral axis relative to heading.
         lx = a.x - np.sin(a.heading) * half
         ly = a.y + np.cos(a.heading) * half
         rx = a.x + np.sin(a.heading) * half
@@ -74,7 +74,6 @@ class FlySniffEnv:
         adapt = getattr(self.agent, attr)
         adapt += alpha * (sat - adapt)
         setattr(self.agent, attr, adapt)
-        # Preserve onset sensitivity while avoiding negative receptor activity.
         return float(np.clip(0.72 * sat + 0.28 * max(sat - adapt, 0.0), 0.0, 1.0))
 
     def observe(self) -> Observation:
@@ -103,8 +102,16 @@ class FlySniffEnv:
         old_x, old_y = a.x, a.y
         a.x += np.cos(a.heading) * speed * self.arena.dt
         a.y += np.sin(a.heading) * speed * self.arena.dt
-        a.x = float(np.clip(a.x, 0.0, self.arena.width))
-        a.y = float(np.clip(a.y, 0.0, self.arena.height))
+
+        # Reflect rather than pinning an agent against a boundary. The arena wall
+        # is part of the simulator, not a source-position cue exposed to controllers.
+        if a.x < 0.0 or a.x > self.arena.width:
+            a.x = float(np.clip(a.x, 0.0, self.arena.width))
+            a.heading = float((np.pi - a.heading + np.pi) % (2 * np.pi) - np.pi)
+        if a.y < 0.0 or a.y > self.arena.height:
+            a.y = float(np.clip(a.y, 0.0, self.arena.height))
+            a.heading = float((-a.heading + np.pi) % (2 * np.pi) - np.pi)
+
         a.path_length += float(np.hypot(a.x - old_x, a.y - old_y))
         a.steps += 1
         a.history.append((a.x, a.y))

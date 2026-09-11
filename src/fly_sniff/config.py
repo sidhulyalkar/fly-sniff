@@ -9,11 +9,11 @@ class ArenaConfig:
     height: float = 6.0
     source_x: float = 1.0
     source_y: float = 3.0
-    source_radius: float = 0.28
+    source_radius: float = 0.32
     start_x: float = 10.5
     antenna_separation: float = 0.12
     dt: float = 0.05
-    max_steps: int = 2400
+    max_steps: int = 900
     speed: float = 0.9
     max_turn_rate: float = 2.8
 
@@ -21,14 +21,15 @@ class ArenaConfig:
 @dataclass(frozen=True)
 class PlumeConfig:
     wind_speed: float = 0.70
-    emission_rate_hz: float = 13.0
+    emission_rate_hz: float = 8.0
     initial_sigma: float = 0.10
     diffusion_rate: float = 0.035
     crosswind_noise: float = 0.14
     meander_amplitude: float = 0.18
     meander_frequency: float = 0.55
     puff_mass: float = 1.0
-    max_puffs: int = 1200
+    max_puffs: int = 600
+    warmup_s: float = 18.0
 
 
 @dataclass(frozen=True)
