@@ -125,7 +125,7 @@ def build_recording(
         colors[label] = color
 
     arena = agents[0].env.arena
-    steps = min(arena.max_steps, int(round(sim_seconds / arena.dt)))
+    steps = min(arena.max_steps, round(sim_seconds / arena.dt))
     frames: list[dict[str, Any]] = []
 
     def capture(actions: list[dict[str, float]] | None = None) -> None:
@@ -223,7 +223,7 @@ def load_recording(path: str | Path) -> dict[str, Any]:
     payload = bundle.get("recording")
     expected = bundle.get("recording_sha256")
     if not isinstance(payload, dict) or not isinstance(expected, str):
-        raise ValueError("invalid recording bundle")
+        raise TypeError("invalid recording bundle")
     actual = recording_sha256(payload)
     if actual != expected:
         raise ValueError(
