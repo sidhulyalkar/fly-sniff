@@ -1,0 +1,14 @@
+{
+  "looming_projection_primary": [
+    "^LPLC2$",
+    "^LC4$"
+  ],
+  "escape_descending_primary": [
+    "^DNp06$",
+    "^DNp01$"
+  ],
+  "escape_descending_secondary": [
+    "^DNp03$",
+    "^DNp04$"
+  ]
+}
