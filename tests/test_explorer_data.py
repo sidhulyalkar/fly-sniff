@@ -2,7 +2,11 @@ import json
 
 import pytest
 
-from fly_sniff.explorer_data import discover_candidates, import_explorer, normalize_explorer_document
+from fly_sniff.explorer_data import (
+    discover_candidates,
+    import_explorer,
+    normalize_explorer_document,
+)
 
 
 def test_normalizes_list_records_and_conservative_side_inference():
@@ -43,9 +47,16 @@ def test_normalizes_nested_container_and_discovers_regex():
 
 def test_rejects_duplicate_or_missing_body_ids():
     with pytest.raises(ValueError, match="duplicate body IDs"):
-        normalize_explorer_document([{"id": 1, "type": "a"}, {"id": 1, "type": "b"}])
+        normalize_explorer_document(
+            [{"bodyId": 1, "type": "a"}, {"bodyId": 1, "type": "b"}]
+        )
     with pytest.raises(ValueError, match="numeric unique body-ID"):
         normalize_explorer_document({"neurons": [{"type": "DNa02"}]})
+
+
+def test_generic_id_field_is_not_body_authority():
+    with pytest.raises(ValueError, match="numeric unique body-ID"):
+        normalize_explorer_document({"neurons": [{"id": 123, "type": "DNa02"}]})
 
 
 def test_import_hashes_exact_source_and_keeps_candidate_status(tmp_path):
