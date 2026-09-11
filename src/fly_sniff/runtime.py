@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterable, Mapping
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
