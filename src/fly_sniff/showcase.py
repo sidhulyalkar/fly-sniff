@@ -74,11 +74,21 @@ SPECS: dict[str, ShowcaseSpec] = {
         key="loom-escape",
         title="Incoming!",
         archetype="native-behavior",
-        required_roles=("loom_left", "loom_right", "steer_left", "steer_right"),
+        required_roles=(
+            "loom_size_left",
+            "loom_size_right",
+            "loom_velocity_left",
+            "loom_velocity_right",
+            "steer_left",
+            "steer_right",
+        ),
         optional_roles=("escape",),
         public_question="Can connectome-constrained circuitry turn away from an approaching object?",
-        scientific_use="Visually legible sensorimotor reflex assay with lesion and rewiring controls.",
-        status="role-trace-pending",
+        scientific_use=(
+            "Direct-hit versus near-miss visuomotor assay with intact/rewired topology controls. "
+            "Size and expansion-speed channels remain explicit modeled adapter features."
+        ),
+        status="implemented-environment-role-trace-pending",
     ),
 }
 
