@@ -39,6 +39,8 @@ fly-sniff-qualify = "fly_sniff.qualification:main"
 fly-sniff-freeze = "fly_sniff.freeze:main"
 fly-sniff-final = "fly_sniff.qualified_eval:main"
 fly-sniff-render-final = "fly_sniff.final_social:main"
+fly-sniff-showcase = "fly_sniff.showcase:main"
+fly-sniff-replay = "fly_sniff.replay:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
