@@ -56,20 +56,30 @@ fly-sniff-qualify data/cache/candidate-v0 \
   --output results/e002/qualification.json
 ```
 
-The v0 report requires all of the following gates:
+### Core steering qualification
+
+The candidate steering circuit must pass all ten core gates:
 
 1. non-empty bilateral odor and steering roles;
 2. non-overlapping left/right role sets;
 3. complete body-ID closure;
 4. a preregistered minimum resolved-sign fraction;
-5. structural reachability from sensory/wind seeds to both steering outputs;
-6. distinguishable mirrored odor perturbations;
-7. opposite steering signs under mirrored perturbations;
-8. near-zero steering after bilateral steering-input lesion;
-9. exact-seed deterministic replay;
-10. measurable persistence through a short odor blank.
+5. structural reachability from sensory/wind seeds to the left steering output;
+6. structural reachability from sensory/wind seeds to the right steering output;
+7. distinguishable mirrored odor perturbations;
+8. opposite steering signs under mirrored perturbations;
+9. near-zero steering after bilateral steering-input lesion;
+10. exact-seed deterministic replay.
 
-The blank test is motivated by 2026 evidence that local fan-shaped-body activity integrates odor encounters over several seconds and can persist after odor loss during plume navigation. The E002 threshold is only a **model sanity floor**; it is not fitted to or presented as the biological time constant.
+Passing these gates qualifies only **modeled steering propagation sanity**. It does not establish biological dynamics or prove the functional identity of a candidate sensory pathway.
+
+### Separate memory hypothesis
+
+`fly-sniff-qualify` also reports `blank_bridge_memory_hypothesis`, which measures modeled directional persistence through a short odor blank. This result is deliberately **nonblocking** for core steering qualification.
+
+The separation is important. 2026 work supports several-second odor-evidence integration and persistent local fan-shaped-body dynamics during turbulent plume navigation, but the responsible recurrent population need not be identical to the hDeltaC/PFL3 steering pathway. A candidate can therefore pass E002 steering while failing the memory hypothesis. Conversely, a persistent candidate does not become a valid steering circuit merely because it bridges a blank.
+
+The v0 blank threshold is a model sanity floor, not a fit to or claim about the biological time constant. Persistent-circuit body IDs, recurrence, signs, and lesion effects require their own structural qualification before any memory claim.
 
 ## Promotion rule
 
