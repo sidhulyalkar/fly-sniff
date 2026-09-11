@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 DEFAULT_PATTERNS = {
     "navigation": ["hDeltaC.*", "PFN.*", "PFL2.*", "PFL3.*"],
     "descending": ["DNa02.*"],
