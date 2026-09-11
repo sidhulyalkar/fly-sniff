@@ -7,9 +7,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import PlumeConfig
+from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import CastSurgeController
 from .evaluate import evaluate, manifest_digest, paired_spl_report, summarize, write_receipt
+from .freeze import current_git_ref
 from .graph import GraphBundle, MaleCNSRateController
 from .rewire import degree_preserving_rewire
 
@@ -40,6 +41,18 @@ def verify_sealed_manifest(manifest: dict) -> None:
         raise ValueError(f"manifest hash mismatch: expected {expected}, recomputed {actual}")
     if manifest.get("status") != "sealed":
         raise ValueError("final evaluation requires status='sealed'")
+
+
+def verify_code_ref(manifest: dict) -> str:
+    expected = str(manifest.get("code_ref", ""))
+    actual = current_git_ref()
+    if not expected or expected == "UNKNOWN":
+        raise ValueError("sealed final manifest must name an exact git commit")
+    if actual == "UNKNOWN":
+        raise ValueError("cannot establish current git commit; run final evaluation from the repository checkout")
+    if actual != expected:
+        raise ValueError(f"code-ref mismatch: manifest={expected} checkout={actual}")
+    return actual
 
 
 def _gold_report(id_frame: pd.DataFrame, ood_frame: pd.DataFrame, manifest: dict) -> dict:
@@ -79,6 +92,7 @@ def main() -> None:
 
     manifest = json.loads(Path(args.manifest).read_text())
     verify_sealed_manifest(manifest)
+    verified_code_ref = verify_code_ref(manifest)
     observed_circuit_sha = circuit_digest(args.circuit)
     if observed_circuit_sha != manifest["circuit_sha256"]:
         raise SystemExit(
@@ -96,17 +110,30 @@ def main() -> None:
     )
     rewired.validate(require_sign=True, require_qualified=True)
 
+    cfg = manifest["config"]
+    arena = ArenaConfig(**cfg["arena"])
+    id_plume = PlumeConfig(**cfg["plume"])
+    sensors = SensorConfig(**cfg["sensor"])
+    ood_plume = PlumeConfig(**manifest["ood_plume"])
+
     factories = {
         "malecns": lambda: MaleCNSRateController(biological),
         "rewire": lambda: MaleCNSRateController(rewired),
         "classical": CastSurgeController,
     }
-    id_frame = evaluate(factories, [int(x) for x in manifest["heldout_seeds"]])
-    ood_plume = PlumeConfig(**manifest["ood_plume"])
+    id_frame = evaluate(
+        factories,
+        [int(x) for x in manifest["heldout_seeds"]],
+        arena=arena,
+        plume=id_plume,
+        sensors=sensors,
+    )
     ood_frame = evaluate(
         factories,
         [int(x) for x in manifest["ood_seeds"]],
+        arena=arena,
         plume=ood_plume,
+        sensors=sensors,
     )
     report = _gold_report(id_frame, ood_frame, manifest)
 
@@ -118,6 +145,7 @@ def main() -> None:
         out / "receipt.json",
         manifest,
         {
+            "code_ref": verified_code_ref,
             "circuit_sha256": observed_circuit_sha,
             "gold_report": report,
         },

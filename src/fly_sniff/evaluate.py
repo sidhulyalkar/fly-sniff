@@ -48,11 +48,18 @@ def evaluate(
     seeds: list[int],
     arena: ArenaConfig | None = None,
     plume: PlumeConfig | None = None,
+    sensors: SensorConfig | None = None,
 ) -> pd.DataFrame:
     rows: list[dict] = []
     for seed in seeds:
         for label, factory in factories.items():
-            metric = run_episode(factory(), seed=seed, arena=arena, plume=plume)
+            metric = run_episode(
+                factory(),
+                seed=seed,
+                arena=arena,
+                plume=plume,
+                sensors=sensors,
+            )
             row = metric.as_dict()
             row["label"] = label
             rows.append(row)
@@ -62,7 +69,11 @@ def evaluate(
 def summarize(frame: pd.DataFrame) -> pd.DataFrame:
     return (
         frame.groupby("label", as_index=False)
-        .agg(success_rate=("success", "mean"), mean_spl=("spl", "mean"), mean_path=("path_length", "mean"))
+        .agg(
+            success_rate=("success", "mean"),
+            mean_spl=("spl", "mean"),
+            mean_path=("path_length", "mean"),
+        )
         .sort_values("mean_spl", ascending=False)
     )
 
@@ -78,9 +89,23 @@ def manifest_digest(payload: dict) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def sealed_manifest_digest(manifest: dict) -> str:
+    expected = manifest.get("manifest_sha256")
+    if expected:
+        unsigned = dict(manifest)
+        unsigned.pop("manifest_sha256")
+        actual = manifest_digest(unsigned)
+        if actual != expected:
+            raise ValueError(
+                f"manifest self-hash mismatch: expected {expected}, recomputed {actual}"
+            )
+        return str(expected)
+    return manifest_digest(manifest)
+
+
 def write_receipt(path: str | Path, manifest: dict, summary: dict) -> None:
     receipt = {
-        "manifest_sha256": manifest_digest(manifest),
+        "manifest_sha256": sealed_manifest_digest(manifest),
         "manifest": manifest,
         "summary": summary,
     }

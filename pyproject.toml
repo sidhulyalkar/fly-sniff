@@ -32,6 +32,7 @@ fly-sniff-offline-discover = "fly_sniff.public_data:offline_discover_main"
 fly-sniff-trace = "fly_sniff.trace:main"
 fly-sniff-freeze = "fly_sniff.freeze:main"
 fly-sniff-final = "fly_sniff.qualified_eval:main"
+fly-sniff-render-final = "fly_sniff.final_social:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
