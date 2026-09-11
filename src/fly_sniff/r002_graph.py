@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.ipc as ipc
+from pyarrow import ipc
 
 from .graph import GraphBundle
 from .public_data import ANNOTATIONS_URL, CONNECTOME_WEIGHTS_URL, download_file, sha256_file
