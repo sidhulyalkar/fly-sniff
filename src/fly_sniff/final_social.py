@@ -5,9 +5,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import animation
 
 from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import CastSurgeController, Controller
