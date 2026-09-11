@@ -42,6 +42,7 @@ fly-sniff-render-final = "fly_sniff.final_social:main"
 fly-sniff-showcase = "fly_sniff.showcase:main"
 fly-sniff-replay = "fly_sniff.replay:main"
 fly-sniff-loom = "fly_sniff.looming:main"
+fly-sniff-r002-authority = "fly_sniff.r002_authority:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
