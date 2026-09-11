@@ -1,0 +1,14 @@
+{
+  "authority": "development-only",
+  "benchmark": "flybrain-plume-hunt",
+  "controllers": [
+    "bilateral-proxy",
+    "cast-surge",
+    "random-walk"
+  ],
+  "final_claim_allowed": false,
+  "plume_family": "stochastic-gaussian-puffs-v0",
+  "seed_base": 13013,
+  "status": "development",
+  "warning": "No MaleCNS circuit is qualified by this manifest. Do not report these runs as connectome results."
+}

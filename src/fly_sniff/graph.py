@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy import sparse
+
+from .controllers import Action, Controller
+from .env import Observation
+
+
+@dataclass(frozen=True)
+class GraphBundle:
+    nodes: pd.DataFrame
+    edges: pd.DataFrame
+    roles: dict[str, list[int]]
+
+    @classmethod
+    def load(cls, directory: str | Path) -> "GraphBundle":
+        root = Path(directory)
+        nodes = pd.read_parquet(root / "nodes.parquet")
+        edges = pd.read_parquet(root / "edges.parquet")
+        roles = json.loads((root / "roles.json").read_text())
+        return cls(nodes=nodes, edges=edges, roles={k: [int(x) for x in v] for k, v in roles.items()})
+
+    def validate(self) -> None:
+        required_nodes = {"bodyId"}
+        required_edges = {"source", "target", "weight"}
+        if not required_nodes.issubset(self.nodes.columns):
+            raise ValueError(f"nodes missing columns: {required_nodes - set(self.nodes.columns)}")
+        if not required_edges.issubset(self.edges.columns):
+            raise ValueError(f"edges missing columns: {required_edges - set(self.edges.columns)}")
+        ids = set(self.nodes.bodyId.astype(int))
+        missing = (set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))) - ids
+        if missing:
+            raise ValueError(f"edges reference {len(missing)} unknown body IDs")
+        for role, body_ids in self.roles.items():
+            unknown = set(body_ids) - ids
+            if unknown:
+                raise ValueError(f"role {role!r} references unknown IDs: {sorted(unknown)[:5]}")
+
+
+class MaleCNSRateController(Controller):
+    """Explicit rate-model assumption over an extracted MaleCNS topology.
+
+    Structural connectivity comes from MaleCNS. Dynamics below are a model,
+    not measurements. The distinction is written into diagnostics and receipts.
+    """
+
+    name = "malecns-rate-v0"
+
+    def __init__(self, bundle: GraphBundle, leak: float = 0.82, gain: float = 1.6):
+        bundle.validate()
+        self.bundle = bundle
+        self.leak = float(leak)
+        self.gain = float(gain)
+        ids = bundle.nodes.bodyId.astype(int).tolist()
+        self.ids = ids
+        self.index = {body_id: i for i, body_id in enumerate(ids)}
+        src = bundle.edges.source.astype(int).map(self.index).to_numpy()
+        dst = bundle.edges.target.astype(int).map(self.index).to_numpy()
+        raw = np.log1p(bundle.edges.weight.astype(float).to_numpy())
+        sign = bundle.edges.get("sign", pd.Series(np.ones(len(bundle.edges)))).astype(float).to_numpy()
+        values = raw * np.sign(sign)
+        mat = sparse.coo_matrix((values, (dst, src)), shape=(len(ids), len(ids))).tocsr()
+        # Normalize each postsynaptic row to bound the deliberately simple dynamics.
+        row_norm = np.asarray(np.abs(mat).sum(axis=1)).ravel()
+        inv = np.divide(1.0, row_norm, out=np.ones_like(row_norm), where=row_norm > 0)
+        self.w = sparse.diags(inv) @ mat
+        self.activity = np.zeros(len(ids), dtype=float)
+        self._diag: dict[str, float] = {}
+
+    def reset(self, seed: int) -> None:
+        super().reset(seed)
+        self.activity.fill(0.0)
+        self._diag = {}
+
+    def _inject(self, role: str, value: float, drive: np.ndarray) -> None:
+        for body_id in self.bundle.roles.get(role, []):
+            if body_id in self.index:
+                drive[self.index[body_id]] += value
+
+    def _role_mean(self, role: str) -> float:
+        idx = [self.index[x] for x in self.bundle.roles.get(role, []) if x in self.index]
+        return float(self.activity[idx].mean()) if idx else 0.0
+
+    def act(self, obs: Observation) -> Action:
+        drive = np.zeros_like(self.activity)
+        self._inject("odor_left", obs.left_odor, drive)
+        self._inject("odor_right", obs.right_odor, drive)
+        self._inject("wind_forward", max(obs.wind_x_body, 0.0), drive)
+        self._inject("wind_backward", max(-obs.wind_x_body, 0.0), drive)
+        self._inject("wind_left", max(obs.wind_y_body, 0.0), drive)
+        self._inject("wind_right", max(-obs.wind_y_body, 0.0), drive)
+        recurrent = self.w @ self.activity
+        proposal = np.tanh(self.gain * (recurrent + drive))
+        self.activity = self.leak * self.activity + (1.0 - self.leak) * proposal
+        left = self._role_mean("steer_left")
+        right = self._role_mean("steer_right")
+        turn = float(np.tanh(2.4 * (right - left)))
+        self._diag = {
+            "dn_left": left,
+            "dn_right": right,
+            "activity_mean": float(np.abs(self.activity).mean()),
+            "modeled_dynamics": 1.0,
+        }
+        return Action(turn=turn, speed=1.0)
+
+    def diagnostics(self) -> dict[str, float]:
+        return self._diag.copy()
