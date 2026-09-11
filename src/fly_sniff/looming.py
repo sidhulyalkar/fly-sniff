@@ -46,7 +46,7 @@ def _distance(config: LoomingStimulusConfig, t: float) -> float:
     if config.mode == "approach":
         value = config.initial_distance - config.speed * t
     else:
-        value = config.min_distance + config.speed * t
+        value = min(config.initial_distance, config.min_distance + config.speed * t)
     return float(max(config.min_distance, value))
 
 
