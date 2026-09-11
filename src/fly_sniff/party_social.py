@@ -32,6 +32,7 @@ PEOPLE = (
     (8.2, 5.1, "F"),
 )
 CULPRIT_INDEX = 0
+PROXY_CLAIM_LABEL = "DEVELOPMENT PROXY • NOT A MALECNS RESULT"
 
 
 def _make_agent(label: str, factory: type[Controller], seed: int) -> PartyAgent:
@@ -40,6 +41,17 @@ def _make_agent(label: str, factory: type[Controller], seed: int) -> PartyAgent:
     controller = factory()
     controller.reset(seed + 101)
     return PartyAgent(label, env, controller, env.observe())
+
+
+def _should_reveal(*, frame: int, frames: int, fps: int, done: bool) -> bool:
+    """Reveal ground truth after success or during the final two seconds.
+
+    The timed reveal guarantees that a short social render has a payoff even if
+    a controller has not reached the source. It does not alter controller state,
+    success metrics, or the scientific benchmark.
+    """
+    reveal_frames = max(1, 2 * fps)
+    return done or frame >= max(0, frames - reveal_frames)
 
 
 def _draw_person(ax, x: float, y: float, tag: str, *, culprit: bool = False) -> None:
@@ -151,6 +163,10 @@ def render_party_proxy(
     This renderer can never label its controllers MaleCNS or rewired connectome.
     It exists to tune scene readability while E001/E002 qualification continues.
     """
+    if seconds < 1:
+        raise ValueError("seconds must be >= 1")
+    if fps < 1:
+        raise ValueError("fps must be >= 1")
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     agents = [
@@ -159,6 +175,7 @@ def render_party_proxy(
     ]
     arena = agents[0].env.arena
     sim_steps_per_frame = max(1, round(3.0 * (1.0 / fps) / arena.dt))
+    frames = max(1, seconds * fps)
 
     fig = plt.figure(figsize=(10.8, 13.5), dpi=100)
     grid = fig.add_gridspec(3, 2, height_ratios=[0.48, 2.7, 1.15])
@@ -166,7 +183,7 @@ def render_party_proxy(
     room_axes = [fig.add_subplot(grid[1, 0]), fig.add_subplot(grid[1, 1])]
     pov_ax = fig.add_subplot(grid[2, :])
 
-    def draw(_frame: int):
+    def draw(frame: int):
         for live in agents:
             for _ in range(sim_steps_per_frame):
                 if not live.done:
@@ -174,6 +191,12 @@ def render_party_proxy(
                     live.obs, live.done = live.env.step(action.turn, action.speed)
 
         snap = agents[0].env.plume.snapshot()
+        reveal_ground_truth = _should_reveal(
+            frame=frame,
+            frames=frames,
+            fps=fps,
+            done=any(live.done for live in agents),
+        )
         title_ax.clear()
         title_ax.axis("off")
         title_ax.text(
@@ -185,10 +208,15 @@ def render_party_proxy(
             fontsize=29,
             fontweight="bold",
         )
+        subtitle = (
+            "CULPRIT REVEAL • ground truth only"
+            if reveal_ground_truth
+            else "Can a fly-brain-inspired controller follow the smell to the guilty human?"
+        )
         title_ax.text(
             0.5,
             0.27,
-            "Can a fly-brain-inspired controller follow the smell to the guilty human?",
+            subtitle,
             ha="center",
             va="center",
             fontsize=11,
@@ -196,7 +224,7 @@ def render_party_proxy(
         title_ax.text(
             0.5,
             0.02,
-            "DEVELOPMENT PROXY • NOT A MALECNS RESULT",
+            PROXY_CLAIM_LABEL,
             ha="center",
             va="bottom",
             fontsize=9,
@@ -204,11 +232,10 @@ def render_party_proxy(
         )
 
         for ax, live in zip(room_axes, agents, strict=True):
-            _draw_room(ax, live, snap, reveal=live.done)
+            _draw_room(ax, live, snap, reveal=reveal_ground_truth or live.done)
         _draw_fly_pov(pov_ax, agents[0], snap)
         return []
 
-    frames = max(1, seconds * fps)
     ani = animation.FuncAnimation(fig, draw, frames=frames, interval=1000 / fps, blit=False)
     try:
         if output.suffix.lower() == ".gif":
