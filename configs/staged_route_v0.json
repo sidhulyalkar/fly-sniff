@@ -1,0 +1,42 @@
+{
+  "dataset": "male-cns:v1.0",
+  "purpose": "literature-informed structural discovery; not a qualified functional circuit",
+  "stages": [
+    {
+      "name": "olfactory_to_goal",
+      "source": [".*ORN.*", "^Or.*", "^Ir.*"],
+      "target": ["^hDeltaC.*"],
+      "max_hops": 6,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test whether annotated olfactory-side structure can enter the candidate fan-shaped-body goal layer."
+    },
+    {
+      "name": "wind_to_goal",
+      "source": ["^PFN.*"],
+      "target": ["^hDeltaC.*"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test the candidate wind-vector input route into hDeltaC-related goal circuitry."
+    },
+    {
+      "name": "goal_to_steering",
+      "source": ["^hDeltaC.*"],
+      "target": ["^PFL2.*", "^PFL3.*"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test structural routes from the candidate goal representation to central-complex motor outputs."
+    },
+    {
+      "name": "steering_to_descending",
+      "source": ["^PFL2.*", "^PFL3.*"],
+      "target": ["^DNa02.*"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test structural routes from PFL output populations into the DNa02 steering endpoint."
+    }
+  ]
+}
