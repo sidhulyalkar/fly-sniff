@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.feather as feather
+from pyarrow import feather
 
 from fly_sniff.graph import GraphBundle
 from fly_sniff.r002_graph import build_r002_graph
@@ -37,8 +37,14 @@ def test_r002_graph_reproduces_authority_sums_and_roles(tmp_path):
     annotations = tmp_path / "annotations.feather"
     rows = []
     for body, type_name, side in [
-        (1, "LPLC2", "L"), (2, "LPLC2", "L"), (3, "LPLC2", "R"), (4, "LPLC2", "R"),
-        (5, "LC4", "L"), (6, "LC4", "R"), (7, "DNp01", "L"), (8, "DNp01", "R"),
+        (1, "LPLC2", "L"),
+        (2, "LPLC2", "L"),
+        (3, "LPLC2", "R"),
+        (4, "LPLC2", "R"),
+        (5, "LC4", "L"),
+        (6, "LC4", "R"),
+        (7, "DNp01", "L"),
+        (8, "DNp01", "R"),
     ]:
         rows.append({"bodyId": body, "type": type_name, "somaSide": side})
     pd.DataFrame(rows).to_feather(annotations)
