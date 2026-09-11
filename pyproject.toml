@@ -44,6 +44,7 @@ fly-sniff-replay = "fly_sniff.replay:main"
 fly-sniff-loom = "fly_sniff.looming:main"
 fly-sniff-r002-authority = "fly_sniff.r002_authority:main"
 fly-sniff-r002-graph = "fly_sniff.r002_graph:main"
+fly-sniff-r002-probe = "fly_sniff.r002_probe:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
