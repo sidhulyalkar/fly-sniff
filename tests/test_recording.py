@@ -36,10 +36,14 @@ def test_proxy_steers_from_body_frame_wind_not_world_heading():
 def test_recording_is_elapsed_time_aligned_and_hash_verified(tmp_path):
     bundle = build_recording(seed=11, sim_seconds=0.15, plume_points=12)
     payload = bundle["recording"]
+    frames = payload["frames"]
 
-    assert payload["frames"][0]["t"] == 0.0
-    assert payload["frames"][1]["t"] == pytest.approx(payload["dt"])
-    assert payload["frames"][0]["plume_t"] > payload["frames"][0]["t"]
+    assert frames[0]["t"] == 0.0
+    assert frames[1]["t"] == pytest.approx(payload["dt"])
+    assert frames[0]["plume_t"] > frames[0]["t"]
+    for expected_step, frame in enumerate(frames):
+        assert frame["step"] == expected_step
+        assert frame["t"] == pytest.approx(expected_step * payload["dt"])
     assert len(payload["controllers"]) == 2
     assert "NOT A MALECNS RESULT" in payload["claim_boundary"]
 
