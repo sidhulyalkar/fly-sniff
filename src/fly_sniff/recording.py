@@ -127,6 +127,7 @@ def build_recording(
     arena = agents[0].env.arena
     steps = min(arena.max_steps, round(sim_seconds / arena.dt))
     frames: list[dict[str, Any]] = []
+    episode_step = 0
 
     def capture(actions: list[dict[str, float]] | None = None) -> None:
         _assert_shared_plume(agents, plume_points)
@@ -134,7 +135,8 @@ def build_recording(
             actions = [{"turn": 0.0, "speed": 0.0} for _ in agents]
         frames.append(
             {
-                "t": float(agents[0].env.agent.steps * arena.dt),
+                "step": episode_step,
+                "t": float(episode_step * arena.dt),
                 "plume_t": float(agents[0].env.plume.t),
                 "plume": _plume_payload(agents[0], plume_points),
                 "agents": [
@@ -176,6 +178,7 @@ def build_recording(
                     action["turn"],
                     action["speed"],
                 )
+        episode_step += 1
         capture()
         if all(live.done for live in agents):
             break
