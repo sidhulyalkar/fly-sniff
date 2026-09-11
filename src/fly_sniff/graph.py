@@ -20,7 +20,7 @@ class GraphBundle:
     manifest: dict | None = None
 
     @classmethod
-    def load(cls, directory: str | Path) -> "GraphBundle":
+    def load(cls, directory: str | Path) -> GraphBundle:
         root = Path(directory)
         nodes = pd.read_parquet(root / "nodes.parquet")
         edges = pd.read_parquet(root / "edges.parquet")
@@ -50,12 +50,13 @@ class GraphBundle:
             signs = set(pd.Series(self.edges.sign).dropna().astype(int).unique())
             if not signs.issubset({-1, 0, 1}):
                 raise ValueError(f"sign must be in -1/0/+1; observed {sorted(signs)}")
-        if require_qualified:
-            if not self.manifest or self.manifest.get("qualification_status") != "qualified":
-                raise ValueError(
-                    "graph is not sealed as qualification_status='qualified'; "
-                    "candidate graphs may be explored but not labelled as a MaleCNS result"
-                )
+        if require_qualified and (
+            not self.manifest or self.manifest.get("qualification_status") != "qualified"
+        ):
+            raise ValueError(
+                "graph is not sealed as qualification_status='qualified'; "
+                "candidate graphs may be explored but not labelled as a MaleCNS result"
+            )
         ids = set(self.nodes.bodyId.astype(int))
         missing = (set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))) - ids
         if missing:
