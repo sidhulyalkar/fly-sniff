@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import urllib.request
 from collections.abc import Iterable
@@ -146,9 +147,7 @@ def _as_float(value: Any) -> float | None:
         result = float(value)
     except (TypeError, ValueError, OverflowError):
         return None
-    if result != result:  # NaN
-        return None
-    return result
+    return result if math.isfinite(result) else None
 
 
 def normalize_explorer_document(document: Any) -> pd.DataFrame:
