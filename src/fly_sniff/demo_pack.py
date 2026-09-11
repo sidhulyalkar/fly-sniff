@@ -26,6 +26,8 @@ def make_demo_manifest(
     clip_name: str,
 ) -> dict[str, Any]:
     """Build a machine-readable contract for a non-claim-bearing social demo."""
+    workflow_sha = os.getenv("GITHUB_SHA")
+    source_head_sha = os.getenv("SOURCE_HEAD_SHA") or workflow_sha
     return {
         "schema_version": 1,
         "demo": "who-farted-development-proxy",
@@ -35,7 +37,12 @@ def make_demo_manifest(
             "Visualization and plumbing demo only. This does not report a qualified MaleCNS result. "
             "The scene tests simulated odor-source localization, not human identity chemistry."
         ),
-        "git_sha": os.getenv("GITHUB_SHA"),
+        "git_sha": workflow_sha,
+        "source_head_sha": source_head_sha,
+        "provenance_note": (
+            "git_sha is the GitHub Actions workflow SHA and may be a synthetic pull-request merge; "
+            "source_head_sha identifies the source branch head used for the demo."
+        ),
         "seed": seed,
         "choice_trials_per_controller": trials,
         "render_seconds": seconds,
