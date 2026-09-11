@@ -8,16 +8,79 @@
 
 ## Public result we are building toward
 
-**FlyBrain Plume Hunt**
+> **We gave the newly mapped fruit-fly connectome a smell to follow. Then we scrambled its wiring. Can the real brain still find the source?**
 
-A single 20–30 second split-screen video shows the *same frozen turbulent plume* driving four controllers:
+The fast social wrapper is intentionally ridiculous: **Who Farted?** Six people stand in a room, one emits the hidden odor source, and the viewer can see the simulated smell plume. The controller cannot see the culprit or source coordinates. It receives only the same bilateral odor/wind observations used by the benchmark.
 
-1. **MaleCNS topology** — extracted sensory/navigation/descending subgraph.
-2. **Degree-preserving rewire** — same nodes and edge-count statistics, topology disrupted.
-3. **Biologically inspired proxy** — transparent cast-and-surge baseline used while the real graph is being qualified.
-4. **Classical plume controller** — non-neural engineering baseline.
+The final shareable comparison will replay the *same frozen plume* for:
 
-The viewer sees the odor plume, fly trajectories, left/right antennal activity, navigation-population activity, steering output, distance-to-source, path efficiency, and final success/SPL. The visualization is not evidence by itself; it is a rendering of a frozen benchmark run.
+1. **MaleCNS topology** — reviewed sensory/navigation/descending subgraph.
+2. **Degree-preserving rewire** — same nodes and exact directed in/out degrees, topology disrupted.
+3. **Classical cast-and-surge** — transparent engineering baseline.
+
+A top-down room makes the causal comparison obvious, while a small fly-centered inset shows the plume in body coordinates with odor made visible for the audience. Proxy renders are permanently watermarked and cannot be used as MaleCNS evidence.
+
+## Install
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
+```
+
+For live neuPrint extraction:
+
+```bash
+pip install -e '.[malecns,dev]'
+export NEUPRINT_TOKEN='...'
+```
+
+## Fast development path
+
+Before asking the connectome to cross a turbulent room, run the deliberately tiny E002A left/right steering test:
+
+```bash
+fly-sniff-choice --controller proxy --trials 100
+fly-sniff-choice --controller random --trials 100
+```
+
+This is not a separate throwaway game. It uses the production `Controller.act(observation)` interface and asks one question: when odor is stronger on one antenna, does the controller commit a turn toward that side? Chance accuracy is 50%.
+
+Then render the room concept using development-only controllers:
+
+```bash
+fly-sniff-party --output artifacts/who-farted-proxy.mp4
+```
+
+The video is hard-labelled **DEVELOPMENT PROXY • NOT A MALECNS RESULT**. Its only purpose is to tune scene readability while the real E001/E002 MaleCNS circuit is qualified.
+
+The original scientific development renderer and benchmark remain available:
+
+```bash
+fly-sniff-benchmark --episodes 64
+fly-sniff-demo --output artifacts/fly-sniff-proxy.mp4
+```
+
+No final connectome claim is allowed from these runs.
+
+## Start from the real MaleCNS resource
+
+A small-first, token-free path downloads Janelia's public ~13 MB v1.0 annotation table:
+
+```bash
+fly-sniff-download-annotations
+fly-sniff-offline-discover data/raw/body-annotations-male-cns-v1.0.feather
+```
+
+Then, with a neuPrint token, discover and extract candidate connectivity directly from `male-cns:v1.0`:
+
+```bash
+fly-sniff-extract-malecns \
+  --patterns configs/circuit_discovery_v0.json \
+  --extract-induced
+```
+
+The full public connection-weight table is roughly 1.1 GB, so the project does not download it by default. Exact upstream URLs and qualification rules live in [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
 
 ## Primary benchmark claim
 
@@ -30,17 +93,31 @@ The first publishable success target is preregistered in [`docs/BENCHMARK_CONTRA
 
 If the biological graph does not beat the controls, that is a valid result. We do not move the goalposts after seeing the frozen test.
 
-## Data authority
+## Research gates
 
-The project targets the public Janelia **MaleCNS v1.0** resource (`male-cns:v1.0`). Raw connectome data remain external and are never silently vendored into the repository. See [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
+- **E001 Data authority** — real v1.0 annotations/body IDs and reproducible connectivity extraction.
+- **E002 Circuit sanity** — sensory injection propagates and bilateral steering readouts behave coherently.
+- **E002A Sniff choice** — smallest controller-level left/right odor steering assay.
+- **E003 Easy plume** — qualified graph exceeds random navigation.
+- **E004 Turbulent plume** — source localization under intermittent evidence.
+- **E005 Causal topology controls** — MaleCNS vs exact degree-preserving rewires.
+- **E006 Freeze** — seal dynamics, roles, seeds, plume distributions, nulls.
+- **E007 Final** — run once, issue receipt, render from that receipt.
 
-## Status
+See [`docs/CIRCUIT_CANDIDATES.md`](docs/CIRCUIT_CANDIDATES.md), [`docs/BENCHMARK_CONTRACT.md`](docs/BENCHMARK_CONTRACT.md), and [`docs/VISUALIZATION_GOAL.md`](docs/VISUALIZATION_GOAL.md).
 
-`v0`: establishing the benchmark, plume simulator, controller API, connectome extraction contract, matched rewiring, metrics, tests, and social-ready renderer.
+## Reuse policy
+
+We keep the social path deliberately light:
+
+- **PomPy (MIT)** is a useful reference for puff-plume mathematics and API design.
+- **FlyGym 2.x** is the future embodiment target once the circuit itself earns a result.
+- Published navigation-model repositories are scientific references unless their licenses are compatible with this MIT project; GPL code is not copied into `fly-sniff`.
+- No full game engine is required for social v0. The first MP4 is generated directly from benchmark state with Matplotlib. A browser renderer can reuse the same scene contract later.
 
 ## Reproducibility rule
 
-Development seeds are disposable. The final benchmark manifest is immutable and hashed before final evaluation. A renderer may only display metrics produced by an evaluation receipt; it may not recompute or alter them for presentation.
+Development seeds are disposable. The final benchmark manifest is immutable and hashed before final evaluation. A final renderer may only display cohort metrics produced by a matching evaluation receipt.
 
 ## License
 

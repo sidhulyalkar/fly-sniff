@@ -1,0 +1,47 @@
+{
+  "authority_kind": "type-level-evidence",
+  "dataset": "male-cns:v1.0",
+  "verified_on": "2026-09-10",
+  "qualification_status": "evidence-only-not-a-body-id-manifest",
+  "anchors": [
+    {
+      "type": "DNa02",
+      "neuron_count": 2,
+      "side_counts": {"left": 1, "right": 1},
+      "predicted_neurotransmitter": "acetylcholine",
+      "predicted_neurotransmitter_confidence": 0.946,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/DNa02.html"
+    },
+    {
+      "source_type": "PFL3",
+      "target_type": "DNa02",
+      "source_population_count_reported": 24,
+      "reported_connections_field": 368,
+      "source_predicted_neurotransmitter": "acetylcholine",
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/DNa02.html",
+      "note": "This is the Cell Type Explorer aggregate type-level connectivity field. It is not a substitute for exact body-ID edge extraction."
+    },
+    {
+      "type": "hDeltaH",
+      "neuron_count": 8,
+      "side_counts": {"left": 4, "right": 4},
+      "predicted_neurotransmitter": "acetylcholine",
+      "predicted_neurotransmitter_confidence": 0.965,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/hDeltaH.html",
+      "note": "Candidate central-complex population only; this record does not assert an olfactory-navigation role."
+    }
+  ],
+  "literature_constraints": [
+    {
+      "claim": "hDeltaC receives wind-sensitive PFN and odor-pathway input and can specify an odor-gated goal direction in the fan-shaped body.",
+      "source": "https://doi.org/10.1038/s41467-022-32247-7",
+      "scope": "published functional/connectomic evidence, primarily preceding MaleCNS v1.0"
+    },
+    {
+      "claim": "A small fan-shaped-body local-neuron population integrates odor evidence over several seconds and maintains a goal signal through odor blanks during turbulent plume navigation.",
+      "source": "https://doi.org/10.1038/s41467-026-75945-2",
+      "scope": "published functional dynamics; not automatically mapped to exact MaleCNS body IDs"
+    }
+  ],
+  "forbidden_inference": "These type-level and literature anchors must not be promoted into a qualified MaleCNS graph without exact v1.0 body IDs, edges, role review, signs, and hashes."
+}

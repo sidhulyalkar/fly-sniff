@@ -1,0 +1,16 @@
+{
+  "navigation": [
+    "hDeltaC.*",
+    "PFN.*",
+    "PFL2.*",
+    "PFL3.*"
+  ],
+  "descending": [
+    "DNa02.*"
+  ],
+  "olfactory_discovery": [
+    ".*ORN.*",
+    "Or.*",
+    "Ir.*"
+  ]
+}
