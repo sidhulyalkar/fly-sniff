@@ -27,6 +27,8 @@ dev = ["pytest>=8", "ruff>=0.6"]
 fly-sniff-demo = "fly_sniff.cli:demo_main"
 fly-sniff-benchmark = "fly_sniff.cli:benchmark_main"
 fly-sniff-extract-malecns = "fly_sniff.malecns:main"
+fly-sniff-download-annotations = "fly_sniff.public_data:download_annotations_main"
+fly-sniff-offline-discover = "fly_sniff.public_data:offline_discover_main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]

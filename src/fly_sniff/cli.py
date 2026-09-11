@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from .controllers import BilateralProxyController, CastSurgeController, RandomWalkController
@@ -38,6 +37,11 @@ def benchmark_main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(out / "episodes.parquet", index=False)
     summary.to_csv(out / "summary.csv", index=False)
-    manifest = {"mode": "development", "seed_base": args.seed, "episodes": args.episodes, "controllers": list(factories)}
+    manifest = {
+        "mode": "development",
+        "seed_base": args.seed,
+        "episodes": args.episodes,
+        "controllers": list(factories),
+    }
     write_receipt(out / "receipt.json", manifest, {"rows": summary.to_dict(orient="records")})
     print(summary.to_string(index=False))

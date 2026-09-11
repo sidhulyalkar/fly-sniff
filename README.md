@@ -10,14 +10,59 @@
 
 **FlyBrain Plume Hunt**
 
-A single 20–30 second split-screen video shows the *same frozen turbulent plume* driving four controllers:
+A single 24–30 second split-screen video shows the *same frozen turbulent plume* driving matched controllers:
 
-1. **MaleCNS topology** — extracted sensory/navigation/descending subgraph.
-2. **Degree-preserving rewire** — same nodes and edge-count statistics, topology disrupted.
-3. **Biologically inspired proxy** — transparent cast-and-surge baseline used while the real graph is being qualified.
-4. **Classical plume controller** — non-neural engineering baseline.
+1. **MaleCNS topology** — reviewed sensory/navigation/descending subgraph.
+2. **Degree-preserving rewire** — same nodes and exact directed in/out degrees, topology disrupted.
+3. **Classical cast-and-surge** — transparent engineering baseline.
+4. **Matched artificial recurrent controller** — added before final freeze.
 
-The viewer sees the odor plume, fly trajectories, left/right antennal activity, navigation-population activity, steering output, distance-to-source, path efficiency, and final success/SPL. The visualization is not evidence by itself; it is a rendering of a frozen benchmark run.
+The viewer sees the odor plume, fly trajectories, left/right antennal activity, selected navigation-population activity, steering output, distance-to-source, path efficiency, and final success/SPL. The final seconds switch from a visually intuitive episode to statistics across the complete held-out cohort.
+
+## Install
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
+```
+
+For live neuPrint extraction:
+
+```bash
+pip install -e '.[malecns,dev]'
+export NEUPRINT_TOKEN='...'
+```
+
+## Run the development system now
+
+The current runnable controller is intentionally labelled as a **biology-inspired proxy**, not MaleCNS:
+
+```bash
+fly-sniff-benchmark --episodes 64
+fly-sniff-demo --output artifacts/fly-sniff-proxy.mp4
+```
+
+No final connectome claim is allowed from these runs.
+
+## Start from the real MaleCNS resource
+
+A small-first, token-free path downloads Janelia's public ~13 MB v1.0 annotation table:
+
+```bash
+fly-sniff-download-annotations
+fly-sniff-offline-discover data/raw/body-annotations-male-cns-v1.0.feather
+```
+
+Then, with a neuPrint token, discover and extract candidate connectivity directly from `male-cns:v1.0`:
+
+```bash
+fly-sniff-extract-malecns \
+  --patterns configs/circuit_discovery_v0.json \
+  --extract-induced
+```
+
+The full public connection-weight table is roughly 1.1 GB, so the project does not download it by default. Exact upstream URLs and qualification rules live in [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
 
 ## Primary benchmark claim
 
@@ -30,17 +75,21 @@ The first publishable success target is preregistered in [`docs/BENCHMARK_CONTRA
 
 If the biological graph does not beat the controls, that is a valid result. We do not move the goalposts after seeing the frozen test.
 
-## Data authority
+## Research gates
 
-The project targets the public Janelia **MaleCNS v1.0** resource (`male-cns:v1.0`). Raw connectome data remain external and are never silently vendored into the repository. See [`docs/DATA_AUTHORITY.md`](docs/DATA_AUTHORITY.md).
+- **E001 Data authority** — real v1.0 annotations/body IDs and reproducible connectivity extraction.
+- **E002 Circuit sanity** — sensory injection propagates and bilateral steering readouts behave coherently.
+- **E003 Easy plume** — qualified graph exceeds random navigation.
+- **E004 Turbulent plume** — source localization under intermittent evidence.
+- **E005 Causal topology controls** — MaleCNS vs exact degree-preserving rewires.
+- **E006 Freeze** — seal dynamics, roles, seeds, plume distributions, nulls.
+- **E007 Final** — run once, issue receipt, render from that receipt.
 
-## Status
-
-`v0`: establishing the benchmark, plume simulator, controller API, connectome extraction contract, matched rewiring, metrics, tests, and social-ready renderer.
+See [`docs/CIRCUIT_CANDIDATES.md`](docs/CIRCUIT_CANDIDATES.md), [`docs/BENCHMARK_CONTRACT.md`](docs/BENCHMARK_CONTRACT.md), and [`docs/VISUALIZATION_GOAL.md`](docs/VISUALIZATION_GOAL.md).
 
 ## Reproducibility rule
 
-Development seeds are disposable. The final benchmark manifest is immutable and hashed before final evaluation. A renderer may only display metrics produced by an evaluation receipt; it may not recompute or alter them for presentation.
+Development seeds are disposable. The final benchmark manifest is immutable and hashed before final evaluation. A final renderer may only display cohort metrics produced by a matching evaluation receipt.
 
 ## License
 
