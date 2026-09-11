@@ -20,6 +20,7 @@ class ChoiceResult:
     source_side: str
     mean_turn: float
     correct: bool
+    committed: bool
 
 
 def choice_observation(source_side: str, *, strong: float = 0.75, weak: float = 0.20) -> Observation:
@@ -49,19 +50,33 @@ def run_choice(
     *,
     seed: int,
     pulse_steps: int = 24,
-    threshold: float = 0.05,
+    commitment_threshold: float = 0.05,
 ) -> ChoiceResult:
-    """Ask whether a controller commits its turn toward a lateral odor pulse."""
+    """Ask whether a controller turns toward a lateral odor pulse.
+
+    Correctness is a forced left/right choice based only on turn sign, so an
+    odor-blind symmetric controller has a 50% chance baseline. Turn magnitude is
+    reported separately as commitment rather than silently changing the null.
+    """
     if pulse_steps < 4:
         raise ValueError("pulse_steps must be >= 4")
+    if commitment_threshold < 0.0:
+        raise ValueError("commitment_threshold must be >= 0")
     obs = choice_observation(source_side)
     controller.reset(seed + 101)
     turns = np.asarray([controller.act(obs).turn for _ in range(pulse_steps)], dtype=float)
     tail = turns[-max(4, pulse_steps // 4) :]
     mean_turn = float(np.mean(tail))
     expected_sign = 1.0 if source_side == "left" else -1.0
-    correct = bool(expected_sign * mean_turn > threshold)
-    return ChoiceResult(seed=seed, source_side=source_side, mean_turn=mean_turn, correct=correct)
+    correct = bool(expected_sign * mean_turn > 0.0)
+    committed = bool(abs(mean_turn) > commitment_threshold)
+    return ChoiceResult(
+        seed=seed,
+        source_side=source_side,
+        mean_turn=mean_turn,
+        correct=correct,
+        committed=committed,
+    )
 
 
 def benchmark_choice(
@@ -79,6 +94,7 @@ def benchmark_choice(
         trial_seed = seed + index * 9973
         results.append(run_choice(controller, side, seed=trial_seed))
     accuracy = float(np.mean([result.correct for result in results]))
+    commitment_rate = float(np.mean([result.committed for result in results]))
     margin = float(
         np.mean(
             [
@@ -88,10 +104,11 @@ def benchmark_choice(
         )
     )
     return {
-        "protocol": "E002A-two-choice-sniff-v0",
+        "protocol": "E002A-two-choice-sniff-v1",
         "controller": controller.name,
         "trials": trials,
         "accuracy": accuracy,
+        "commitment_rate": commitment_rate,
         "mean_signed_turn_margin": margin,
         "chance_accuracy": 0.5,
         "claim_status": "development-only",
@@ -113,5 +130,6 @@ def main() -> None:
     report = benchmark_choice(factories[args.controller](), trials=args.trials, seed=args.seed)
     print(
         f"{report['controller']}: accuracy={report['accuracy']:.3f} "
+        f"committed={report['commitment_rate']:.3f} "
         f"margin={report['mean_signed_turn_margin']:+.3f} trials={report['trials']}"
     )
