@@ -21,6 +21,7 @@ jobs:
     timeout-minutes: 10
     env:
       MPLBACKEND: Agg
+      SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
