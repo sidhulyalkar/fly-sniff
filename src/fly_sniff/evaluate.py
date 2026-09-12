@@ -105,7 +105,7 @@ def paired_metric_report(
         "mean_delta": mean,
         "ci95_low": lo,
         "ci95_high": hi,
-        "n": int(len(pivot)),
+        "n": len(pivot),
     }
 
 
@@ -145,7 +145,7 @@ def paired_success_report(
         "b_only_successes": b_only,
         "discordant_pairs": discordant,
         "mcnemar_exact_p": exact_p,
-        "n": int(len(pivot)),
+        "n": len(pivot),
     }
 
 
