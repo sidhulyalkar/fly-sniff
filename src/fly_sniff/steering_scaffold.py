@@ -97,9 +97,12 @@ def build_steering_scaffold(
     ):
         raise ValueError("sign-authority SHA-256 does not match the sealed scaffold evidence")
     expected_sign_path = config.get("sign_authority")
-    if expected_sign_path and sign_authority_path is not None:
-        if Path(expected_sign_path).as_posix() != Path(sign_authority_path).as_posix():
-            raise ValueError("sign-authority path does not match the sealed scaffold config")
+    if (
+        expected_sign_path
+        and sign_authority_path is not None
+        and Path(expected_sign_path).as_posix() != Path(sign_authority_path).as_posix()
+    ):
+        raise ValueError("sign-authority path does not match the sealed scaffold config")
 
     population_names = ("PFL3", "DNa03", "LAL010", "DNa02")
     node_rows: list[dict[str, Any]] = []
@@ -185,8 +188,8 @@ def main() -> None:
     save_bundle(bundle, args.output)
     summary = {
         "output": str(args.output),
-        "nodes": int(len(bundle.nodes)),
-        "edges": int(len(bundle.edges)),
+        "nodes": len(bundle.nodes),
+        "edges": len(bundle.edges),
         "signed_edge_fraction": float(bundle.edges.sign.ne(0).mean()) if len(bundle.edges) else 0.0,
         "qualification_status": bundle.manifest["qualification_status"],
         "source_route_audit_sha256": audit_sha,
