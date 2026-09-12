@@ -25,6 +25,7 @@ from .training import (
     optimizer_budget_receipt,
     validate_parameters,
 )
+from .training_budget_redteam import reconstruct_optimizer_execution
 
 REQUIRED_ROLES = (
     "odor_context_left",
@@ -231,6 +232,14 @@ def _verify_budget_receipt(
     expected_hash = canonical_sha256(expected)
     if report.get("optimizer_budget_sha256") != expected_hash:
         raise ValueError("training report optimizer budget hash mismatch")
+    try:
+        reconstructed = reconstruct_optimizer_execution(report, config)
+    except (RuntimeError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "training report optimizer history does not reconstruct to the frozen execution budget"
+        ) from exc
+    if reconstructed != expected:
+        raise ValueError("training report reconstructed optimizer execution budget mismatch")
     return expected
 
 
@@ -438,9 +447,10 @@ def qualify_trained_candidate(
         "memory_policy": frozen["memory_policy"],
         "warning": (
             "Passing trained E002 supports internal consistency of the explicit modeled dynamics "
-            "and the supplied training receipts. It does not prove no external final-test peeking, "
-            "measured physiology, peripheral sensory transduction, or final navigation superiority "
-            "over matched trained topology controls."
+            "and the supplied training receipts, including reconstructed represented optimizer "
+            "execution. It does not prove no external final-test peeking, measured physiology, "
+            "peripheral sensory transduction, or final navigation superiority over matched trained "
+            "topology controls."
         ),
     }
 
