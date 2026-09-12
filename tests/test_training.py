@@ -1,11 +1,10 @@
 import copy
 import json
 
-import numpy as np
 import pandas as pd
 import pytest
 
-import fly_sniff.training as training
+from fly_sniff import training
 from fly_sniff.env import Observation
 from fly_sniff.graph import GraphBundle
 from fly_sniff.training import (
@@ -29,6 +28,10 @@ def _config(tmp_path):
             "split_seed": 17,
             "train_episodes": 6,
             "validation_episodes": 4,
+        },
+        "connectome_sensory_interface": {
+            "odor_mode": "mean_bilateral_nondirectional",
+            "direction_source": "body_frame_wind",
         },
         "objective": {
             "version": "navigation-objective-v1",
@@ -109,14 +112,14 @@ def _params(**overrides):
     return DynamicsParameters.from_mapping(values)
 
 
-def _observation(left=1.0, right=0.0):
+def _observation(left=1.0, right=0.0, *, wind_y=0.0):
     return Observation(
         left_odor=left,
         right_odor=right,
         mean_odor=0.5 * (left + right),
         odor_delta=right - left,
         wind_x_body=0.0,
-        wind_y_body=0.0,
+        wind_y_body=wind_y,
         heading=0.0,
     )
 
@@ -136,35 +139,36 @@ def test_parameter_contract_rejects_out_of_bounds_values(tmp_path):
         validate_parameters(_params(odor_gain=9.0), config)
 
 
-def test_task_optimized_controller_keeps_graph_fixed_and_applies_tied_odor_gain():
+def test_connectome_odor_drive_is_nondirectional_and_graph_stays_fixed():
     bundle = _bundle()
     before_nodes = bundle.nodes.copy(deep=True)
     before_edges = bundle.edges.copy(deep=True)
     before_roles = copy.deepcopy(bundle.roles)
 
-    baseline = TaskOptimizedMaleCNSController(
-        bundle,
-        _params(odor_gain=1.0),
-        require_qualified=False,
-    )
-    boosted = TaskOptimizedMaleCNSController(
+    left_only = TaskOptimizedMaleCNSController(
         bundle,
         _params(odor_gain=2.0),
         require_qualified=False,
     )
-    baseline.reset(1)
-    boosted.reset(1)
-    baseline_turn = baseline.act(_observation()).turn
-    boosted_turn = boosted.act(_observation()).turn
+    right_only = TaskOptimizedMaleCNSController(
+        bundle,
+        _params(odor_gain=2.0),
+        require_qualified=False,
+    )
+    left_only.reset(1)
+    right_only.reset(1)
+    left_turn = left_only.act(_observation(left=1.0, right=0.0)).turn
+    right_turn = right_only.act(_observation(left=0.0, right=1.0)).turn
 
-    assert boosted_turn > baseline_turn > 0.0
-    snapshot = boosted.input_snapshot()
+    assert left_turn == pytest.approx(right_turn)
+    snapshot = left_only.input_snapshot()
     assert snapshot is not None
-    left = next(item for item in snapshot["roles"] if item["role"] == "odor_left")
-    right = next(item for item in snapshot["roles"] if item["role"] == "odor_right")
-    assert left["gain"] == right["gain"] == 2.0
-    assert left["raw_value"] == 1.0
-    assert left["value"] == 2.0
+    assert snapshot["odor_interface"] == "mean_bilateral_nondirectional"
+    odor_roles = [item for item in snapshot["roles"] if item["role"].startswith("odor_")]
+    assert len(odor_roles) == 2
+    assert {item["raw_value"] for item in odor_roles} == {0.5}
+    assert {item["gain"] for item in odor_roles} == {2.0}
+    assert {item["value"] for item in odor_roles} == {1.0}
     pd.testing.assert_frame_equal(bundle.nodes, before_nodes)
     pd.testing.assert_frame_equal(bundle.edges, before_edges)
     assert bundle.roles == before_roles
@@ -227,4 +231,13 @@ def test_config_rejects_seed_namespace_that_can_touch_final_test(tmp_path):
     path = tmp_path / "bad.json"
     path.write_text(json.dumps(config))
     with pytest.raises(ValueError, match="overlaps"):
+        load_training_config(path)
+
+
+def test_config_rejects_directional_odor_shortcut(tmp_path):
+    config = _config(tmp_path)
+    config["connectome_sensory_interface"]["odor_mode"] = "left_right_directional"
+    path = tmp_path / "bad-odor.json"
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match="nondirectional"):
         load_training_config(path)
