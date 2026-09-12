@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import pytest
+
+from fly_sniff.steering_scaffold import build_steering_scaffold
+
+
+def _audit() -> dict:
+    populations = {
+        "PFL3": {"rows": [{"bodyId": 1, "type": "PFL3"}]},
+        "DNa03": {"rows": [{"bodyId": 2, "type": "DNa03"}]},
+        "LAL010": {"rows": [{"bodyId": 3, "type": "LAL010"}]},
+        "DNa02": {
+            "rows": [
+                {"bodyId": 4, "type": "DNa02", "instance": "DNa02_L"},
+                {"bodyId": 5, "type": "DNa02", "instance": "DNa02_R"},
+            ]
+        },
+    }
+    direct = [
+        {"source": "PFL3", "target": "DNa02", "edges": [{"source": 1, "target": 4, "weight": 12.0}]},
+        {"source": "PFL3", "target": "DNa03", "edges": [{"source": 1, "target": 2, "weight": 9.0}]},
+        {"source": "PFL3", "target": "LAL010", "edges": [{"source": 1, "target": 3, "weight": 7.0}]},
+        {"source": "DNa03", "target": "DNa02", "edges": [{"source": 2, "target": 4, "weight": 20.0}]},
+        {"source": "LAL010", "target": "DNa02", "edges": [{"source": 3, "target": 4, "weight": 18.0}]},
+    ]
+    return {
+        "protocol": "malecns-literature-route-audit-v1",
+        "dataset": "male-cns:v1.0",
+        "populations": populations,
+        "direct_predictions": direct,
+    }
+
+
+def _config() -> dict:
+    return {
+        "protocol": "malecns-steering-scaffold-candidate-v1",
+        "dataset": "male-cns:v1.0",
+        "evidence_audit_sha256": "abc",
+        "evidence_authority": "authority/example.json",
+        "populations": {
+            "PFL3": [1],
+            "DNa03": [2],
+            "LAL010": [3],
+            "DNa02": [4, 5],
+        },
+        "candidate_roles": {
+            "steer_left": [4],
+            "steer_right": [5],
+            "turn_drive_left": [1],
+            "turn_drive_right": [],
+        },
+        "excluded_from_this_scaffold": {"odor_sensory_roles": "unresolved"},
+    }
+
+
+def test_builds_candidate_scaffold_with_explicit_signs() -> None:
+    bundle = build_steering_scaffold(
+        _audit(),
+        _config(),
+        type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
+        source_audit_sha256="abc",
+    )
+    assert bundle.manifest["qualification_status"] == "candidate"
+    assert len(bundle.nodes) == 5
+    assert len(bundle.edges) == 5
+    assert set(bundle.edges.sign) == {1}
+    assert bundle.roles["steer_left"] == [4]
+    assert "odor_left" not in bundle.roles
+    bundle.validate(require_sign=True, require_qualified=False)
+
+
+def test_rejects_audit_hash_drift() -> None:
+    with pytest.raises(ValueError, match="SHA-256"):
+        build_steering_scaffold(
+            _audit(),
+            _config(),
+            type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
+            source_audit_sha256="different",
+        )
+
+
+def test_rejects_unresolved_presynaptic_sign() -> None:
+    with pytest.raises(ValueError, match="sign unresolved"):
+        build_steering_scaffold(
+            _audit(),
+            _config(),
+            type_signs={"PFL3": 0, "DNa03": 1, "LAL010": 1},
+            source_audit_sha256="abc",
+        )
+
+
+def test_rejects_population_body_id_drift() -> None:
+    audit = _audit()
+    audit["populations"]["PFL3"]["rows"][0]["bodyId"] = 999
+    with pytest.raises(ValueError, match="population body IDs changed"):
+        build_steering_scaffold(
+            audit,
+            _config(),
+            type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
+            source_audit_sha256="abc",
+        )
