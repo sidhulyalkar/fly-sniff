@@ -97,6 +97,7 @@ def test_trained_final_manifest_binds_matched_training_and_passing_e002(monkeypa
     bundle = _bundle()
     intact_parameter_hash = "intact-parameter-hash"
     intact_audit_hash = "intact-audit-hash"
+    execution_audit_hash = "execution-audit-hash"
     seeds = make_rewire_seeds(n=8)
     verified = {
         "intact": {
@@ -122,6 +123,7 @@ def test_trained_final_manifest_binds_matched_training_and_passing_e002(monkeypa
             "report": {"trained_parameter_sha256": "lesion-parameter-hash"},
         },
         "optimizer_budget_sha256": "budget-hash",
+        "optimizer_execution_audit_sha256": execution_audit_hash,
     }
     monkeypatch.setattr(
         "fly_sniff.trained_final.validate_matched_training_artifact",
@@ -151,6 +153,7 @@ def test_trained_final_manifest_binds_matched_training_and_passing_e002(monkeypa
     assert len(manifest["ood_seeds"]) == TRAINED_FINAL_OOD_EPISODES
     assert manifest["matched_training_report_sha256"] == canonical_sha256(matched_report)
     assert manifest["trained_e002_sha256"] == canonical_sha256(e002)
+    assert manifest["optimizer_execution_audit_sha256"] == execution_audit_hash
     assert manifest["model_contract"]["controller"] == TaskOptimizedMaleCNSController.name
     assert manifest["model_contract"]["intact_parameter_sha256"] == intact_parameter_hash
     assert manifest["model_contract"]["lesion_parameter_sha256"] == "lesion-parameter-hash"
@@ -187,6 +190,7 @@ def test_trained_final_manifest_rejects_protocol_seed_shopping(monkeypatch):
             "report": {"trained_parameter_sha256": "l"},
         },
         "optimizer_budget_sha256": "b",
+        "optimizer_execution_audit_sha256": "execution-audit",
     }
     monkeypatch.setattr(
         "fly_sniff.trained_final.validate_matched_training_artifact",
@@ -213,4 +217,59 @@ def test_trained_final_manifest_rejects_protocol_seed_shopping(monkeypatch):
     changed.pop("manifest_sha256")
     changed["manifest_sha256"] = manifest_digest(changed)
     with pytest.raises(ValueError, match="split seed"):
+        verify_trained_final_manifest(changed)
+
+
+def test_trained_final_manifest_requires_execution_audit_binding(monkeypatch):
+    config = load_training_config("configs/task_optimization_v1.json")
+    bundle = _bundle()
+    seeds = make_rewire_seeds(n=8)
+    verified = {
+        "intact": {
+            "bundle": bundle,
+            "parameters": _params(),
+            "report": {"trained_parameter_sha256": "p", "audit_receipt_sha256": "a"},
+        },
+        "rewires": [
+            {
+                "seed": seed,
+                "bundle": bundle,
+                "parameters": _params(),
+                "report": {"trained_parameter_sha256": str(seed)},
+            }
+            for seed in seeds
+        ],
+        "lesion": {
+            "bundle": bundle,
+            "parameters": _params(),
+            "report": {"trained_parameter_sha256": "l"},
+        },
+        "optimizer_budget_sha256": "b",
+        "optimizer_execution_audit_sha256": "execution-audit",
+    }
+    monkeypatch.setattr(
+        "fly_sniff.trained_final.validate_matched_training_artifact",
+        lambda bundle, config, matched_report: verified,
+    )
+    e002 = {
+        "protocol": config["trained_e002"]["protocol"],
+        "passed": True,
+        "graph_sha256": bundle.replay_fingerprint(),
+        "training_config_sha256": canonical_sha256(config),
+        "trained_parameter_sha256": "p",
+        "training_audit_receipt_sha256": "a",
+    }
+    manifest = build_trained_final_manifest(
+        bundle=bundle,
+        circuit_sha256="digest",
+        config=config,
+        matched_report={"x": 1},
+        trained_e002=e002,
+        code_ref="deadbeef",
+    )
+    changed = copy.deepcopy(manifest)
+    changed.pop("optimizer_execution_audit_sha256")
+    changed.pop("manifest_sha256")
+    changed["manifest_sha256"] = manifest_digest(changed)
+    with pytest.raises(ValueError, match="execution audit"):
         verify_trained_final_manifest(changed)
