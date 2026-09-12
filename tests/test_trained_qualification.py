@@ -1,3 +1,4 @@
+import copy
 import json
 
 import pandas as pd
@@ -5,6 +6,7 @@ import pytest
 
 from fly_sniff import trained_qualification as tq
 from fly_sniff.graph import GraphBundle
+from fly_sniff.reproducible_training import seal_training_runtime
 from fly_sniff.training import (
     DynamicsParameters,
     canonical_sha256,
@@ -181,17 +183,7 @@ def _training_report(bundle, config, *, development_passed=True):
         "validation_success_rate_delta": success_delta,
         "history": history,
     }
-    report["audit_receipt_sha256"] = canonical_sha256(
-        {
-            "graph_sha256": report["graph_sha256"],
-            "training_config_sha256": report["training_config_sha256"],
-            "train_seed_sha256": report["train_seed_sha256"],
-            "validation_seed_sha256": report["validation_seed_sha256"],
-            "trained_parameter_sha256": report["trained_parameter_sha256"],
-            "optimizer_budget_sha256": report["optimizer_budget_sha256"],
-        }
-    )
-    return report
+    return seal_training_runtime(report)
 
 
 def _passing_probe():
@@ -246,6 +238,16 @@ def test_training_report_rejects_incomplete_optimizer_history_even_with_valid_bu
         tq.parameters_from_training_report(report, bundle, config)
 
 
+def test_training_report_rejects_forged_runtime_receipt():
+    config = _config()
+    bundle = _bundle()
+    report = _training_report(bundle, config)
+    changed = copy.deepcopy(report)
+    changed["runtime_environment"]["numerical_compatibility"]["packages"]["numpy"] = "0.0.0"
+    with pytest.raises(ValueError, match="runtime|numerical"):
+        tq.parameters_from_training_report(changed, bundle, config)
+
+
 def test_trained_e002_requires_every_frozen_gate(monkeypatch):
     config = _config()
     bundle = _bundle()
@@ -256,6 +258,7 @@ def test_trained_e002_requires_every_frozen_gate(monkeypatch):
     assert qualified["passed"]
     assert qualified["passed_gate_count"] == qualified["gate_count"]
     assert qualified["protocol"] == "E002-trained-odor-gated-pfn-basis-v1"
+    assert qualified["numerical_runtime_sha256"] == report["numerical_runtime_sha256"]
 
     failed_report = _training_report(bundle, config, development_passed=False)
     failed = tq.qualify_trained_candidate(bundle, failed_report, config)
