@@ -1,7 +1,7 @@
 import pandas as pd
 
 from fly_sniff.graph import GraphBundle
-from fly_sniff.rewire import degree_preserving_rewire
+from fly_sniff.rewire import degree_preserving_rewire, lesion_incoming_to_roles
 
 
 def _degree(edges, col):
@@ -31,3 +31,34 @@ def test_rewire_preserves_directed_degrees():
     assert rewired.manifest["qualification_status"] == "qualified"
     assert rewired.manifest["graph_role"] == "degree-preserving-rewire"
     assert rewired.manifest["rewire"]["exact_in_out_degree_preserved"] is True
+
+
+def test_role_input_lesion_removes_only_edges_into_frozen_roles():
+    nodes = pd.DataFrame({"bodyId": [1, 2, 3, 4]})
+    edges = pd.DataFrame(
+        {
+            "source": [1, 1, 2, 3],
+            "target": [2, 3, 4, 4],
+            "weight": [5, 6, 7, 8],
+            "sign": [1, 1, -1, 1],
+        }
+    )
+    bundle = GraphBundle(
+        nodes,
+        edges,
+        {
+            "odor_left": [1],
+            "odor_right": [2],
+            "steer_left": [3],
+            "steer_right": [4],
+        },
+        {"qualification_status": "qualified", "graph_role": "malecns"},
+    )
+
+    lesioned = lesion_incoming_to_roles(bundle, ["steer_left", "steer_right"])
+
+    assert list(zip(lesioned.edges.source, lesioned.edges.target, strict=True)) == [(1, 2)]
+    assert lesioned.manifest["qualification_status"] == "qualified"
+    assert lesioned.manifest["graph_role"] == "role-input-lesion"
+    assert lesioned.manifest["lesion"]["body_ids"] == [3, 4]
+    assert lesioned.manifest["lesion"]["removed_edge_count"] == 3

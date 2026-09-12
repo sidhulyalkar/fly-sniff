@@ -46,6 +46,15 @@ class Controller(ABC):
     def diagnostics(self) -> dict[str, float]:
         return {}
 
+    def input_snapshot(self) -> dict[str, Any] | None:
+        """Return explicit modeled neural-input mapping when the controller has one.
+
+        Classical and proxy controllers intentionally return ``None``. A neural
+        model may use this to expose which role/body IDs received each modeled
+        observation value without implying receptor or physiological identity.
+        """
+        return None
+
     def activity_snapshot(self, *, limit: int = 256) -> dict[str, Any] | None:
         """Return sparse neural activity for visualization when it really exists.
 

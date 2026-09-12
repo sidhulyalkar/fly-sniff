@@ -21,6 +21,8 @@ def degree_preserving_rewire(
     are rejected. This is a topology control, not a perfect null for every graph statistic.
     """
     bundle.validate(require_sign="sign" in bundle.edges.columns)
+    if swaps_per_edge < 1:
+        raise ValueError("swaps_per_edge must be >= 1")
     rng = np.random.default_rng(seed)
     edges = bundle.edges.copy().reset_index(drop=True)
     occupied = set(zip(edges.source.astype(int), edges.target.astype(int), strict=True))
@@ -53,10 +55,58 @@ def degree_preserving_rewire(
         manifest["rewire"] = {
             "seed": int(seed),
             "swaps_per_edge": int(swaps_per_edge),
+            "target_swaps": int(target_swaps),
             "accepted_swaps": int(accepted),
             "attempted_swaps": int(attempts),
+            "mixing_complete": bool(accepted == target_swaps),
             "exact_in_out_degree_preserved": True,
         }
+    return GraphBundle(
+        bundle.nodes.copy(),
+        edges,
+        {k: list(v) for k, v in bundle.roles.items()},
+        manifest,
+    )
+
+
+def lesion_incoming_to_roles(
+    bundle: GraphBundle,
+    roles: tuple[str, ...] | list[str],
+) -> GraphBundle:
+    """Remove all edges entering an explicitly named set of role populations.
+
+    This is a deterministic dependency control. It does not claim that the
+    corresponding biological lesion is experimentally realizable or selective.
+    The exact role names and affected body IDs are recorded in the returned
+    manifest so E002 and the frozen navigation cohort can use the same lesion.
+    """
+    bundle.validate(require_sign="sign" in bundle.edges.columns)
+    role_names = [str(role) for role in roles]
+    if not role_names:
+        raise ValueError("lesion requires at least one role")
+    missing = [role for role in role_names if not bundle.roles.get(role)]
+    if missing:
+        raise ValueError(f"cannot lesion empty or missing roles: {missing}")
+
+    lesioned_ids = sorted(
+        {
+            int(body_id)
+            for role in role_names
+            for body_id in bundle.roles.get(role, [])
+        }
+    )
+    target_ids = bundle.edges.target.astype(int)
+    removed_mask = target_ids.isin(lesioned_ids)
+    edges = bundle.edges.loc[~removed_mask].copy().reset_index(drop=True)
+
+    manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
+    manifest["graph_role"] = "role-input-lesion"
+    manifest["lesion"] = {
+        "kind": "remove-incoming-edges-to-roles",
+        "roles": role_names,
+        "body_ids": lesioned_ids,
+        "removed_edge_count": int(removed_mask.sum()),
+    }
     return GraphBundle(
         bundle.nodes.copy(),
         edges,

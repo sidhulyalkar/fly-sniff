@@ -39,6 +39,14 @@ def make_seed_split(seed: int, n_id: int, n_ood: int) -> tuple[list[int], list[i
     return [int(x) for x in values[:n_id]], [int(x) for x in values[n_id:]]
 
 
+def make_rewire_seeds(seed: int = 913013, n: int = 8) -> list[int]:
+    """Create the explicit null-topology seeds stored in the sealed manifest."""
+    if n < 2:
+        raise ValueError("rewire ensemble requires at least two independently seeded topologies")
+    rng = np.random.default_rng(seed)
+    return [int(x) for x in rng.choice(1_999_999_999, size=n, replace=False) + 1]
+
+
 def default_ood_plume() -> dict:
     # Frozen distribution shift: faster, more intermittent, more crosswind wandering.
     return asdict(
@@ -60,8 +68,9 @@ def build_manifest(
     circuit_sha256: str,
 ) -> dict:
     id_seeds, ood_seeds = make_seed_split(seed, n_id, n_ood)
+    rewire_seeds = make_rewire_seeds()
     payload = {
-        "schema": "fly-sniff-final-v1",
+        "schema": "fly-sniff-final-v2",
         "status": "sealed",
         "code_ref": code_ref,
         "circuit_sha256": circuit_sha256,
@@ -70,12 +79,33 @@ def build_manifest(
         "ood_seeds": ood_seeds,
         "config": default_config_dict(),
         "ood_plume": default_ood_plume(),
-        "rewire": {"seed": 913013, "swaps_per_edge": 8},
+        "rewire": {
+            "seed": rewire_seeds[0],
+            "swaps_per_edge": 8,
+            "role": "designated primary null retained for v1-comparable reporting",
+        },
+        "rewire_ensemble": {
+            "seed_generator_seed": 913013,
+            "seeds": rewire_seeds,
+            "count": len(rewire_seeds),
+            "swaps_per_edge": 8,
+            "null_model": "directed degree-preserving double-edge swaps",
+            "comparison_unit": (
+                "for each environment seed, average the metric across the sealed null topologies, "
+                "then pair intact against that per-environment null mean"
+            ),
+        },
+        "lesion": {
+            "kind": "remove-incoming-edges-to-roles",
+            "roles": ["steer_left", "steer_right"],
+        },
         "gold": {
             "success_rate_min": 0.70,
             "spl_delta_vs_rewire_min": 0.10,
             "paired_ci95_must_exclude_zero": True,
             "ood_success_rate_min": 0.60,
+            "ensemble_spl_delta_min": 0.10,
+            "ensemble_paired_ci95_must_exclude_zero": True,
         },
     }
     payload["manifest_sha256"] = canonical_sha256(payload)
@@ -86,7 +116,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Seal a one-way FlyBrain Plume Hunt final-test manifest"
     )
-    parser.add_argument("--output", default="manifests/final-sealed-v1.json")
+    parser.add_argument("--output", default="manifests/final-sealed-v2.json")
     parser.add_argument("--seed", type=int, default=48151623)
     parser.add_argument("--heldout", type=int, default=1000)
     parser.add_argument("--ood", type=int, default=400)

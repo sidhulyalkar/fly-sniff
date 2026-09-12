@@ -60,9 +60,30 @@ def test_recording_seals_model_contract_and_configs():
     assert payload["model_contract"]["mathematical_model"] == "docs/MATHEMATICAL_MODEL.md"
     assert payload["model_contract"]["plume_model"] == "stochastic-puff-2d-v1"
     assert payload["model_contract"]["sensor_model"] == "bilateral-phenomenological-v1"
+    assert "physical left/right antenna sample coordinates" in payload["model_contract"][
+        "causal_replay_chain"
+    ]
+    assert "explicit modeled graph-role drive when using the neural controller" in payload[
+        "model_contract"
+    ]["causal_replay_chain"]
     assert payload["config"]["arena"]["dt"] == pytest.approx(payload["dt"])
     assert payload["config"]["plume"]["wind_speed"] > 0.0
     assert payload["config"]["sensor"]["adaptation_tau"] > 0.0
+
+
+def test_recording_sensor_trace_is_synchronized_to_observation():
+    bundle = build_recording(seed=15, sim_seconds=0.10, plume_points=8)
+    payload = bundle["recording"]
+
+    for frame in payload["frames"]:
+        for agent in frame["agents"]:
+            trace = agent["sensor_trace"]
+            obs = agent["observation"]
+            assert trace["signal_kind"] == "modeled_antenna_transduction"
+            assert trace["left"]["response"] == pytest.approx(obs["left_odor"])
+            assert trace["right"]["response"] == pytest.approx(obs["right_odor"])
+            assert trace["left"]["concentration"] >= 0.0
+            assert trace["right"]["concentration"] >= 0.0
 
 
 def test_recording_marks_sampled_plume_frames_as_incomplete():
