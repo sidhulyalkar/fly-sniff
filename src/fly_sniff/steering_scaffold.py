@@ -81,9 +81,25 @@ def build_steering_scaffold(
     if audit.get("dataset") != config.get("dataset"):
         raise ValueError("route-audit dataset does not match scaffold config")
 
-    expected_sha = config.get("evidence_audit_sha256")
-    if expected_sha and source_audit_sha256 and expected_sha != source_audit_sha256:
+    expected_audit_sha = config.get("evidence_audit_sha256")
+    if (
+        expected_audit_sha
+        and source_audit_sha256
+        and expected_audit_sha != source_audit_sha256
+    ):
         raise ValueError("route-audit SHA-256 does not match the sealed scaffold evidence")
+
+    expected_sign_sha = config.get("sign_authority_sha256")
+    if (
+        expected_sign_sha
+        and sign_authority_sha256
+        and expected_sign_sha != sign_authority_sha256
+    ):
+        raise ValueError("sign-authority SHA-256 does not match the sealed scaffold evidence")
+    expected_sign_path = config.get("sign_authority")
+    if expected_sign_path and sign_authority_path is not None:
+        if Path(expected_sign_path).as_posix() != Path(sign_authority_path).as_posix():
+            raise ValueError("sign-authority path does not match the sealed scaffold config")
 
     population_names = ("PFL3", "DNa03", "LAL010", "DNa02")
     node_rows: list[dict[str, Any]] = []
