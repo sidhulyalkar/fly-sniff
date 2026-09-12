@@ -24,6 +24,7 @@ jobs:
           fly-sniff-record --help
           fly-sniff-staged-trace --help
           fly-sniff-review-route --help
+          fly-sniff-e001-evidence --help
           fly-sniff-cinematic --help
           fly-sniff-train-dynamics --help
           fly-sniff-qualify-trained --help
