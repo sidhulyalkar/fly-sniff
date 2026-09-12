@@ -4,10 +4,13 @@
   "input_protocol": "staged-structural-discovery-v3",
   "claim_boundary": "This policy derives a candidate model-role map from the preregistered E001 evidence. It does not qualify dynamics or assert that the modeled sensory drive equals measured activity in these neurons.",
   "side_inference": {
-    "source": "instance string only",
+    "priority": ["somaSide", "rootSide", "instance"],
+    "left_values": ["L", "left", "Left"],
+    "right_values": ["R", "right", "Right"],
     "left_pattern": "(?:^|_)L(?:\\d|_|$)",
     "right_pattern": "(?:^|_)R(?:\\d|_|$)",
-    "ambiguous_policy": "exclude from side-specific model roles and report"
+    "ambiguous_policy": "exclude from side-specific model roles and report",
+    "rationale": "Ventral PFN airflow preference is tied to the hemisphere of the cell body, so MaleCNS somaSide is the primary side authority when present."
   },
   "roles": {
     "odor_context_left": {
@@ -29,18 +32,18 @@
     "wind_basis_left": {
       "stage": "wind_to_hDeltaC",
       "seed_role": "source",
-      "type_regex": "^(?:PFNa|PFNm(?:_a|_b)?)$",
+      "type_regex": "^(?:PFNa|PFNp(?:_[a-e])?|PFNm(?:_[a-b])?)$",
       "required_side": "L",
       "minimum_count": 1,
-      "rationale": "Conservative side-resolved ventral-PFN basis population. Retained PFNp cells are not assigned to a side-specific model role when the MaleCNS instance string does not expose side."
+      "rationale": "Retained ventral-PFN source neurons assigned to the left airflow basis only when somaSide, rootSide, or the instance fallback resolves their hemisphere as left."
     },
     "wind_basis_right": {
       "stage": "wind_to_hDeltaC",
       "seed_role": "source",
-      "type_regex": "^(?:PFNa|PFNm(?:_a|_b)?)$",
+      "type_regex": "^(?:PFNa|PFNp(?:_[a-e])?|PFNm(?:_[a-b])?)$",
       "required_side": "R",
       "minimum_count": 1,
-      "rationale": "Right-side counterpart of the conservative side-resolved ventral-PFN basis population."
+      "rationale": "Right-side counterpart of the side-resolved retained ventral-PFN basis population."
     },
     "steer_left": {
       "stage": "pfl3_to_dna02",
@@ -76,14 +79,14 @@
   "wind_unresolved_policy": {
     "report_retained_side_unresolved_pfn": true,
     "include_in_training_role": false,
-    "reason": "The optimizer must not invent hemisphere assignments for PFN candidates whose exported MaleCNS instance identity does not resolve side."
+    "reason": "The optimizer must not invent hemisphere assignments for any retained PFN whose somaSide, rootSide, and instance evidence all fail to resolve side."
   },
   "promotion_policy": {
     "automatic_qualification": false,
     "required_before_training": [
       "all six model roles non-empty",
       "no body ID appears in both left and right versions of the same role family",
-      "exact role IDs and side evidence are persisted",
+      "exact role IDs and side evidence source are persisted",
       "intermediate-type composition is summarized for each primary E001 stage",
       "sign coverage is computed on the eventual candidate GraphBundle",
       "review artifact is frozen before real optimization"
