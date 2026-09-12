@@ -130,9 +130,12 @@ def main() -> None:
     sensors = SensorConfig(**cfg["sensor"])
     ood_plume = PlumeConfig(**manifest["ood_plume"])
 
+    # The neural model and environment share one sealed simulation clock. If a
+    # future manifest changes arena.dt, the modeled neural relaxation keeps the
+    # same physical tau rather than silently changing with call frequency.
     factories = {
-        "malecns": lambda: MaleCNSRateController(biological),
-        "rewire": lambda: MaleCNSRateController(rewired),
+        "malecns": lambda: MaleCNSRateController(biological, model_dt_s=arena.dt),
+        "rewire": lambda: MaleCNSRateController(rewired, model_dt_s=arena.dt),
         "classical": CastSurgeController,
     }
     id_frame = evaluate(
