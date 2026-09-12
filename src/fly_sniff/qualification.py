@@ -10,6 +10,7 @@ import numpy as np
 
 from .env import Observation
 from .graph import GraphBundle, MaleCNSRateController
+from .rewire import lesion_incoming_to_roles
 
 REQUIRED_ROLES = ("odor_left", "odor_right", "steer_left", "steer_right")
 WIND_ROLES = ("wind_forward", "wind_backward", "wind_left", "wind_right")
@@ -35,7 +36,13 @@ class ProbeResult:
     blank_retention: float
 
 
-def _observation(left: float, right: float, *, wind_x: float = 1.0, wind_y: float = 0.0) -> Observation:
+def _observation(
+    left: float,
+    right: float,
+    *,
+    wind_x: float = 1.0,
+    wind_y: float = 0.0,
+) -> Observation:
     return Observation(
         left_odor=float(left),
         right_odor=float(right),
@@ -57,17 +64,6 @@ def _rollout_turn(
     controller.reset(seed)
     turns = np.asarray([controller.act(obs).turn for obs in sequence], dtype=float)
     return turns, controller
-
-
-def _lesion_incoming(bundle: GraphBundle, roles: tuple[str, ...]) -> GraphBundle:
-    lesioned = set()
-    for role in roles:
-        lesioned.update(int(x) for x in bundle.roles.get(role, []))
-    edges = bundle.edges.loc[~bundle.edges.target.astype(int).isin(lesioned)].copy()
-    manifest = dict(bundle.manifest or {})
-    manifest["qualification_status"] = "candidate"
-    manifest["lesion"] = {"incoming_to_roles": list(roles)}
-    return GraphBundle(bundle.nodes.copy(), edges, dict(bundle.roles), manifest)
 
 
 def _reachable(edges, starts: set[int]) -> set[int]:
@@ -115,7 +111,7 @@ def probe_candidate(
     replay, _ = _rollout_turn(bundle, left_seq, seed=seed)
     deterministic_error = float(np.max(np.abs(left_turns - replay))) if len(replay) else 0.0
 
-    lesioned = _lesion_incoming(bundle, ("steer_left", "steer_right"))
+    lesioned = lesion_incoming_to_roles(bundle, ("steer_left", "steer_right"))
     lesioned_turns, _ = _rollout_turn(lesioned, left_seq, seed=seed)
     lesioned_peak = float(np.max(np.abs(lesioned_turns))) if len(lesioned_turns) else 0.0
 
@@ -123,7 +119,11 @@ def probe_candidate(
     pulse_end = max(abs(float(left_turns[-1])), 1e-12)
     blank = _observation(0.0, 0.0)
     blank_turns = np.asarray([controller.act(blank).turn for _ in range(blank_steps)], dtype=float)
-    late = float(np.mean(np.abs(blank_turns[-max(4, blank_steps // 4) :]))) if len(blank_turns) else 0.0
+    late = (
+        float(np.mean(np.abs(blank_turns[-max(4, blank_steps // 4) :])))
+        if len(blank_turns)
+        else 0.0
+    )
     retention = float(np.clip(late / pulse_end, 0.0, 10.0))
 
     return ProbeResult(
@@ -152,8 +152,12 @@ def qualify_candidate(
     ids = set(bundle.nodes.bodyId.astype(int))
     roles = {k: {int(x) for x in v} for k, v in bundle.roles.items()}
     missing_roles = [role for role in REQUIRED_ROLES if not roles.get(role)]
-    steering_disjoint = roles.get("steer_left", set()).isdisjoint(roles.get("steer_right", set()))
-    sensory_disjoint = roles.get("odor_left", set()).isdisjoint(roles.get("odor_right", set()))
+    steering_disjoint = roles.get("steer_left", set()).isdisjoint(
+        roles.get("steer_right", set())
+    )
+    sensory_disjoint = roles.get("odor_left", set()).isdisjoint(
+        roles.get("odor_right", set())
+    )
 
     signed_fraction = float(bundle.edges.sign.astype(int).ne(0).mean()) if len(bundle.edges) else 0.0
     sensory = roles.get("odor_left", set()) | roles.get("odor_right", set())
@@ -164,22 +168,72 @@ def qualify_candidate(
 
     probe = probe_candidate(bundle, seed=seed)
     core_gates = [
-        Gate("required_roles", not missing_roles, ",".join(missing_roles) if missing_roles else "complete", "all bilateral odor and steering roles are non-empty"),
-        Gate("role_disjointness", steering_disjoint and sensory_disjoint, int(steering_disjoint and sensory_disjoint), "left/right odor and steering role sets do not overlap"),
-        Gate("body_id_closure", all(x in ids for values in roles.values() for x in values), len(ids), "all role body IDs exist in nodes.parquet"),
-        Gate("signed_edge_fraction", signed_fraction >= min_sign_fraction, signed_fraction, f">= {min_sign_fraction:.2f}"),
-        Gate("structural_reachability_left", steer_left_reached, int(steer_left_reached), "sensory/wind seeds structurally reach steer_left"),
-        Gate("structural_reachability_right", steer_right_reached, int(steer_right_reached), "sensory/wind seeds structurally reach steer_right"),
-        Gate("bilateral_turn_separation", probe.separation >= min_turn_separation, probe.separation, f">= {min_turn_separation:.3f}"),
-        Gate("bilateral_turn_opposition", probe.opposite_sign, int(probe.opposite_sign), "mirrored odor perturbations produce opposite steering signs"),
+        Gate(
+            "required_roles",
+            not missing_roles,
+            ",".join(missing_roles) if missing_roles else "complete",
+            "all bilateral odor and steering roles are non-empty",
+        ),
+        Gate(
+            "role_disjointness",
+            steering_disjoint and sensory_disjoint,
+            int(steering_disjoint and sensory_disjoint),
+            "left/right odor and steering role sets do not overlap",
+        ),
+        Gate(
+            "body_id_closure",
+            all(x in ids for values in roles.values() for x in values),
+            len(ids),
+            "all role body IDs exist in nodes.parquet",
+        ),
+        Gate(
+            "signed_edge_fraction",
+            signed_fraction >= min_sign_fraction,
+            signed_fraction,
+            f">= {min_sign_fraction:.2f}",
+        ),
+        Gate(
+            "structural_reachability_left",
+            steer_left_reached,
+            int(steer_left_reached),
+            "sensory/wind seeds structurally reach steer_left",
+        ),
+        Gate(
+            "structural_reachability_right",
+            steer_right_reached,
+            int(steer_right_reached),
+            "sensory/wind seeds structurally reach steer_right",
+        ),
+        Gate(
+            "bilateral_turn_separation",
+            probe.separation >= min_turn_separation,
+            probe.separation,
+            f">= {min_turn_separation:.3f}",
+        ),
+        Gate(
+            "bilateral_turn_opposition",
+            probe.opposite_sign,
+            int(probe.opposite_sign),
+            "mirrored odor perturbations produce opposite steering signs",
+        ),
         Gate(
             "bilateral_turn_laterality",
             probe.laterality_correct,
             int(probe.laterality_correct),
             "left-only odor produces positive/left turn and right-only odor negative/right turn",
         ),
-        Gate("steering_lesion", probe.lesioned_peak_turn <= max_lesioned_turn, probe.lesioned_peak_turn, f"<= {max_lesioned_turn:.3f} after bilateral steering-input lesion"),
-        Gate("determinism", probe.deterministic_error <= 1e-12, probe.deterministic_error, "exact-seed replay max error <= 1e-12"),
+        Gate(
+            "steering_lesion",
+            probe.lesioned_peak_turn <= max_lesioned_turn,
+            probe.lesioned_peak_turn,
+            f"<= {max_lesioned_turn:.3f} after bilateral steering-input lesion",
+        ),
+        Gate(
+            "determinism",
+            probe.deterministic_error <= 1e-12,
+            probe.deterministic_error,
+            "exact-seed replay max error <= 1e-12",
+        ),
     ]
     memory_gate = Gate(
         "blank_bridge_memory_hypothesis",
@@ -201,6 +255,11 @@ def qualify_candidate(
         "passed_gate_count": sum(g.passed for g in all_gates),
         "gates": [asdict(g) for g in all_gates],
         "probe": asdict(probe),
+        "lesion_contract": {
+            "kind": "remove-incoming-edges-to-roles",
+            "roles": ["steer_left", "steer_right"],
+            "implementation": "fly_sniff.rewire.lesion_incoming_to_roles",
+        },
         "coordinate_convention": {
             "positive_turn": "left/counterclockwise",
             "negative_turn": "right/clockwise",
@@ -215,7 +274,9 @@ def qualify_candidate(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run E002 sanity gates on a candidate MaleCNS graph bundle")
+    parser = argparse.ArgumentParser(
+        description="Run E002 sanity gates on a candidate MaleCNS graph bundle"
+    )
     parser.add_argument("bundle")
     parser.add_argument("--output", default="results/e002/qualification.json")
     parser.add_argument("--seed", type=int, default=13013)
