@@ -84,16 +84,32 @@ The JSON contains:
 - annotation schema and high-frequency annotation values;
 - separate match counts/examples for `ORN`, `^Or`, and `^Ir`;
 - overlap counts between those source hypotheses;
-- exact/family annotation matches for `FB5AB`, `PFNa`, `PFNm`, `PFNp`, `hDeltaC`, `PFL3`, and `DNa02`;
+- complete available annotation rows for `FB5AB`, `PFNa`, `PFNm`, `PFNp`, `hDeltaC`, `PFL3`, and `DNa02`, including soma/root side, neurotransmitter, and confidence fields when they exist in MaleCNS;
 - corrected trace report and full structural audit;
 - dominant neuron types at each forward graph depth;
 - edge counts and summed structural weight for every forward-depth transition;
 - strongest type-to-type structural connection aggregates;
-- exact anchor populations retained in the traced corridor, including their graph depths and seed flags.
+- exact anchor populations retained in the traced corridor, including their graph depths and seed flags;
+- one-sided hypergeometric over-representation for `type`, `class`, and `subclass`, with Benjamini-Hochberg FDR correction against the full annotation background.
+
+The enrichment section is intended to answer a different question from raw abundance. It identifies annotations that are disproportionately represented in the traced corridor rather than simply common in the CNS. Enrichment remains structural evidence only.
 
 This is the preferred file to upload or paste into a review chat.
 
-## 5. Small terminal summary
+## 5. Optional standalone enrichment report
+
+The same enrichment analysis is also available independently:
+
+```bash
+fly-sniff-enrich-trace \
+  data/raw/body-annotations-male-cns-v1.0.feather \
+  data/cache/staged-route-v1 \
+  --output results/trace/staged-route-v1-enrichment.json
+```
+
+This is useful when comparing several trace configurations without rebuilding the full handoff file.
+
+## 6. Small terminal summary
 
 For a compact first message, run:
 
@@ -105,6 +121,7 @@ jq '{
   olfactory_seed_hypothesis,
   trace_counts: .trace_audit.counts,
   trace_checks: .trace_audit.checks,
+  top_type_enrichment: .corridor_enrichment.columns.type.rows[:15],
   anchor_corridor_membership: (
     .anchor_corridor_membership
     | map_values({
@@ -117,7 +134,7 @@ jq '{
 
 If that output is too long, the CLI itself already prints a concise summary after writing the JSON.
 
-## 6. Files worth sharing if deeper review is needed
+## 7. Files worth sharing if deeper review is needed
 
 The highest-value bundle is:
 
@@ -130,6 +147,6 @@ data/cache/staged-route-v1/path_provenance.csv
 
 `nodes.parquet` and `edges.parquet` are useful for deeper local analysis but can be much larger. Upload them only when exact body-ID or edge-level follow-up is needed.
 
-## 7. Interpretation boundary
+## 8. Interpretation boundary
 
-A retained body ID means only that it lies in the configured bounded structural corridor under the current search procedure. A high structural weight, central graph position, or membership in a named cell type does not establish odor response, activity timing, causal navigation relevance, or physiological sign.
+A retained body ID means only that it lies in the configured bounded structural corridor under the current search procedure. A high structural weight, central graph position, statistical over-representation, or membership in a named cell type does not establish odor response, activity timing, causal navigation relevance, or physiological sign.
