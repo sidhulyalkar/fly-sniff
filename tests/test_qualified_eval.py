@@ -9,6 +9,10 @@ from fly_sniff.qualified_eval import circuit_digest, verify_sealed_manifest
 
 def test_sealed_manifest_verification_detects_mutation():
     manifest = build_manifest(seed=9, n_id=3, n_ood=2, code_ref="abc", circuit_sha256="def")
+    assert manifest["lesion"] == {
+        "kind": "remove-incoming-edges-to-roles",
+        "roles": ["steer_left", "steer_right"],
+    }
     verify_sealed_manifest(manifest)
     mutated = dict(manifest)
     mutated["gold"] = dict(mutated["gold"])
