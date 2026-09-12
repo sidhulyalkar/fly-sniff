@@ -27,11 +27,12 @@ def candidate_bundle() -> GraphBundle:
     return GraphBundle(nodes, edges, roles, {"dataset": "male-cns:v1.0", "qualification_status": "candidate"})
 
 
-def test_probe_is_bilateral_deterministic_and_lesion_sensitive():
+def test_probe_is_bilateral_deterministic_laterality_correct_and_lesion_sensitive():
     result = probe_candidate(candidate_bundle(), seed=7)
-    assert result.left_turn < 0
-    assert result.right_turn > 0
+    assert result.left_turn > 0
+    assert result.right_turn < 0
     assert result.opposite_sign
+    assert result.laterality_correct
     assert result.separation > 0.05
     assert result.lesioned_peak_turn <= 1e-12
     assert result.deterministic_error <= 1e-12
@@ -43,6 +44,9 @@ def test_candidate_can_pass_model_sanity_without_becoming_qualified():
     report = qualify_candidate(bundle, seed=7)
     assert report["passed"]
     assert report["passed_gate_count"] == report["gate_count"]
+    assert report["protocol"] == "E002-circuit-sanity-v1"
+    laterality_gate = next(g for g in report["gates"] if g["name"] == "bilateral_turn_laterality")
+    assert laterality_gate["passed"]
     assert bundle.manifest["qualification_status"] == "candidate"
 
 
