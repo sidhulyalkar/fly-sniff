@@ -58,7 +58,8 @@ def _agent_payload(
     action: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     agent = live.env.agent
-    return {
+    neural_activity = live.controller.activity_snapshot(limit=256)
+    payload: dict[str, Any] = {
         "label": live.label,
         "controller": live.controller.name,
         "x": float(agent.x),
@@ -75,6 +76,9 @@ def _agent_payload(
             for key, value in live.controller.diagnostics().items()
         },
     }
+    if neural_activity is not None:
+        payload["neural_activity"] = neural_activity
+    return payload
 
 
 def _plume_payload(live: PartyAgent, max_points: int) -> list[list[float]]:

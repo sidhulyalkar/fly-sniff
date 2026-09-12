@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -142,3 +143,34 @@ class MaleCNSRateController(Controller):
 
     def diagnostics(self) -> dict[str, float]:
         return self._diag.copy()
+
+    def activity_snapshot(self, *, limit: int = 256) -> dict[str, Any] | None:
+        """Return the strongest modeled neuron activities without inventing spikes.
+
+        The values are rate-model state variables in [-1, 1], not measured
+        electrophysiology. Sparse top-|activity| storage keeps social recordings
+        compact while preserving exact body IDs for an anatomical replay.
+        """
+        if limit < 1 or not len(self.activity):
+            return None
+        count = min(int(limit), len(self.activity))
+        if count == len(self.activity):
+            indices = np.arange(len(self.activity), dtype=int)
+        else:
+            indices = np.argpartition(np.abs(self.activity), -count)[-count:]
+        indices = indices[np.argsort(np.abs(self.activity[indices]))[::-1]]
+        cells = [
+            {
+                "body_id": int(self.ids[int(index)]),
+                "activity": float(self.activity[int(index)]),
+            }
+            for index in indices
+            if abs(float(self.activity[int(index)])) > 1e-9
+        ]
+        status = (self.bundle.manifest or {}).get("qualification_status", "candidate")
+        return {
+            "model": self.name,
+            "claim_status": str(status),
+            "signal_kind": "modeled_rate_state",
+            "cells": cells,
+        }
