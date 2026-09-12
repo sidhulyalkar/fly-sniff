@@ -122,13 +122,37 @@ def _training_report(bundle, config, *, development_passed=True):
         validation_seed_count=len(validation),
     )
     baseline_validation = {
+        "n": len(validation),
         "objective": 0.50,
         "success_rate": 0.50,
     }
     trained_validation = {
+        "n": len(validation),
         "objective": 0.52 if development_passed else 0.49,
         "success_rate": 0.50,
     }
+    history = []
+    for generation in range(int(config["optimizer"]["generations"])):
+        count = int(config["optimizer"]["episodes_per_candidate"])
+        batch = train[generation : generation + count]
+        receipts = [
+            {
+                "index": index,
+                "parameter_sha256": canonical_sha256(
+                    {"generation": generation, "candidate": index}
+                ),
+                "objective": 0.5,
+            }
+            for index in range(int(config["optimizer"]["population"]))
+        ]
+        history.append(
+            {
+                "generation": generation,
+                "seed_batch": batch,
+                "seed_batch_sha256": canonical_sha256(batch),
+                "candidate_receipts": receipts,
+            }
+        )
     objective_delta = trained_validation["objective"] - baseline_validation["objective"]
     success_delta = trained_validation["success_rate"] - baseline_validation["success_rate"]
     report = {
@@ -146,13 +170,16 @@ def _training_report(bundle, config, *, development_passed=True):
         "optimizer_budget": budget,
         "optimizer_budget_sha256": canonical_sha256(budget),
         "baseline_parameters": default_parameters(config).to_dict(),
+        "baseline_train": {"n": len(train)},
         "baseline_validation": baseline_validation,
+        "trained_train": {"n": len(train)},
         "trained_validation": trained_validation,
         "trained_parameters": parameters.to_dict(),
         "trained_parameter_sha256": canonical_sha256(parameters.to_dict()),
         "development_gate_passed": development_passed,
         "validation_objective_delta": objective_delta,
         "validation_success_rate_delta": success_delta,
+        "history": history,
     }
     report["audit_receipt_sha256"] = canonical_sha256(
         {
@@ -207,6 +234,15 @@ def test_training_report_rejects_final_test_leakage():
     report = _training_report(bundle, config)
     report["final_test_namespace_touched"] = True
     with pytest.raises(ValueError, match="final-test namespace"):
+        tq.parameters_from_training_report(report, bundle, config)
+
+
+def test_training_report_rejects_incomplete_optimizer_history_even_with_valid_budget_receipt():
+    config = _config()
+    bundle = _bundle()
+    report = _training_report(bundle, config)
+    report["history"][0]["candidate_receipts"].pop()
+    with pytest.raises(ValueError, match="optimizer history|execution budget"):
         tq.parameters_from_training_report(report, bundle, config)
 
 
