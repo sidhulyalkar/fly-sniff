@@ -10,7 +10,7 @@ import pandas as pd
 from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import Controller
 from .env import FlySniffEnv
-from .metrics import EpisodeMetrics, paired_bootstrap_delta, spl
+from .metrics import EpisodeMetrics, paired_bootstrap_delta, shortest_path_to_goal_region, spl
 
 
 def run_episode(
@@ -22,7 +22,11 @@ def run_episode(
 ) -> EpisodeMetrics:
     env = FlySniffEnv(seed=seed, arena=arena, plume=plume, sensors=sensors)
     controller.reset(seed + 101)
-    initial = env.distance_to_source
+    initial_center_distance = env.distance_to_source
+    shortest_path = shortest_path_to_goal_region(
+        initial_center_distance,
+        env.arena.source_radius,
+    )
     obs = env.observe()
     done = False
     while not done:
@@ -36,8 +40,8 @@ def run_episode(
         steps=a.steps,
         elapsed_s=a.steps * env.arena.dt,
         path_length=a.path_length,
-        shortest_path=initial,
-        spl=spl(a.found, initial, a.path_length),
+        shortest_path=shortest_path,
+        spl=spl(a.found, shortest_path, a.path_length),
         final_distance=env.distance_to_source,
     )
 
