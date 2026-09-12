@@ -52,6 +52,35 @@ def _bundle(*, qualified=True, overlap_sensory_and_steering=False):
     )
 
 
+def _connected_bundle(*, qualified=False):
+    nodes = pd.DataFrame({"bodyId": [1, 2, 3, 4, 5, 6]})
+    edges = pd.DataFrame(
+        {
+            "source": [1, 3, 2, 4],
+            "target": [5, 5, 6, 6],
+            "weight": [8.0, 8.0, 8.0, 8.0],
+            "sign": [1, 1, 1, 1],
+        }
+    )
+    roles = {
+        "odor_context_left": [1],
+        "odor_context_right": [2],
+        "wind_basis_left": [3],
+        "wind_basis_right": [4],
+        "steer_left": [5],
+        "steer_right": [6],
+    }
+    return GraphBundle(
+        nodes,
+        edges,
+        roles,
+        {
+            "qualification_status": "qualified" if qualified else "candidate",
+            "dataset": "synthetic-redteam-connected",
+        },
+    )
+
+
 def _summary(seeds, objective=0.5):
     return {
         "n": len(seeds),
@@ -220,6 +249,36 @@ def test_sensory_and_steering_roles_must_be_disjoint_to_make_lesion_interpretabl
     params = default_parameters(_config())
     with pytest.raises(ValueError, match="overlap|disjoint|steer"):
         TaskOptimizedMaleCNSController(bundle, params, require_qualified=False)
+
+
+def test_steering_lesion_cannot_be_rescued_by_global_gain_extremes():
+    """Once steering inputs are cut, unrelated allowed gains must not restore a turn."""
+    config = _config()
+    bundle = _connected_bundle()
+    lesioned = training.lesion_incoming_to_roles(bundle, ["steer_left", "steer_right"])
+    parameters = training.DynamicsParameters.from_mapping(
+        {
+            name: float(config["trainable_parameters"][name]["max"])
+            for name in training.PARAMETER_NAMES
+        }
+    )
+    controller = TaskOptimizedMaleCNSController(
+        lesioned,
+        parameters,
+        require_qualified=False,
+    )
+    controller.reset(7)
+    observation = Observation(
+        left_odor=0.8,
+        right_odor=0.8,
+        mean_odor=0.8,
+        odor_delta=0.0,
+        wind_x_body=-0.7,
+        wind_y_body=0.4,
+        heading=1.2,
+    )
+    turns = [controller.act(observation).turn for _ in range(40)]
+    assert max(abs(turn) for turn in turns) == pytest.approx(0.0, abs=1e-12)
 
 
 def test_objective_rejects_nonfinite_or_out_of_contract_components():
