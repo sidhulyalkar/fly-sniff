@@ -33,9 +33,9 @@ def _quantiles(values: pd.Series) -> dict[str, float]:
 def _bool_mask(values: pd.Series) -> pd.Series:
     if pd.api.types.is_bool_dtype(values.dtype):
         return values.fillna(False).astype(bool)
-    normalized = values.astype(str).str.strip().str.lower()
+    normalized = values.where(values.notna(), "false").astype(str).str.strip().str.lower()
     allowed = {"true", "false", "1", "0"}
-    unexpected = sorted(set(normalized.dropna()) - allowed)
+    unexpected = sorted(set(normalized) - allowed)
     if unexpected:
         raise ValueError(f"cannot interpret boolean provenance values {unexpected}")
     return normalized.isin({"true", "1"})
@@ -86,8 +86,8 @@ def audit_corridor(
     provenance_ids = set(provenance.bodyId.astype(int))
     source_mask = _bool_mask(provenance.is_source_seed)
     target_mask = _bool_mask(provenance.is_target_seed)
-    source_ids = set(provenance.loc[source_mask, "bodyId"].astype(int))
-    target_ids = set(provenance.loc[target_mask, "bodyId"].astype(int))
+    retained_source_ids = set(provenance.loc[source_mask, "bodyId"].astype(int))
+    retained_target_ids = set(provenance.loc[target_mask, "bodyId"].astype(int))
 
     edge_sources = edges.source.astype(int)
     edge_targets = edges.target.astype(int)
@@ -95,15 +95,31 @@ def audit_corridor(
 
     minimum_weight = None
     max_hops = None
+    input_source_count = None
+    input_target_count = None
     if trace_report is not None:
         if trace_report.get("min_weight") is not None:
             minimum_weight = float(trace_report["min_weight"])
         if trace_report.get("max_hops") is not None:
             max_hops = int(trace_report["max_hops"])
+        if trace_report.get("input_source_seed_count") is not None:
+            input_source_count = int(trace_report["input_source_seed_count"])
+        elif trace_report.get("source_seed_count") is not None:
+            input_source_count = int(trace_report["source_seed_count"])
+        if trace_report.get("input_target_seed_count") is not None:
+            input_target_count = int(trace_report["input_target_seed_count"])
+        elif trace_report.get("target_seed_count") is not None:
+            input_target_count = int(trace_report["target_seed_count"])
 
     weight_threshold_ok = True
     if minimum_weight is not None and len(edges):
         weight_threshold_ok = bool((edges.weight.astype(float) >= minimum_weight).all())
+
+    input_seed_counts_sane = True
+    if input_source_count is not None:
+        input_seed_counts_sane &= input_source_count >= len(retained_source_ids)
+    if input_target_count is not None:
+        input_seed_counts_sane &= input_target_count >= len(retained_target_ids)
 
     prov = provenance.set_index(provenance.bodyId.astype(int), drop=False)
     forward = pd.to_numeric(prov.forward_depth, errors="coerce")
@@ -171,10 +187,10 @@ def audit_corridor(
     report_mismatches: dict[str, dict[str, int]] = {}
     if trace_report is not None:
         observed = {
-            "source_seed_count": len(source_ids),
-            "target_seed_count": len(target_ids),
             "corridor_nodes": len(nodes),
             "corridor_edges": len(edges),
+            "retained_source_seed_count": len(retained_source_ids),
+            "retained_target_seed_count": len(retained_target_ids),
         }
         for key, value in observed.items():
             if key in trace_report and int(trace_report[key]) != int(value):
@@ -189,8 +205,9 @@ def audit_corridor(
         "provenance_ids_unique": bool(provenance.bodyId.astype(int).is_unique),
         "node_provenance_id_match": node_ids == provenance_ids,
         "edge_endpoint_closure": endpoint_ids.issubset(node_ids),
-        "source_seed_closure": source_ids.issubset(node_ids),
-        "target_seed_closure": target_ids.issubset(node_ids),
+        "retained_source_seed_closure": retained_source_ids.issubset(node_ids),
+        "retained_target_seed_closure": retained_target_ids.issubset(node_ids),
+        "input_seed_counts_sane": bool(input_seed_counts_sane),
         "nonnegative_weights": bool((edges.weight.astype(float) >= 0.0).all()),
         "trace_min_weight_respected": weight_threshold_ok,
         "bounded_hop_limit_respected": bounded_hop_limit_ok,
@@ -208,8 +225,10 @@ def audit_corridor(
         "counts": {
             "nodes": int(len(nodes)),
             "edges": int(len(edges)),
-            "source_seeds": int(len(source_ids)),
-            "target_seeds": int(len(target_ids)),
+            "input_source_seeds": input_source_count,
+            "input_target_seeds": input_target_count,
+            "retained_source_seeds": int(len(retained_source_ids)),
+            "retained_target_seeds": int(len(retained_target_ids)),
         },
         "depths": {
             "forward": _finite_int_hist(provenance.forward_depth),
