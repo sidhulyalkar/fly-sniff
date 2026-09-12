@@ -39,6 +39,7 @@ def test_trace_corridor_keeps_only_nodes_on_bounded_source_target_paths():
         fanout_per_node=10,
     )
     assert set(nodes.bodyId) == {1, 2, 3, 4, 5}
+    assert nodes.annotation_present.all()
     assert set(edges.target) == {2, 3, 4, 5}
     assert 9 not in set(provenance.bodyId)
 
@@ -69,8 +70,42 @@ def test_trace_corridor_accepts_public_malecns_schema():
     )
 
     assert set(nodes.bodyId) == {1, 2, 3}
+    assert nodes.annotation_present.all()
     assert list(edges.columns) == ["source", "target", "weight"]
     assert list(edges[["source", "target"]].itertuples(index=False, name=None)) == [(1, 2), (2, 3)]
+    assert set(provenance.bodyId) == {1, 2, 3}
+
+
+def test_trace_corridor_preserves_unannotated_structural_intermediate():
+    annotations = pd.DataFrame(
+        {
+            "bodyId": [1, 3],
+            "type": ["ORN", "DNa02"],
+        }
+    )
+    weights = pd.DataFrame(
+        {
+            "source": [1, 2],
+            "target": [2, 3],
+            "weight": [8.0, 9.0],
+        }
+    )
+
+    nodes, edges, provenance = trace_corridor(
+        annotations,
+        weights,
+        {1},
+        {3},
+        max_hops=2,
+        min_weight=5.0,
+        fanout_per_node=10,
+    )
+
+    assert set(nodes.bodyId) == {1, 2, 3}
+    missing = nodes.set_index("bodyId").loc[2]
+    assert not bool(missing.annotation_present)
+    assert pd.isna(missing.type)
+    assert set(edges.source) | set(edges.target) == {1, 2, 3}
     assert set(provenance.bodyId) == {1, 2, 3}
 
 
