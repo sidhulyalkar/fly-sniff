@@ -20,6 +20,18 @@ DEFAULT_RATE_TAU_S = float(-DEFAULT_RATE_DT_S / np.log(0.82))
 DEFAULT_RATE_GAIN = 1.6
 DEFAULT_TURN_GAIN = 2.4
 
+# These are the task-optimized v1 sensory roles. A role-level modeled sensory
+# value is distributed across the exact sealed body IDs so a larger population
+# cannot receive more total external drive merely because it contains more cells.
+TASK_TOTAL_NORMALIZED_ROLES = frozenset(
+    {
+        "odor_context_left",
+        "odor_context_right",
+        "wind_basis_left",
+        "wind_basis_right",
+    }
+)
+
 
 @dataclass(frozen=True)
 class GraphBundle:
@@ -205,10 +217,23 @@ class MaleCNSRateController(Controller):
         self._diag = {}
         self._input_snapshot = None
 
+    def _injection_value(self, role: str, value: float) -> float:
+        body_ids = [
+            body_id
+            for body_id in self.bundle.roles.get(role, [])
+            if body_id in self.index
+        ]
+        if not body_ids:
+            return 0.0
+        if role in TASK_TOTAL_NORMALIZED_ROLES:
+            return float(value) / len(body_ids)
+        return float(value)
+
     def _inject(self, role: str, value: float, drive: np.ndarray) -> None:
+        per_cell_value = self._injection_value(role, value)
         for body_id in self.bundle.roles.get(role, []):
             if body_id in self.index:
-                drive[self.index[body_id]] += value
+                drive[self.index[body_id]] += per_cell_value
 
     def _role_mean(self, role: str) -> float:
         idx = [
@@ -252,10 +277,7 @@ class MaleCNSRateController(Controller):
         }
         recurrent = self.w @ self.activity
         proposal = np.tanh(self.gain * (recurrent + drive))
-        self.activity = (
-            self.retention * self.activity
-            + (1.0 - self.retention) * proposal
-        )
+        self.activity = self.retention * self.activity + (1.0 - self.retention) * proposal
         left = self._role_mean("steer_left")
         right = self._role_mean("steer_right")
 
