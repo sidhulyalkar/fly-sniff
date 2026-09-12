@@ -67,6 +67,8 @@ def build_steering_scaffold(
     *,
     type_signs: dict[str, int],
     source_audit_sha256: str | None = None,
+    sign_authority_path: str | Path | None = None,
+    sign_authority_sha256: str | None = None,
 ) -> GraphBundle:
     """Build the restricted excitatory steering scaffold from an audited route artifact.
 
@@ -115,6 +117,7 @@ def build_steering_scaffold(
 
     edges = pd.DataFrame(edge_rows)
     roles = {key: [int(x) for x in values] for key, values in config["candidate_roles"].items()}
+    authority_path = Path(sign_authority_path) if sign_authority_path is not None else None
     manifest = {
         "dataset": audit["dataset"],
         "protocol": config["protocol"],
@@ -122,7 +125,10 @@ def build_steering_scaffold(
         "graph_role": "restricted-excitatory-steering-scaffold",
         "source_route_audit_sha256": source_audit_sha256,
         "evidence_authority": config.get("evidence_authority"),
-        "sign_authority": str(DEFAULT_SIGN_AUTHORITY),
+        "sign_authority": {
+            "path": str(authority_path) if authority_path is not None else None,
+            "sha256": sign_authority_sha256,
+        },
         "included_edge_families": [f"{a}->{b}" for a, b in EDGE_FAMILIES],
         "excluded": config.get("excluded_from_this_scaffold", {}),
         "claim_boundary": (
@@ -146,15 +152,19 @@ def main() -> None:
     args = parser.parse_args()
 
     audit_path = Path(args.audit)
+    sign_authority_path = Path(args.sign_authority)
     audit = json.loads(audit_path.read_text())
     config = json.loads(Path(args.config).read_text())
-    signs = _load_type_signs(args.sign_authority)
+    signs = _load_type_signs(sign_authority_path)
     audit_sha = sha256_file(audit_path)
+    sign_authority_sha = sha256_file(sign_authority_path)
     bundle = build_steering_scaffold(
         audit,
         config,
         type_signs=signs,
         source_audit_sha256=audit_sha,
+        sign_authority_path=sign_authority_path,
+        sign_authority_sha256=sign_authority_sha,
     )
     save_bundle(bundle, args.output)
     summary = {
@@ -164,6 +174,7 @@ def main() -> None:
         "signed_edge_fraction": float(bundle.edges.sign.ne(0).mean()) if len(bundle.edges) else 0.0,
         "qualification_status": bundle.manifest["qualification_status"],
         "source_route_audit_sha256": audit_sha,
+        "sign_authority_sha256": sign_authority_sha,
         "roles": bundle.roles,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
