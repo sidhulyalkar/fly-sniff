@@ -1,0 +1,108 @@
+{
+  "schema": "fly-sniff-r002-result-v1",
+  "dataset": "male-cns:v1.0",
+  "experiment": "R002-loom-escape",
+  "qualification_protocol": "R002-qualification-v1",
+  "qualification_status": "qualified",
+  "scientific_claim_allowed": true,
+  "structural_authority": {
+    "selected_body_count": 313,
+    "selected_edge_count": 20607,
+    "population_counts": {
+      "LPLC2_L": 94,
+      "LPLC2_R": 91,
+      "LC4_L": 71,
+      "LC4_R": 55,
+      "DNp01_L": 1,
+      "DNp01_R": 1
+    },
+    "exact_synapse_checks": [
+      {
+        "source": "LPLC2_L",
+        "target": "DNp01_L",
+        "connections": 2642,
+        "exact_match": true
+      },
+      {
+        "source": "LC4_L",
+        "target": "DNp01_L",
+        "connections": 3782,
+        "exact_match": true
+      },
+      {
+        "source": "LPLC2_R",
+        "target": "DNp01_R",
+        "connections": 2220,
+        "exact_match": true
+      },
+      {
+        "source": "LC4_R",
+        "target": "DNp01_R",
+        "connections": 2580,
+        "exact_match": true
+      }
+    ],
+    "source_hashes": {
+      "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+      "neurotransmitters_sha256": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621",
+      "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+      "authority_sha256": "e70e99b9824e7d8798896ba523c481f51091f3334d892b85fb659ded0a0b4b98"
+    }
+  },
+  "qualification": {
+    "trial_seed": 24017,
+    "trials": 24,
+    "rewire_seeds": [24018, 24019, 24020, 24021, 24022],
+    "pass": true,
+    "intact_direct_stronger_than_near_rate": 1.0,
+    "intact_mean_direct_lateralization": 0.9100882178158732,
+    "intact_mean_direct_minus_near_target": 0.010780215174417055,
+    "intact_mean_direct_peak_target": 0.9159940483343365,
+    "rewire_lateralization_wins": 5,
+    "rewire_separation_wins": 5,
+    "rewire_count": 5,
+    "combined_visual_lesion_mean_direct_peak_target": 0.0,
+    "combined_visual_lesion_fraction_of_intact": 0.0
+  },
+  "independent_holdout": {
+    "trials": 40,
+    "trial_seed": 77777,
+    "rewire_seed": 77778,
+    "intact": {
+      "direct_stronger_than_near_rate": 1.0,
+      "mean_direct_lateralization": 0.9093934171011625,
+      "mean_direct_minus_near_target": 0.010480930728065907
+    },
+    "degree_preserving_rewire": {
+      "direct_stronger_than_near_rate": 1.0,
+      "mean_direct_lateralization": 0.0002731854818419727,
+      "mean_direct_minus_near_target": 0.006093102794986751
+    },
+    "intact_minus_rewire": {
+      "lateralization": 0.9091202316193205,
+      "direct_minus_near_target": 0.004387827933079156
+    }
+  },
+  "render": {
+    "headline": "Same looming input. Same modeled dynamics. Only topology changed.",
+    "r002_intact_vs_rewire.gif": {
+      "bytes": 1856657,
+      "sha256": "ae14bc359869243d2aa7034ba4faf60d49d11b2af3823ad7c15badcec9fc5838"
+    },
+    "r002_summary.png": {
+      "bytes": 214868,
+      "sha256": "232df8e2683f8fdc85102dbc227675dd5dfa0bdbdcf08f4592b7d33c17291d29"
+    },
+    "r002_render_trace.json": {
+      "bytes": 54189,
+      "sha256": "2701e2a79a1edf0867c199d3aca983707062dbdd41d8073fa86137085c81bc35"
+    }
+  },
+  "claim_scope": "Under the explicit R002 synthetic looming adapter and generic modeled rate dynamics, the bounded MaleCNS LPLC2/LC4-to-DNp01/GF topology produces a collision-sensitive, strongly lateralized escape-circuit readout that passes the frozen structural, lesion, and global degree-preserving-rewire controls. This does not establish perception, measured neural dynamics, a biological jump, steering, or a complete biological escape response.",
+  "interpretive_note": "Direct-hit versus near-miss separation remains positive after degree-preserving rewiring, while lateralization nearly collapses. The strongest topology-dependent result is therefore preservation of side-specific escape organization rather than mere detection of stronger looming evidence.",
+  "provenance": {
+    "qualification_run": 34662365891,
+    "qualification_artifact_id": 10288505000,
+    "qualification_artifact_zip_sha256": "6360b75123df03c96dd6e2e056093da8076b31246a432d9c53c1d56766a73e33"
+  }
+}

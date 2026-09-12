@@ -1,0 +1,109 @@
+name: r002-graph
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/fly_sniff/r002_graph.py"
+      - "src/fly_sniff/r002_probe.py"
+      - "src/fly_sniff/r002_qualify.py"
+      - "src/fly_sniff/r002_render.py"
+      - "src/fly_sniff/looming.py"
+      - "tests/test_r002_graph.py"
+      - "tests/test_r002_probe.py"
+      - "tests/test_r002_qualify.py"
+      - "tests/test_r002_render.py"
+      - "authority/r002_malecns_v1_candidate.json"
+      - ".github/workflows/r002-graph.yml"
+      - "pyproject.toml"
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - name: Cache MaleCNS v1.0 flat tables
+        uses: actions/cache@v4
+        with:
+          path: data/raw/r002
+          key: male-cns-v1.0-flat-r002-v1
+      - name: Extract bounded body-level graph
+        run: |
+          fly-sniff-r002-graph \
+            --authority authority/r002_malecns_v1_candidate.json \
+            --download \
+            --output artifacts/r002/graph
+      - name: Show structural validation summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path('artifacts/r002/graph/manifest.json').read_text())
+          print('selected bodies:', manifest['selected_body_count'])
+          print('selected edges:', manifest['selected_edge_count'])
+          for row in manifest['direct_edge_validation']:
+              print(
+                  f"{row['source_population']} -> {row['target_population']}: "
+                  f"{row['observed_connections']} / {row['expected_connections']} "
+                  f"exact={row['exact_match']}"
+              )
+          print('qualification:', manifest['qualification_status'])
+          print('readout:', manifest['behavioral_readout_status'])
+          PY
+      - name: Apply frozen R002 qualification protocol
+        run: |
+          fly-sniff-r002-qualify artifacts/r002/graph \
+            --trials 24 \
+            --seed 24017 \
+            --output artifacts/r002/qualification.json \
+            --qualified-circuit artifacts/r002/qualified-graph
+      - name: Show qualification decision
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('artifacts/r002/qualification.json').read_text())
+          print('R002 qualified:', report['pass'])
+          for name, passed in report['gates'].items():
+              print(f'{name}: {passed}')
+          for name, value in report['summary'].items():
+              print(f'{name}: {value}')
+          qualified = Path('artifacts/r002/qualified-graph/manifest.json')
+          print('qualified graph emitted:', qualified.exists())
+          PY
+      - name: Verify qualified artifact can execute
+        run: |
+          if [ -f artifacts/r002/qualified-graph/manifest.json ]; then
+            fly-sniff-r002-probe artifacts/r002/qualified-graph \
+              --trials 40 \
+              --seed 77777 \
+              --rewire-seed 77778 \
+              --output artifacts/r002/qualified-probe.json
+          else
+            echo "Scientific qualification did not pass; preserving candidate result without failing CI."
+          fi
+      - name: Render causal split-screen evidence
+        run: |
+          if [ -f artifacts/r002/qualified-graph/manifest.json ]; then
+            fly-sniff-r002-render artifacts/r002/qualified-graph \
+              --rewire-seed 24018 \
+              --output-dir artifacts/r002/render
+          else
+            fly-sniff-r002-render artifacts/r002/graph \
+              --allow-candidate \
+              --rewire-seed 24018 \
+              --output-dir artifacts/r002/render
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r002-malecns-evidence
+          path: artifacts/r002
+          if-no-files-found: error

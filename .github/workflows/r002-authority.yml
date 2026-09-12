@@ -1,0 +1,52 @@
+name: r002-authority
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/fly_sniff/type_page_authority.py"
+      - "src/fly_sniff/r002_authority.py"
+      - "tests/test_type_page_authority.py"
+      - "tests/test_r002_authority.py"
+      - ".github/workflows/r002-authority.yml"
+      - "pyproject.toml"
+
+jobs:
+  authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - name: Build candidate MaleCNS looming authority
+        run: |
+          fly-sniff-r002-authority \
+            --download \
+            --output artifacts/r002/authority.json
+      - name: Show candidate summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('artifacts/r002/authority.json').read_text())
+          print('dataset:', data['dataset'])
+          print('qualification:', data['qualification_status'])
+          for key, values in sorted(data['populations'].items()):
+              print(f'{key}: {len(values)} bodies')
+          for row in data['structural_summaries']:
+              print(
+                  f"{row['source_type']}_{row['source_side']} -> "
+                  f"DNp01_{row['target_side']}: "
+                  f"n={row['source_population_count']} "
+                  f"connections={row['aggregate_connections']}"
+              )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r002-malecns-authority
+          path: artifacts/r002/authority.json
+          if-no-files-found: error

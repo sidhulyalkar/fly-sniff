@@ -57,7 +57,9 @@ SPECS: dict[str, ShowcaseSpec] = {
         required_roles=("vision_left", "vision_right"),
         optional_roles=("steer_left", "steer_right"),
         public_question="What does modeled MaleCNS activity do while the fly watches this clip?",
-        scientific_use="Replayable stimulus-response visualization. Activity is not perception or understanding.",
+        scientific_use=(
+            "Replayable stimulus-response visualization. Activity is not perception or understanding."
+        ),
         status="adapter-ready-role-map-pending",
     ),
     "game-control": ShowcaseSpec(
@@ -66,19 +68,38 @@ SPECS: dict[str, ShowcaseSpec] = {
         archetype="closed-loop-game",
         required_roles=("vision_left", "vision_right", "steer_left", "steer_right"),
         optional_roles=("move_forward", "action_primary"),
-        public_question="What happens when game observations drive fly sensory channels and fly readouts drive buttons?",
-        scientific_use="Interface stress test. Engineered sensory and motor mappings must be shown explicitly.",
+        public_question=(
+            "What happens when game observations drive fly sensory channels and fly readouts "
+            "drive buttons?"
+        ),
+        scientific_use=(
+            "Interface stress test. Engineered sensory and motor mappings must be shown explicitly."
+        ),
         status="adapter-contract-ready-world-adapter-pending",
     ),
     "loom-escape": ShowcaseSpec(
         key="loom-escape",
         title="Incoming!",
-        archetype="native-behavior",
-        required_roles=("loom_left", "loom_right", "steer_left", "steer_right"),
-        optional_roles=("escape",),
-        public_question="Can connectome-constrained circuitry turn away from an approaching object?",
-        scientific_use="Visually legible sensorimotor reflex assay with lesion and rewiring controls.",
-        status="role-trace-pending",
+        archetype="native-behavior-open-loop-readout",
+        required_roles=(
+            "loom_size_left",
+            "loom_size_right",
+            "loom_velocity_left",
+            "loom_velocity_right",
+            "escape_left",
+            "escape_right",
+        ),
+        optional_roles=(),
+        public_question=(
+            "Does native MaleCNS looming topology preserve a collision-sensitive, lateralized "
+            "DNp01/GF escape signal that scrambled wiring loses?"
+        ),
+        scientific_use=(
+            "Direct-hit versus near-miss escape-circuit assay with exact MaleCNS structural "
+            "authority, five degree-preserving rewires and a combined visual-output lesion. "
+            "The output is a modeled neural readout, not a steering command."
+        ),
+        status="implemented-structural-authority-functional-qualification-gated",
     ),
 }
 
