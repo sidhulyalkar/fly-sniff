@@ -25,6 +25,34 @@ same looming stimulus + same modeled dynamics
 The result is an **open-loop modeled neural readout**. R002 does not claim that the virtual
 fly sees an object, performs a biological jump, or turns away.
 
+## Frozen result
+
+R002 **qualified** under the predeclared `R002-qualification-v1` gate. The compact immutable
+result record is `results/r002_malecns_v1_qualified.json`.
+
+| measure | frozen qualification result |
+| --- | ---: |
+| Direct-hit target > paired near-miss | **100%** |
+| Mean intact direct-hit lateralization | **0.910088** |
+| Mean intact direct-hit minus near-miss target activity | **0.010780** |
+| Mean intact direct-hit target peak | **0.915994** |
+| Intact wins vs 5 rewires on lateralization | **5 / 5** |
+| Intact wins vs 5 rewires on collision separation | **5 / 5** |
+| Combined LPLC2/LC4-output lesion fraction of intact | **0.0** |
+
+An independent 40-trial holdout used trial seed `77777` and a fresh rewire seed `77778`:
+
+| measure | intact MaleCNS | degree-preserving rewire |
+| --- | ---: | ---: |
+| Direct-hit target > paired near-miss | 100% | 100% |
+| Mean direct-hit lateralization | **0.909393** | **0.000273** |
+| Mean direct-hit minus near-miss target activity | **0.010481** | **0.006093** |
+
+This decomposition matters. Some direct-hit versus near-miss separation survives the global
+rewire, while the side-specific DNp01/GF organization nearly disappears. The strongest
+R002 topology-dependent result is therefore **lateralized escape organization**, not merely
+that a larger looming stimulus can produce more modeled activity.
+
 ## What is biological and what is modeled
 
 Structural authority comes from `male-cns:v1.0`. The bounded R002 graph contains the released
@@ -44,7 +72,10 @@ or an end-to-end behavioral policy.
 
 ## Frozen MaleCNS authority
 
-The committed candidate authority is `authority/r002_malecns_v1_candidate.json`.
+The committed structural authority is `authority/r002_malecns_v1_candidate.json`. The filename
+retains `candidate` because it is the immutable pre-qualification authority input; qualification
+is represented separately by the frozen result and qualified GraphBundle.
+
 Complete population membership comes from the public MaleCNS annotation Feather, not from
 Cell Type Explorer display IDs. The Explorer HTML is pinned separately and used for type-level
 structural summaries.
@@ -83,7 +114,7 @@ The synthetic adapter emits four named channels:
 - `loom_velocity_right`
 
 The size feature is normalized angular diameter. The velocity feature is normalized positive
-angular expansion speed. Candidate mappings are:
+angular expansion speed. Candidate feature mappings are:
 
 ```text
 loom_size_left/right       -> LPLC2_L/R
@@ -125,6 +156,12 @@ The topology control is an exact directed degree-preserving rewire. In/out degre
 roles remain on the same neuron identities, and edge attributes stay attached to their source
 edge record while targets are swapped.
 
+This is a deliberately strong global null, but it does not preserve hemisphere or cell-class
+strata. A future R002-v2 can add hemisphere-preserving and class-preserving rewires to ask how
+much of the lateralization advantage is explained by coarse bilateral organization versus
+finer synaptic topology. That is a stricter follow-up, not a prerequisite for the frozen v1
+claim above.
+
 ## Frozen qualification protocol
 
 `R002-qualification-v1` is encoded in `src/fly_sniff/r002_qualify.py`. The thresholds were
@@ -149,8 +186,9 @@ trial seed: 24017
 rewire seeds: 24018, 24019, 24020, 24021, 24022
 ```
 
-A scientific miss writes a complete `qualification.json` and remains a successful CI run.
-Negative science is data; broken software is what should turn CI red.
+All seven gates passed. A scientific miss would still have written a complete
+`qualification.json` and remained a successful CI run. Negative science is data; broken
+software is what should turn CI red.
 
 ## Reproduce the chain
 
@@ -173,7 +211,7 @@ fly-sniff-r002-qualify artifacts/r002/graph \
   --qualified-circuit artifacts/r002/qualified-graph
 ```
 
-A qualified graph can then be independently probed without candidate overrides:
+Independently probe the qualified artifact:
 
 ```bash
 fly-sniff-r002-probe artifacts/r002/qualified-graph \
@@ -192,24 +230,24 @@ fly-sniff-r002-render artifacts/r002/qualified-graph \
 ```
 
 The renderer emits a summary PNG, animated GIF, frame-level trace JSON and hashed render
-receipt. Candidate rendering is possible only with `--allow-candidate` and remains visibly
-labelled `CANDIDATE`.
+receipt. The qualified render is allowed to carry the MaleCNS claim; candidate rendering is
+possible only with `--allow-candidate` and remains visibly labelled `CANDIDATE`.
 
 ## Claim boundary
 
-If R002 qualifies, the strongest allowed statement is:
+R002 supports the following statement:
 
 > Under the explicit R002 synthetic looming adapter and generic modeled rate dynamics, the
-> bounded MaleCNS LPLC2/LC4-to-DNp01/GF topology produces a collision-sensitive, lateralized
-> escape-circuit readout that survives the frozen qualification controls better than matched
-> degree-preserving rewires.
+> bounded MaleCNS LPLC2/LC4-to-DNp01/GF topology produces a collision-sensitive, strongly
+> lateralized escape-circuit readout that passes the frozen structural, lesion, and global
+> degree-preserving-rewire controls.
 
-Do not shorten that into “the connectome sees the object,” “the fly brain jumps,” or “we
-simulated a conscious fly.”
+Do not shorten that into “the connectome sees the object,” “the fly brain jumps,” “the
+connectome turns away,” or “we simulated a conscious fly.”
 
 ## Public visualization
 
-The first shareable render uses one shared expanding object and two neural panels:
+The shareable render uses one shared expanding object and two neural panels:
 
 ```text
        SAME LOOMING INPUT
@@ -225,7 +263,8 @@ The headline is:
 
 > **Same looming input. Same modeled dynamics. Only topology changed.**
 
-That makes the causal manipulation legible without pretending that the animation is a
+The frozen render receipt records SHA-256 hashes for the PNG, animated GIF and frame-level
+trace. This makes the causal manipulation legible without pretending that the animation is a
 recording of a living fly.
 
 ## References guiding the hypotheses
