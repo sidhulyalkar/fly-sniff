@@ -72,3 +72,33 @@ def test_trace_corridor_accepts_public_malecns_schema():
     assert list(edges.columns) == ["source", "target", "weight"]
     assert list(edges[["source", "target"]].itertuples(index=False, name=None)) == [(1, 2), (2, 3)]
     assert set(provenance.bodyId) == {1, 2, 3}
+
+
+def test_trace_persisted_edges_obey_min_weight_threshold():
+    annotations = pd.DataFrame(
+        {
+            "bodyId": [1, 2, 3],
+            "type": ["ORN", "PN", "DNa02"],
+        }
+    )
+    weights = pd.DataFrame(
+        {
+            "source": [1, 2, 1],
+            "target": [2, 3, 3],
+            "weight": [8.0, 9.0, 1.0],
+        }
+    )
+
+    nodes, edges, _ = trace_corridor(
+        annotations,
+        weights,
+        {1},
+        {3},
+        max_hops=2,
+        min_weight=5.0,
+        fanout_per_node=10,
+    )
+
+    assert set(nodes.bodyId) == {1, 2, 3}
+    assert (edges.weight >= 5.0).all()
+    assert (1, 3) not in set(edges[["source", "target"]].itertuples(index=False, name=None))
