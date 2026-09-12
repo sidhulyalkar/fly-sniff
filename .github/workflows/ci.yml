@@ -28,6 +28,7 @@ jobs:
           fly-sniff-train-dynamics --help
           fly-sniff-qualify-trained --help
           fly-sniff-redteam-training --help
+          fly-sniff-redteam-rewires --help
       - name: Ruff
         id: ruff
         continue-on-error: true
