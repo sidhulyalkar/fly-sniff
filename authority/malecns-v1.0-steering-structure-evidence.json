@@ -41,7 +41,8 @@
   },
   "interpretation": {
     "steering_scaffold": "MaleCNS v1.0 strongly reproduces the direct and indirect PFL3-to-DNa02 steering-side architecture and bilateral PFL2 gain-related input motifs expected from the cited steering literature.",
-    "odor_goal_chain": "FB5AB-to-hDeltaC is strong, but direct hDeltaC-to-PFL3 support is only 1-2 synapses per observed edge and vanishes at the preregistered threshold sweep from weight 3 upward. The odor-to-goal chain therefore remains unresolved and must not be sealed as a functional route.",
+    "odor_goal_chain": "FB5AB-to-hDeltaC is strong. Direct hDeltaC-to-PFL3 support is only 1-2 synapses per observed edge and vanishes from weight 3 upward, but Matheson et al. explicitly state that the biological pathways connecting hDeltaC to PFL outputs involve at least one additional cell type and collapse those relays in their model. The correct next test is therefore a preregistered multi-cell relay audit, not lowering the direct-edge threshold or declaring the published mechanism absent.",
+    "goal_relay_candidates": "The next sealed audit separately tests 2022 hDeltaA/hDeltaG/hDeltaH/hDeltaM local-relay candidates, FC2-to-PFL3 as an independent goal-interface positive control, and newer hDeltaK/PFG persistent-goal candidates. These hypothesis families must be reported separately rather than pooled after observing results.",
     "source_manifest": "The legacy ORN/^Or/^Ir regex set is not a valid receptor-family manifest. ORN and ^Or select the same 2,635 ORN_* rows and ^Ir selects zero; receptorType is null for the olfactory annotations in this release artifact."
   },
   "forbidden_inference": "Do not call this a measured functional circuit, neural firing, or a qualified odor-navigation controller. Exact edge sign/transmitter provenance, sensory-role sealing, E002 perturbations, matched rewiring, and frozen held-out behavioral evaluation remain required."
