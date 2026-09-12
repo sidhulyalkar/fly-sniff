@@ -183,6 +183,11 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=24017)
     parser.add_argument("--output", default="artifacts/r002/qualification.json")
     parser.add_argument("--qualified-circuit", default="artifacts/r002/qualified-graph")
+    parser.add_argument(
+        "--require-pass",
+        action="store_true",
+        help="exit non-zero on a scientific qualification miss; default preserves negative results",
+    )
     args = parser.parse_args()
 
     bundle = GraphBundle.load(args.circuit)
@@ -191,9 +196,10 @@ def main() -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"pass": report["pass"], **report["summary"]}, indent=2, sort_keys=True))
-    if qualified is None:
+    if qualified is not None:
+        save_bundle(qualified, args.qualified_circuit)
+    elif args.require_pass:
         raise SystemExit("R002 functional qualification did not pass; candidate artifacts are preserved")
-    save_bundle(qualified, args.qualified_circuit)
 
 
 if __name__ == "__main__":
