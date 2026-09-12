@@ -1,5 +1,4 @@
 import pytest
-
 from fly_sniff.type_page_authority import find_partner, parse_type_page
 
 
