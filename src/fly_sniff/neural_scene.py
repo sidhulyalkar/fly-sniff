@@ -95,7 +95,7 @@ def build_neural_scene(bundle: GraphBundle) -> dict[str, Any]:
     missing_position = 0
     raw_projection: list[tuple[float, float]] = []
     for row in bundle.nodes.itertuples(index=False):
-        body_id = int(getattr(row, "bodyId"))
+        body_id = int(row.bodyId)
         xyz = _coerce_xyz(getattr(row, position_column))
         if xyz is None:
             missing_position += 1
@@ -121,17 +121,17 @@ def build_neural_scene(bundle: GraphBundle) -> dict[str, Any]:
     positioned_ids = {node["body_id"] for node in positioned}
     edges: list[dict[str, Any]] = []
     for row in bundle.edges.itertuples(index=False):
-        source = int(getattr(row, "source"))
-        target = int(getattr(row, "target"))
+        source = int(row.source)
+        target = int(row.target)
         if source not in positioned_ids or target not in positioned_ids:
             continue
         edge = {
             "source": source,
             "target": target,
-            "weight": float(getattr(row, "weight")),
+            "weight": float(row.weight),
         }
         if hasattr(row, "sign"):
-            edge["sign"] = int(getattr(row, "sign"))
+            edge["sign"] = int(row.sign)
         edges.append(edge)
 
     qualification = (bundle.manifest or {}).get("qualification_status", "candidate")
@@ -147,8 +147,8 @@ def build_neural_scene(bundle: GraphBundle) -> dict[str, Any]:
         "claim_label": claim_label,
         "coordinate_source": position_column,
         "projection": "source anatomical x/z coordinates, robustly normalized",
-        "nodes_total": int(len(bundle.nodes)),
-        "nodes_positioned": int(len(positioned)),
+        "nodes_total": len(bundle.nodes),
+        "nodes_positioned": len(positioned),
         "nodes_missing_position": int(missing_position),
         "nodes": positioned,
         "edges": edges,
