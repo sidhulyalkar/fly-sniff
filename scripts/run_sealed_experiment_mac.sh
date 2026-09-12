@@ -26,13 +26,55 @@ if [[ ! -x .venv/bin/python ]]; then
   exit 5
 fi
 
+# Final mode never rebuilds, retrains, requalifies, or refreezes anything. It can
+# only consume artifacts from an already completed development run.
+if [[ "${RUN_FINAL:-0}" == "1" ]]; then
+  OUT="${FINAL_RUN_DIR:-}"
+  if [[ -z "$OUT" && -L results/sealed-experiment/LATEST ]]; then
+    OUT="results/sealed-experiment/$(readlink results/sealed-experiment/LATEST)"
+  fi
+  if [[ -z "$OUT" || ! -d "$OUT" ]]; then
+    echo "ERROR: set FINAL_RUN_DIR to the frozen run directory to consume." >&2
+    exit 6
+  fi
+  CANDIDATE_MANIFEST="$OUT/candidate-graph-v1.json"
+  MATCHED="$OUT/matched-training-v1.json"
+  TRAINED_E002="$OUT/trained-e002-v1.json"
+  FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
+  FINAL_LOCK="$OUT/final-run-consumed-v1.json"
+  FINAL_OUT="$OUT/final-v1"
+  for required in "$CANDIDATE_MANIFEST" "$MATCHED" "$TRAINED_E002" "$FINAL_MANIFEST"; do
+    if [[ ! -f "$required" ]]; then
+      echo "ERROR: frozen final prerequisite missing: $required" >&2
+      exit 7
+    fi
+  done
+  .venv/bin/fly-sniff-verify-candidate \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    --task-config configs/task_optimization_v1.json
+  .venv/bin/fly-sniff-sealed-final \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    "$FINAL_MANIFEST" \
+    "$MATCHED" \
+    "$TRAINED_E002" \
+    --config configs/task_optimization_v1.json \
+    --output "$FINAL_OUT" \
+    --final-lock "$FINAL_LOCK" \
+    --arm-final
+  echo "Final v1 consumed. Do not rerun this protocol."
+  echo "Result: $FINAL_OUT/gold_report.json"
+  exit 0
+fi
+
 E001_RUN="${E001_RUN:-}"
 if [[ -z "$E001_RUN" && -f results/e001/LATEST ]]; then
   E001_RUN="$(cat results/e001/LATEST)"
 fi
 if [[ -z "$E001_RUN" || ! -d "$E001_RUN" ]]; then
   echo "ERROR: set E001_RUN to the exact passing Mac E001 run directory." >&2
-  exit 6
+  exit 8
 fi
 
 STAGED_ROOT="$E001_RUN/staged-route-v1"
@@ -53,8 +95,6 @@ MATCHED="$OUT/matched-training-v1.json"
 INTACT="$OUT/intact-training-v1.json"
 TRAINED_E002="$OUT/trained-e002-v1.json"
 FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
-FINAL_LOCK="$OUT/final-run-consumed-v1.json"
-FINAL_OUT="$OUT/final-v1"
 
 for required in \
   "$STAGED_ROOT/staged_trace_report.json" \
@@ -62,7 +102,7 @@ for required in \
   "$ROLE_REVIEW"; do
   if [[ ! -f "$required" ]]; then
     echo "ERROR: missing required E001 artifact: $required" >&2
-    exit 7
+    exit 9
   fi
 done
 
@@ -163,7 +203,7 @@ The candidate graph, sign authority, sensory normalization, matched topology tra
 optimizer budget, CEM replay, rewire diagnostics, shortcut diagnostics, trained E002,
 and final seed manifest are frozen under commit $(git rev-parse HEAD).
 
-No held-out or OOD final episode has been evaluated by this script unless RUN_FINAL=1.
+No held-out or OOD final episode has been evaluated.
 
 Candidate manifest: $CANDIDATE_MANIFEST
 Matched training: $MATCHED
@@ -171,25 +211,8 @@ Trained E002: $TRAINED_E002
 Final manifest: $FINAL_MANIFEST
 EOF
 
-if [[ "${RUN_FINAL:-0}" != "1" ]]; then
-  echo
-  echo "Development lane complete. Final namespace remains untouched."
-  echo "Review: $OUT/READY_FOR_FINAL.md"
-  echo "When ready to consume final exactly once:"
-  echo "  RUN_FINAL=1 BUNDLE='$BUNDLE' E001_RUN='$E001_RUN' bash scripts/run_sealed_experiment_mac.sh"
-  exit 0
-fi
-
-.venv/bin/fly-sniff-sealed-final \
-  "$BUNDLE" \
-  "$CANDIDATE_MANIFEST" \
-  "$FINAL_MANIFEST" \
-  "$MATCHED" \
-  "$TRAINED_E002" \
-  --config configs/task_optimization_v1.json \
-  --output "$FINAL_OUT" \
-  --final-lock "$FINAL_LOCK" \
-  --arm-final
-
-echo "Final v1 consumed. Do not rerun this protocol."
-echo "Result: $FINAL_OUT/gold_report.json"
+echo
+echo "Development lane complete. Final namespace remains untouched."
+echo "Review: $OUT/READY_FOR_FINAL.md"
+echo "When ready to consume this exact frozen run once:"
+echo "  RUN_FINAL=1 FINAL_RUN_DIR='$OUT' BUNDLE='$BUNDLE' bash scripts/run_sealed_experiment_mac.sh"
