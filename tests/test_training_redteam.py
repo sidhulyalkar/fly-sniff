@@ -13,6 +13,7 @@ from fly_sniff.training import (
     default_parameters,
     make_training_seed_split,
     optimize_dynamics,
+    optimizer_budget_receipt,
     train_matched_control_cohort,
 )
 
@@ -66,25 +67,50 @@ def _summary(seeds, objective=0.5):
 def _training_report(bundle, config):
     params = default_parameters(config)
     train, validation = make_training_seed_split(config)
-    return {
+    budget = optimizer_budget_receipt(
+        config,
+        train_seed_count=len(train),
+        validation_seed_count=len(validation),
+    )
+    baseline_validation = {"objective": 0.50, "success_rate": 0.50}
+    trained_validation = {"objective": 0.52, "success_rate": 0.50}
+    report = {
         "protocol": config["protocol"],
         "training_config_sha256": canonical_sha256(config),
         "graph_sha256": bundle.replay_fingerprint(),
-        "final_test_namespace_touched": False,
+        "sensory_interface": config["connectome_sensory_interface"],
+        "train_seeds": train,
+        "validation_seeds": validation,
         "train_seed_sha256": canonical_sha256(train),
         "validation_seed_sha256": canonical_sha256(validation),
         "train_seed_count": len(train),
         "validation_seed_count": len(validation),
+        "final_test_namespace_touched": False,
+        "optimizer_budget": budget,
+        "optimizer_budget_sha256": canonical_sha256(budget),
+        "baseline_parameters": default_parameters(config).to_dict(),
+        "baseline_validation": baseline_validation,
+        "trained_validation": trained_validation,
         "trained_parameters": params.to_dict(),
         "trained_parameter_sha256": canonical_sha256(params.to_dict()),
         "development_gate_passed": True,
         "validation_objective_delta": 0.02,
         "validation_success_rate_delta": 0.0,
     }
+    report["audit_receipt_sha256"] = canonical_sha256(
+        {
+            "graph_sha256": report["graph_sha256"],
+            "training_config_sha256": report["training_config_sha256"],
+            "train_seed_sha256": report["train_seed_sha256"],
+            "validation_seed_sha256": report["validation_seed_sha256"],
+            "trained_parameter_sha256": report["trained_parameter_sha256"],
+            "optimizer_budget_sha256": report["optimizer_budget_sha256"],
+        }
+    )
+    return report
 
 
 def test_candidate_selection_never_uses_validation_inside_cem(monkeypatch):
-    """Validation may gate the frozen result, but it must never rank CEM candidates."""
     config = copy.deepcopy(_config())
     config["optimizer"].update(
         {"population": 4, "generations": 2, "episodes_per_candidate": 3}
@@ -101,8 +127,6 @@ def test_candidate_selection_never_uses_validation_inside_cem(monkeypatch):
 
     monkeypatch.setattr(training, "evaluate_parameters", fake_evaluate)
     optimize_dynamics(bundle, config)
-
-    # baseline train, baseline validation, CEM candidates, trained train, trained validation
     generation_calls = calls[2:-2]
     assert generation_calls
     assert all(set(batch) <= train_set for batch in generation_calls)
@@ -119,7 +143,6 @@ def test_development_and_final_seed_namespaces_are_disjoint_by_construction():
 
 
 def test_observation_api_exposes_no_direct_position_source_or_wall_state():
-    """Guard the controller boundary against direct source/boundary-coordinate leakage."""
     forbidden = {
         "x",
         "y",
@@ -146,56 +169,19 @@ def test_controller_does_not_use_world_heading_when_body_sensory_inputs_match():
     assert a.activity.tolist() == pytest.approx(b.activity.tolist())
 
 
-def test_v1_matched_control_contract_refuses_fewer_than_eight_rewires(monkeypatch):
-    """A 2-rewire run must not be labelable as the frozen v1 matched cohort."""
-    config = _config()
-    bundle = _bundle()
-
-    monkeypatch.setattr(
-        training,
-        "optimize_dynamics",
-        lambda *args, **kwargs: {
-            "trained_validation": {
-                "objective": 0.5,
-                "success_rate": 0.5,
-                "mean_spl": 0.5,
-            }
-        },
-    )
-    monkeypatch.setattr(
-        training,
-        "degree_preserving_rewire",
-        lambda bundle, seed, swaps_per_edge: GraphBundle(
-            bundle.nodes.copy(),
-            bundle.edges.copy(),
-            copy.deepcopy(bundle.roles),
-            {
-                **(bundle.manifest or {}),
-                "rewire": {
-                    "mixing_complete": True,
-                    "accepted_swaps": 0,
-                    "target_swaps": 0,
-                    "swaps_per_edge": swaps_per_edge,
-                },
-            },
-        ),
-    )
-
-    with pytest.raises(ValueError, match="eight|rewire_count|frozen"):
-        train_matched_control_cohort(bundle, config, rewire_count=2)
+def test_v1_matched_control_contract_refuses_fewer_than_eight_rewires():
+    with pytest.raises(ValueError, match="eight|exactly 8|rewire_count|frozen"):
+        train_matched_control_cohort(_bundle(), _config(), rewire_count=2)
 
 
-def test_v1_matched_control_contract_refuses_changed_swap_budget(monkeypatch):
-    """The null topology budget is part of the frozen comparison, not a CLI tuning knob."""
-    config = _config()
-    bundle = _bundle()
-    monkeypatch.setattr(training, "optimize_dynamics", lambda *args, **kwargs: {})
+def test_v1_matched_control_contract_refuses_changed_swap_budget():
     with pytest.raises(ValueError, match="swaps_per_edge|frozen|8"):
-        train_matched_control_cohort(bundle, config, rewire_count=8, swaps_per_edge=1)
+        train_matched_control_cohort(
+            _bundle(), _config(), rewire_count=8, swaps_per_edge=1
+        )
 
 
 def test_rewire_completion_cannot_be_asserted_by_boolean_only():
-    """A spoofed mixing_complete flag must not override contradictory swap receipts."""
     bundle = _bundle()
     bundle.manifest["rewire"] = {
         "mixing_complete": True,
@@ -203,13 +189,13 @@ def test_rewire_completion_cannot_be_asserted_by_boolean_only():
         "target_swaps": 100,
         "attempted_swaps": 1,
         "swaps_per_edge": 8,
+        "exact_in_out_degree_preserved": True,
     }
     with pytest.raises(RuntimeError, match="rewire|swap|mix"):
         training._require_complete_rewire(bundle)
 
 
 def test_optimizer_rejects_role_or_topology_mutation_during_training(monkeypatch):
-    """The graph identity must be sealed before optimization, not fingerprinted only afterward."""
     config = copy.deepcopy(_config())
     config["optimizer"].update(
         {"population": 4, "generations": 1, "episodes_per_candidate": 2}
@@ -230,7 +216,6 @@ def test_optimizer_rejects_role_or_topology_mutation_during_training(monkeypatch
 
 
 def test_sensory_and_steering_roles_must_be_disjoint_to_make_lesion_interpretable():
-    """Direct sensory injection into a steering-role neuron would bypass the edge lesion."""
     bundle = _bundle(qualified=False, overlap_sensory_and_steering=True)
     params = default_parameters(_config())
     with pytest.raises(ValueError, match="overlap|disjoint|steer"):
@@ -256,13 +241,11 @@ def test_objective_rejects_nonfinite_or_out_of_contract_components():
 
 
 def test_cem_ties_have_a_canonical_candidate_order(monkeypatch):
-    """Equal scores must not delegate scientific selection to an unstable sort tie."""
     config = copy.deepcopy(_config())
     config["optimizer"].update(
         {"population": 4, "generations": 1, "episodes_per_candidate": 2}
     )
     bundle = _bundle()
-
     monkeypatch.setattr(
         training,
         "evaluate_parameters",
@@ -270,35 +253,34 @@ def test_cem_ties_have_a_canonical_candidate_order(monkeypatch):
     )
     report = optimize_dynamics(bundle, config)
     assert report["history"][0]["best_parameters"] == default_parameters(config).to_dict()
+    assert (
+        report["history"][0]["candidate_tie_break"]
+        == "descending_objective_then_ascending_candidate_index"
+    )
 
 
 def test_training_report_seed_receipts_are_recomputed_not_trusted():
-    """final_test_namespace_touched=False is not itself evidence of no peeking."""
     config = _config()
     bundle = _bundle()
     report = _training_report(bundle, config)
     report["train_seed_sha256"] = "forged"
     report["validation_seed_sha256"] = "forged"
-
     with pytest.raises(ValueError, match="seed|split|receipt|hash"):
         tq.parameters_from_training_report(report, bundle, config)
 
 
 def test_training_report_development_gate_is_recomputed_not_trusted():
-    """A boolean gate cannot be allowed to contradict the sealed validation deltas."""
     config = _config()
     bundle = _bundle()
     report = _training_report(bundle, config)
     report["development_gate_passed"] = True
     report["validation_objective_delta"] = -1.0
     report["validation_success_rate_delta"] = -1.0
-
-    with pytest.raises(ValueError, match="development|gate|validation"):
+    with pytest.raises(ValueError, match="development|gate|validation|recomputed"):
         tq.parameters_from_training_report(report, bundle, config)
 
 
 def test_optimizer_report_seals_an_auditable_compute_budget(monkeypatch):
-    """Equal-budget claims need a machine-checkable episode/evaluation receipt."""
     config = copy.deepcopy(_config())
     config["optimizer"].update(
         {"population": 4, "generations": 2, "episodes_per_candidate": 3}
@@ -316,43 +298,26 @@ def test_optimizer_report_seals_an_auditable_compute_budget(monkeypatch):
     assert receipt["episodes_per_candidate"] == 3
     assert receipt["candidate_evaluations"] == 8
     assert receipt["candidate_episodes"] == 24
+    assert report["optimizer_budget_sha256"] == canonical_sha256(receipt)
 
 
-def test_matched_controls_use_identical_optimizer_config_for_every_topology(monkeypatch):
-    """Positive sentry: every topology must see the same frozen optimizer object."""
-    config = _config()
-    bundle = _bundle()
-    seen_hashes = []
-
-    def fake_optimize(bundle, config, **kwargs):
-        seen_hashes.append(canonical_sha256(config))
-        return {
-            "trained_validation": {
-                "objective": 0.5,
-                "success_rate": 0.5,
-                "mean_spl": 0.5,
-            }
-        }
-
-    def fake_rewire(bundle, seed, swaps_per_edge):
-        manifest = copy.deepcopy(bundle.manifest) or {}
-        manifest["rewire"] = {
-            "mixing_complete": True,
-            "accepted_swaps": 0,
-            "target_swaps": 0,
-            "attempted_swaps": 0,
-            "swaps_per_edge": swaps_per_edge,
-        }
-        return GraphBundle(
-            bundle.nodes.copy(),
-            bundle.edges.copy(),
-            copy.deepcopy(bundle.roles),
-            manifest,
-        )
-
-    monkeypatch.setattr(training, "optimize_dynamics", fake_optimize)
-    monkeypatch.setattr(training, "degree_preserving_rewire", fake_rewire)
-    monkeypatch.setattr(training, "_require_complete_rewire", lambda bundle: None)
-    train_matched_control_cohort(bundle, config, rewire_count=8, swaps_per_edge=8)
-    assert len(seen_hashes) == 10  # intact + 8 rewires + lesion
-    assert len(set(seen_hashes)) == 1
+def test_matched_controls_require_identical_optimizer_budget_receipts():
+    budget = {
+        "protocol": "task-optimization-budget-v1",
+        "population": 4,
+        "generations": 2,
+        "episodes_per_candidate": 3,
+        "candidate_evaluations": 8,
+        "candidate_episodes": 24,
+        "full_pool_evaluations": 4,
+        "full_pool_episodes": 20,
+        "total_parameter_evaluations": 12,
+        "total_episode_evaluations": 44,
+    }
+    a = {"optimizer_budget": budget, "optimizer_budget_sha256": canonical_sha256(budget)}
+    b = copy.deepcopy(a)
+    assert training._require_identical_optimizer_budgets([a, b]) == canonical_sha256(budget)
+    b["optimizer_budget"] = {**budget, "candidate_episodes": 23}
+    b["optimizer_budget_sha256"] = canonical_sha256(b["optimizer_budget"])
+    with pytest.raises(RuntimeError, match="unequal compute budgets"):
+        training._require_identical_optimizer_budgets([a, b])
