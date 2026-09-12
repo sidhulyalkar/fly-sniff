@@ -1,0 +1,66 @@
+{
+  "authority_kind": "type-level-transmitter-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "evidence-only-not-synapse-specific-physiology",
+  "model_sign_rule": {
+    "ACh": 1,
+    "GABA": -1,
+    "Glu": 0,
+    "other_or_unclear": 0,
+    "warning": "This is an explicit modeling convention. Predicted transmitter identity is not equivalent to a measured postsynaptic sign, and glutamatergic sign is left unresolved here."
+  },
+  "types": {
+    "DNa02": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": 0.946,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/DNa02.html"
+    },
+    "DNa03": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": 0.958,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/DNa03.html"
+    },
+    "LAL010": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": 0.953,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/LAL010.html"
+    },
+    "FB5AB": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": 0.932,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/FB5AB.html"
+    },
+    "PFL3": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": null,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/PFL3.html",
+      "note": "MaleCNS Cell Type Explorer connectivity tables identify PFL3 partners as ACh; confidence was not independently sealed in this tranche."
+    },
+    "PFL2": {
+      "predicted_neurotransmitter": "ACh",
+      "confidence": null,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/PFL2.html",
+      "note": "MaleCNS Cell Type Explorer connectivity tables identify PFL2 partners as ACh; confidence was not independently sealed in this tranche."
+    },
+    "MBON32": {
+      "predicted_neurotransmitter": "GABA",
+      "confidence": 0.708,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/MBON32.html"
+    }
+  },
+  "steering_scaffold_sign_scope": {
+    "PFL3->DNa02": 1,
+    "PFL3->DNa03": 1,
+    "PFL3->LAL010": 1,
+    "DNa03->DNa02": 1,
+    "LAL010->DNa02": 1,
+    "basis": "All presynaptic types in this restricted excitatory steering scaffold are predicted cholinergic at the type level."
+  },
+  "not_yet_sealed": [
+    "hDeltaC transmitter confidence in the exact local artifact",
+    "contralateral inhibitory steering intermediates",
+    "synapse-specific receptor-dependent sign",
+    "sensory-pathway sign provenance"
+  ],
+  "forbidden_inference": "Do not treat these type-level predictions as measured synaptic physiology or use them to claim the full see-saw circuit is complete."
+}
