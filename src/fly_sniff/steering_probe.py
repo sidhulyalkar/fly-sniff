@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,6 +20,34 @@ class SteeringProbeResult:
     laterality_correct: bool
     deterministic_error: float
     pfl3_cut_peak_turn: float
+
+
+def _sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _bundle_provenance(bundle_dir: str | Path) -> dict:
+    root = Path(bundle_dir)
+    required = ("nodes.parquet", "edges.parquet", "roles.json", "manifest.json")
+    missing = [name for name in required if not (root / name).is_file()]
+    if missing:
+        raise ValueError(f"steering scaffold bundle missing provenance files: {missing}")
+    manifest = json.loads((root / "manifest.json").read_text())
+    return {
+        "path": str(root),
+        "files": {
+            name: {
+                "sha256": _sha256_file(root / name),
+                "bytes": (root / name).stat().st_size,
+            }
+            for name in required
+        },
+        "manifest": manifest,
+    }
 
 
 def _run_role(
@@ -166,7 +195,7 @@ def probe_steering_scaffold(
 
     passed = all(bool(gate["passed"]) for gate in gates)
     return {
-        "protocol": "E002a-steering-scaffold-propagation-v1",
+        "protocol": "E002a-steering-scaffold-propagation-v2",
         "dataset": (bundle.manifest or {}).get("dataset", "unknown"),
         "passed": passed,
         "gate_count": len(gates),
@@ -187,13 +216,15 @@ def main() -> None:
         description="Run the isolated E002a modeled-propagation probe on a steering scaffold"
     )
     parser.add_argument("bundle")
-    parser.add_argument("--output", default="results/e002/steering-scaffold-v1.json")
+    parser.add_argument("--output", default="results/e002/steering-scaffold-v2.json")
     parser.add_argument("--seed", type=int, default=13013)
     parser.add_argument("--steps", type=int, default=32)
     args = parser.parse_args()
 
     bundle = GraphBundle.load(args.bundle)
     report = probe_steering_scaffold(bundle, seed=args.seed, steps=args.steps)
+    report["run_config"] = {"seed": int(args.seed), "steps": int(args.steps)}
+    report["input_bundle"] = _bundle_provenance(args.bundle)
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
