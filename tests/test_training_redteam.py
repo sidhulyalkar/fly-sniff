@@ -101,8 +101,29 @@ def _training_report(bundle, config):
         train_seed_count=len(train),
         validation_seed_count=len(validation),
     )
-    baseline_validation = {"objective": 0.50, "success_rate": 0.50}
-    trained_validation = {"objective": 0.52, "success_rate": 0.50}
+    baseline_validation = {"n": len(validation), "objective": 0.50, "success_rate": 0.50}
+    trained_validation = {"n": len(validation), "objective": 0.52, "success_rate": 0.50}
+    history = []
+    for generation in range(int(config["optimizer"]["generations"])):
+        count = int(config["optimizer"]["episodes_per_candidate"])
+        batch = train[generation : generation + count]
+        history.append(
+            {
+                "generation": generation,
+                "seed_batch": batch,
+                "seed_batch_sha256": canonical_sha256(batch),
+                "candidate_receipts": [
+                    {
+                        "index": index,
+                        "parameter_sha256": canonical_sha256(
+                            {"generation": generation, "candidate": index}
+                        ),
+                        "objective": 0.5,
+                    }
+                    for index in range(int(config["optimizer"]["population"]))
+                ],
+            }
+        )
     report = {
         "protocol": config["protocol"],
         "training_config_sha256": canonical_sha256(config),
@@ -118,13 +139,16 @@ def _training_report(bundle, config):
         "optimizer_budget": budget,
         "optimizer_budget_sha256": canonical_sha256(budget),
         "baseline_parameters": default_parameters(config).to_dict(),
+        "baseline_train": {"n": len(train)},
         "baseline_validation": baseline_validation,
+        "trained_train": {"n": len(train)},
         "trained_validation": trained_validation,
         "trained_parameters": params.to_dict(),
         "trained_parameter_sha256": canonical_sha256(params.to_dict()),
         "development_gate_passed": True,
         "validation_objective_delta": 0.02,
         "validation_success_rate_delta": 0.0,
+        "history": history,
     }
     report["audit_receipt_sha256"] = canonical_sha256(
         {
