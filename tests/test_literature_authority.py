@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -8,6 +9,12 @@ def _load_json(relative_path: str) -> dict:
     return json.loads((ROOT / relative_path).read_text())
 
 
+def _git_blob_sha1(path: Path) -> str:
+    data = path.read_bytes()
+    header = f"blob {len(data)}\0".encode()
+    return hashlib.sha1(header + data).hexdigest()
+
+
 def test_hdelta_c_addendum_is_part_of_literature_authority() -> None:
     authority = _load_json("authority/olfactory-navigation-literature-v1.json")
     by_key = {entry["key"]: entry for entry in authority["evidence"]}
@@ -15,6 +22,15 @@ def test_hdelta_c_addendum_is_part_of_literature_authority() -> None:
     addendum = by_key["matheson_2024_hdelta_addendum"]
     assert addendum["doi"] == "10.1038/s41467-024-46225-8"
     assert "hDeltaK" in " ".join(addendum["claims_used_as_constraints"])
+
+
+def test_role_policy_is_bound_to_current_literature_authority() -> None:
+    role_policy = _load_json("configs/role_review_v1.json")
+    binding = role_policy["literature_authority"]
+    authority_path = ROOT / binding["path"]
+
+    assert authority_path.is_file()
+    assert _git_blob_sha1(authority_path) == binding["git_blob_sha1"]
 
 
 def test_hdelta_c_is_not_promoted_to_proven_functional_integrator() -> None:
