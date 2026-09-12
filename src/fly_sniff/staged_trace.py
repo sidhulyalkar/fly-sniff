@@ -92,6 +92,78 @@ def _stage_report(
     }
 
 
+def _retained_seed_sets(provenance: pd.DataFrame) -> dict[str, set[int]]:
+    if provenance.empty:
+        return {"source": set(), "target": set()}
+    source_mask = provenance.is_source_seed.astype(bool)
+    target_mask = provenance.is_target_seed.astype(bool)
+    return {
+        "source": set(provenance.loc[source_mask, "bodyId"].astype(int)),
+        "target": set(provenance.loc[target_mask, "bodyId"].astype(int)),
+    }
+
+
+def _audit_handoffs(
+    handoffs: list[dict[str, Any]],
+    retained_seeds: dict[str, dict[str, set[int]]],
+) -> dict[str, Any]:
+    reports: list[dict[str, Any]] = []
+    for handoff in handoffs:
+        name = str(handoff["name"])
+        members = handoff.get("members", [])
+        if len(members) < 2:
+            raise ValueError(f"handoff {name!r} requires at least two members")
+        member_sets: list[set[int]] = []
+        member_counts: list[dict[str, Any]] = []
+        for member in members:
+            stage_name = str(member["stage"])
+            role = str(member["role"])
+            if stage_name not in retained_seeds:
+                raise ValueError(f"handoff {name!r} references unknown stage {stage_name!r}")
+            if role not in {"source", "target"}:
+                raise ValueError(
+                    f"handoff {name!r} role must be 'source' or 'target', found {role!r}"
+                )
+            values = retained_seeds[stage_name][role]
+            member_sets.append(values)
+            member_counts.append(
+                {"stage": stage_name, "role": role, "retained_seed_count": len(values)}
+            )
+        shared = set.intersection(*member_sets)
+        minimum = int(handoff.get("min_shared_body_ids", 1))
+        if minimum < 1:
+            raise ValueError(f"handoff {name!r} min_shared_body_ids must be >= 1")
+        required = bool(handoff.get("required_for_primary_hypothesis", True))
+        reports.append(
+            {
+                "name": name,
+                "required_for_primary_hypothesis": required,
+                "members": member_counts,
+                "min_shared_body_ids": minimum,
+                "shared_body_id_count": len(shared),
+                "shared_body_ids": sorted(shared),
+                "passed": len(shared) >= minimum,
+                "rationale": handoff.get("rationale", ""),
+                "warning": (
+                    "Body-ID continuity is structural evidence only; sharing a retained seed across "
+                    "stages does not establish physiological integration or information flow."
+                ),
+            }
+        )
+
+    required_reports = [
+        report for report in reports if report["required_for_primary_hypothesis"]
+    ]
+    return {
+        "protocol": "staged-handoff-audit-v1",
+        "handoff_count": len(reports),
+        "required_handoff_count": len(required_reports),
+        "required_handoff_pass_count": sum(report["passed"] for report in required_reports),
+        "all_required_handoffs_pass": all(report["passed"] for report in required_reports),
+        "handoffs": reports,
+    }
+
+
 def run_staged_trace(
     annotations: pd.DataFrame,
     weights: pd.DataFrame,
@@ -100,16 +172,13 @@ def run_staged_trace(
     *,
     input_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run independent structural corridor searches for an interpretable route audit.
+    """Run staged structural searches plus exact body-ID handoff checks.
 
-    Each stage is deliberately evaluated independently. An empty upstream stage
-    therefore does not prevent downstream structural questions from being
-    inspected, and no stage is promoted from structural discovery to functional
-    evidence by this utility.
-
-    Exact regex-matched seed identities are persisted for every stage. Candidate
-    corridors are immediately checked with the structural-corridor audit so a
-    strict E001 run cannot pass merely because files were produced.
+    Each stage is evaluated independently so a missing upstream stage cannot hide
+    downstream structural information. Exact regex-matched seed identities are
+    persisted, every candidate corridor is structurally audited, and configured
+    handoffs require exact retained body-ID overlap between stages. None of these
+    checks promote structural discovery into physiological or functional evidence.
     """
     stages = config.get("stages", [])
     if not stages:
@@ -130,6 +199,7 @@ def run_staged_trace(
     reports: list[dict[str, Any]] = []
     aggregate_nodes: list[pd.DataFrame] = []
     aggregate_edges: list[pd.DataFrame] = []
+    retained_seeds: dict[str, dict[str, set[int]]] = {}
 
     for stage in stages:
         name = stage["name"]
@@ -176,12 +246,10 @@ def run_staged_trace(
         edges.to_parquet(stage_dir / "edges.parquet", index=False)
         provenance.to_csv(stage_dir / "path_provenance.csv", index=False)
 
-        if provenance.empty:
-            retained_source_count = 0
-            retained_target_count = 0
-        else:
-            retained_source_count = int(provenance.is_source_seed.astype(bool).sum())
-            retained_target_count = int(provenance.is_target_seed.astype(bool).sum())
+        stage_retained = _retained_seed_sets(provenance)
+        retained_seeds[name] = stage_retained
+        retained_source_count = len(stage_retained["source"])
+        retained_target_count = len(stage_retained["target"])
 
         report = _stage_report(
             stage=stage,
@@ -235,6 +303,11 @@ def run_staged_trace(
             index=False,
         )
 
+    handoff_audit = _audit_handoffs(config.get("handoffs", []), retained_seeds)
+    (output / "handoff_audit.json").write_text(
+        json.dumps(handoff_audit, indent=2, sort_keys=True) + "\n"
+    )
+
     candidate_count = sum(
         report["status"] == "candidate_corridor" for report in reports
     )
@@ -249,10 +322,11 @@ def run_staged_trace(
         and report["structural_audit_passed"] is True
         for report in required_reports
     )
-    primary_ready = required_audit_pass_count == len(required_reports)
+    required_stages_ready = required_audit_pass_count == len(required_reports)
+    primary_ready = required_stages_ready and handoff_audit["all_required_handoffs_pass"]
 
     summary = {
-        "protocol": "staged-structural-discovery-v2",
+        "protocol": "staged-structural-discovery-v3",
         "dataset": config.get("dataset", "unspecified"),
         "dataset_release": config.get("dataset_release"),
         "purpose": config.get("purpose", "structural discovery"),
@@ -264,11 +338,17 @@ def run_staged_trace(
         "required_stage_count": len(required_reports),
         "required_candidate_stage_count": required_candidate_count,
         "required_stage_audit_pass_count": required_audit_pass_count,
-        "all_required_stages_have_audited_candidate_corridors": primary_ready,
+        "all_required_stages_have_audited_candidate_corridors": required_stages_ready,
+        "handoff_audit_artifact": "handoff_audit.json",
+        "required_handoff_count": handoff_audit["required_handoff_count"],
+        "required_handoff_pass_count": handoff_audit["required_handoff_pass_count"],
+        "all_required_handoffs_pass": handoff_audit["all_required_handoffs_pass"],
+        "primary_structural_hypothesis_passed": primary_ready,
+        "handoffs": handoff_audit["handoffs"],
         "stages": reports,
         "warning": (
-            "Structural discovery only. A candidate corridor and a passing structural audit are "
-            "not evidence of physiological influence or a qualified MaleCNS controller."
+            "Structural discovery only. Candidate corridors, passing audits, and exact body-ID "
+            "handoffs do not establish physiological influence or a qualified MaleCNS controller."
         ),
     }
     (output / "staged_trace_report.json").write_text(
@@ -293,8 +373,8 @@ def main() -> None:
         "--strict",
         action="store_true",
         help=(
-            "exit non-zero unless every primary required stage yields a candidate corridor "
-            "that passes the structural audit"
+            "exit non-zero unless every primary required stage passes its structural audit "
+            "and every required cross-stage body-ID handoff passes"
         ),
     )
     args = parser.parse_args()
@@ -318,7 +398,7 @@ def main() -> None:
         input_provenance=input_provenance,
     )
     print(json.dumps(summary, indent=2))
-    if args.strict and not summary["all_required_stages_have_audited_candidate_corridors"]:
+    if args.strict and not summary["primary_structural_hypothesis_passed"]:
         raise SystemExit(2)
 
 
