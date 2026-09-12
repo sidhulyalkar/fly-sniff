@@ -1,6 +1,6 @@
 import pytest
-from fly_sniff.type_page_authority import find_partner, parse_type_page
 
+from fly_sniff.type_page_authority import find_partner, parse_type_page
 
 PAGE = '''<!doctype html>
 <h1 id=top>DNp01<span class=soma-side>(L)</span></h1>
