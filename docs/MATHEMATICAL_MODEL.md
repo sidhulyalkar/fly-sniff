@@ -19,7 +19,7 @@ y_{t+\Delta t} &= y_t + v s_t\sin(\theta_{t+\Delta t})\Delta t.
 \end{aligned}
 \]
 
-Arena boundaries reflect heading after position is clipped back to the boundary. This is benchmark geometry, not a wall-interaction model.
+The coordinate convention is explicit: **positive turn is left/counterclockwise** and negative turn is right/clockwise. Arena boundaries reflect heading after position is clipped back to the boundary. This is benchmark geometry, not a wall-interaction model.
 
 ## 2. Stochastic puff plume
 
@@ -90,12 +90,12 @@ Thus at heading zero (+x), the left antenna is at +y and the right antenna is at
 
 ## 4. Phenomenological odor transduction
 
-At each antenna, concentration \(c\) is first scaled and saturates through
+At each antenna, concentration \(c_t\) is first scaled and saturates through
 
 \[
-r = gc,
+r_t = g c_t,
 \qquad
-s=\frac{r}{K+r},
+s_t=\frac{r_t}{K+r_t},
 \]
 
 where \(g\) is `concentration_gain` and \(K\) is `concentration_half_sat`.
@@ -106,20 +106,20 @@ Adaptation is modeled as a first-order state
 \tau\frac{da}{dt}=s-a.
 \]
 
-For piecewise-constant drive during one simulator step, the implementation uses the exact zero-order-hold update
+The observation at time \(t\) is calculated from the current saturated drive and the adaptation state **carried into** that sample:
 
 \[
-a_{t+\Delta t}=a_t+\left(1-e^{-\Delta t/\tau}\right)(s-a_t).
+y_t=\operatorname{clip}_{[0,1]}
+\left(0.72s_t+0.28\max(s_t-a_t,0)\right).
 \]
 
-The reported antenna signal is
+Only after emitting that observation is the adaptation state advanced. For piecewise-constant drive during one simulator step, the implementation uses the exact zero-order-hold update
 
 \[
-y=\operatorname{clip}_{[0,1]}
-\left(0.72s+0.28\max(s-a,0)\right).
+a_{t+\Delta t}=a_t+\left(1-e^{-\Delta t/\tau}\right)(s_t-a_t).
 \]
 
-This final mixture is an explicit **phenomenological benchmark transduction**, not a receptor-kinetics model and not measured ORN firing.
+This ordering avoids using a future-updated adaptation state in the current sensory observation. The final mixture is an explicit **phenomenological benchmark transduction**, not a receptor-kinetics model and not measured ORN firing.
 
 ### Observation idempotence
 
@@ -146,6 +146,8 @@ It uses:
 - right-minus-left odor difference as a small bilateral steering bias;
 - a simple exponentially weighted odor memory.
 
+A stronger right antenna signal produces a negative/rightward correction and a stronger left antenna signal produces a positive/leftward correction. Its `dn_left` and `dn_right` diagnostics are display-only proxy motor channels aligned with that convention. They are not descending-neuron recordings.
+
 All constants in this controller are engineering parameters for a development baseline. They must not be described as fitted neural physiology.
 
 ## 7. Structural MaleCNS tracing
@@ -164,9 +166,86 @@ A retained node must be able to participate in a bounded source-to-target corrid
 - satisfy `weight >= min_weight`;
 - satisfy the bounded source-to-target depth criterion.
 
-Graph distance, degree, and structural edge weight are **not neural activity, functional importance, or causal influence**.
+The report distinguishes regex-matched **input seeds** from seeds that actually survive into the bounded corridor. Graph distance, degree, and structural edge weight are **not neural activity, functional importance, or causal influence**.
 
-## 8. Evidence classes for visualization
+## 8. Explicit MaleCNS rate-model assumption
+
+`MaleCNSRateController` is a modeled dynamical system laid over a reviewed structural graph. It is not a reconstruction of membrane voltage, spike timing, calcium activity, or measured physiology.
+
+### Signed structural matrix
+
+For a directed structural edge from presynaptic neuron \(j\) to postsynaptic neuron \(i\), the raw modeled coefficient is
+
+\[
+q_{ij}=\operatorname{sign}_{ij}\log(1+w_{ij}),
+\]
+
+where \(w_{ij}>0\) is the measured structural synapse-count weight and `sign` is the explicit presynaptic sign policy. Sign 0 means unresolved and therefore contributes zero drive rather than being silently treated as excitatory or inhibitory.
+
+For numerical stability, incoming coefficients are normalized per postsynaptic neuron:
+
+\[
+W_{ij}=\frac{q_{ij}}{\sum_k |q_{ik}|}
+\]
+
+when the denominator is nonzero. This normalization preserves relative signed input structure within a postsynaptic row but **does not preserve absolute synaptic drive across neurons**. It is an engineering modeling choice and must not be described as physiological synaptic strength.
+
+### Modeled dynamics
+
+Given modeled activity vector \(a_t\) and external role drive \(u_t\), define
+
+\[
+p_t=\tanh\left(g(Wa_t+u_t)\right).
+\]
+
+The state is treated as a first-order relaxation toward this nonlinear proposal:
+
+\[
+\tau_a\frac{da}{dt}=p-a.
+\]
+
+For one controller step, the implementation uses
+
+\[
+\rho=e^{-\Delta t/\tau_a},
+\qquad
+a_{t+\Delta t}=\rho a_t+(1-\rho)p_t.
+\]
+
+The default \(\tau_a\) was chosen to reproduce the historical v0 per-step retention of 0.82 at \(\Delta t=0.05\,\mathrm{s}\). It is therefore a compatibility-preserving engineering parameter, **not a fitted neural time constant**. The explicit time-constant form ensures that the same constant-input relaxation is consistent when simulation `dt` changes.
+
+### Sensory injection
+
+The benchmark adapter injects recorded behavioral variables into named roles:
+
+- `odor_left`, `odor_right` receive the corresponding modeled antenna signal;
+- `wind_forward`, `wind_backward`, `wind_left`, `wind_right` receive rectified components of body-frame airflow.
+
+This mapping is an engineered interface between the plume benchmark and reviewed body-ID roles. It is not evidence that each named neuron receives those variables with unit gain in vivo.
+
+### Steering readout and laterality
+
+Let \(L\) and \(R\) be the mean modeled activities of `steer_left` and `steer_right`. The current steering readout is
+
+\[
+u_t=\tanh\left(k_{turn}(L-R)\right).
+\]
+
+Because FlySniff defines positive turn as left/counterclockwise, `steer_left` is required to drive positive/left turning and `steer_right` negative/right turning. Qualification now checks this laterality explicitly rather than accepting merely opposite signs.
+
+This ipsilateral convention is consistent with published PFL3 steering results, including:
+
+- Hulse et al., *eLife* (2021), doi:10.7554/eLife.66039;
+- Westeinde et al., *Nature* (2024), doi:10.1038/s41586-023-07006-3;
+- Matheson et al., *Nature Communications* (2022), doi:10.1038/s41467-022-32247-7.
+
+Those papers are biological priors and sign-convention references. They do not by themselves assign exact MaleCNS v1.0 body IDs to this project's roles.
+
+### Current scope
+
+The v0 connectome controller returns fixed normalized forward speed and uses the qualified graph to model steering. It must therefore **not** be described as a complete model of PFL2-mediated speed control or full fly locomotor circuitry. Adding connectome-derived speed modulation requires a separate qualified role/readout and ablation.
+
+## 9. Evidence classes for visualization
 
 The renderer must keep these classes distinct:
 
@@ -191,14 +270,14 @@ The renderer must keep these classes distinct:
 
 A structural graph may glow as `MODELED ACTIVITY` only when an explicit model generated that activity and the recording stores it. Structural connectivity alone must never be animated or labeled as firing.
 
-## 9. Determinism and paired comparisons
+## 10. Determinism and paired comparisons
 
 For a fixed episode seed, compared controllers receive the same exogenous plume realization. Recordings are canonicalized and SHA-256 hashed. Rendering is downstream of the scientific recording and must not alter controller state, plume state, success, or trajectory.
 
-## 10. Current claim boundary
+## 11. Current claim boundary
 
 Until the repository qualification gates pass, public development artifacts must remain labeled:
 
 `DEVELOPMENT PROXY • NOT A MALECNS RESULT`
 
-A structural corridor is a discovery result. Promotion to a connectome-controller claim additionally requires sealed body IDs/roles, sign provenance where available, bilateral perturbation checks, steering-output lesion checks, deterministic replay, and the preregistered behavioral evaluation.
+A structural corridor is a discovery result. Promotion to a connectome-controller claim additionally requires sealed body IDs/roles, sign provenance where available, correct bilateral perturbation laterality, steering-output lesion checks, deterministic replay, and the preregistered behavioral evaluation.
