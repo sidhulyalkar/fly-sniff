@@ -169,24 +169,20 @@ class MaleCNSRateController(Controller):
         idx = [self.index[x] for x in self.bundle.roles.get(role, []) if x in self.index]
         return float(self.activity[idx].mean()) if idx else 0.0
 
-    def act(self, obs: Observation) -> Action:
+    def _advance_role_drive(self, role_drive: dict[str, float]) -> Action:
         drive = np.zeros_like(self.activity)
-        self._inject("odor_left", obs.left_odor, drive)
-        self._inject("odor_right", obs.right_odor, drive)
-        self._inject("wind_forward", max(obs.wind_x_body, 0.0), drive)
-        self._inject("wind_backward", max(-obs.wind_x_body, 0.0), drive)
-        self._inject("wind_left", max(obs.wind_y_body, 0.0), drive)
-        self._inject("wind_right", max(-obs.wind_y_body, 0.0), drive)
+        for role, value in role_drive.items():
+            self._inject(role, float(value), drive)
         recurrent = self.w @ self.activity
         proposal = np.tanh(self.gain * (recurrent + drive))
         self.activity = self.retention * self.activity + (1.0 - self.retention) * proposal
         left = self._role_mean("steer_left")
         right = self._role_mean("steer_right")
 
-        # FlySniff uses positive heading change for a left/CCW turn. The role
-        # contract is ipsilateral: steer_left drives left and steer_right drives
-        # right. This is also consistent with PFL3 laterality reported in the
-        # central-complex steering literature.
+        # FlySniff uses positive heading change for a left/CCW turn. The output
+        # role contract is ipsilateral: DNa02_L is steer_left and DNa02_R is
+        # steer_right. Upstream mechanistic-probe roles are kept separate from
+        # sensory roles so PFL3 cannot accidentally be presented as an odor sensor.
         turn = float(np.tanh(self.turn_gain * (left - right)))
         self._diag = {
             "dn_left": left,
@@ -199,6 +195,28 @@ class MaleCNSRateController(Controller):
             "signed_edge_fraction": self.signed_fraction,
         }
         return Action(turn=turn, speed=1.0)
+
+    def act_role_drive(self, role_drive: dict[str, float]) -> Action:
+        """Advance one modeled step from explicit named-role drive.
+
+        This is intended for mechanistic perturbation probes. It is deliberately
+        separate from :meth:`act`, which maps benchmark sensory observations to
+        sensory roles. Calling this method is not evidence that a driven role is
+        sensory or that the modeled state is physiological activity.
+        """
+        return self._advance_role_drive(role_drive)
+
+    def act(self, obs: Observation) -> Action:
+        return self._advance_role_drive(
+            {
+                "odor_left": obs.left_odor,
+                "odor_right": obs.right_odor,
+                "wind_forward": max(obs.wind_x_body, 0.0),
+                "wind_backward": max(-obs.wind_x_body, 0.0),
+                "wind_left": max(obs.wind_y_body, 0.0),
+                "wind_right": max(-obs.wind_y_body, 0.0),
+            }
+        )
 
     def diagnostics(self) -> dict[str, float]:
         return self._diag.copy()
