@@ -83,6 +83,34 @@ def _frontier_depths(
     return depths
 
 
+def _corridor_nodes(annotations: pd.DataFrame, corridor: set[int]) -> pd.DataFrame:
+    """Return one row for every structural corridor node, annotated when possible.
+
+    The edge table can contain body IDs that are absent from the annotation table.
+    Dropping those IDs would break graph closure and silently censor measured
+    structure. We therefore preserve every structural ID and left-join annotations,
+    marking missing metadata explicitly.
+    """
+    annotation_rows = annotations.copy()
+    if "bodyId" not in annotation_rows.columns:
+        raise ValueError("annotations require bodyId")
+    annotation_rows["bodyId"] = annotation_rows.bodyId.astype(int)
+    if not annotation_rows.bodyId.is_unique:
+        raise ValueError("annotations require unique bodyId rows for structural tracing")
+
+    structural = pd.DataFrame({"bodyId": sorted(int(x) for x in corridor)})
+    nodes = structural.merge(
+        annotation_rows,
+        on="bodyId",
+        how="left",
+        validate="one_to_one",
+        indicator="_annotation_merge",
+    )
+    annotation_present = nodes.pop("_annotation_merge").eq("both")
+    nodes.insert(1, "annotation_present", annotation_present.astype(bool))
+    return nodes
+
+
 def trace_corridor(
     annotations: pd.DataFrame,
     weights: pd.DataFrame,
@@ -154,7 +182,7 @@ def trace_corridor(
     target_reverse = edges.target.map(reverse).fillna(max_hops + 1).astype(int)
     edges = edges.loc[(source_forward + 1 + target_reverse) <= max_hops].copy()
 
-    nodes = annotations[annotations.bodyId.astype(int).isin(corridor)].copy()
+    nodes = _corridor_nodes(annotations, corridor)
     provenance = pd.DataFrame(
         {
             "bodyId": sorted(corridor),
@@ -204,6 +232,7 @@ def main() -> None:
 
     retained_source_seeds = int(provenance.is_source_seed.sum())
     retained_target_seeds = int(provenance.is_target_seed.sum())
+    annotated_nodes = int(nodes.annotation_present.sum())
     report = {
         "source_regex": args.source,
         "target_regex": args.target,
@@ -215,7 +244,10 @@ def main() -> None:
         # These are the seed neurons that actually survive the bounded corridor.
         "retained_source_seed_count": retained_source_seeds,
         "retained_target_seed_count": retained_target_seeds,
+        # Structural node count includes body IDs lacking an annotation row.
         "corridor_nodes": len(nodes),
+        "corridor_annotated_nodes": annotated_nodes,
+        "corridor_unannotated_nodes": len(nodes) - annotated_nodes,
         "corridor_edges": len(edges),
         "max_hops": args.max_hops,
         "min_weight": args.min_weight,
