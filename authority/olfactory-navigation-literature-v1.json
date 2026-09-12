@@ -21,7 +21,7 @@
       "url": "https://doi.org/10.1038/s41467-022-32247-7",
       "claims_used_as_search_priors": [
         "FB5AB is an odor-responsive fan-shaped-body tangential input receiving mushroom-body/lateral-horn olfactory pathway input.",
-        "hDeltaC receives odor-pathway input involving FB5AB and wind-direction input from PFN populations.",
+        "hDeltaC receives odor-pathway input involving FB5AB and wind-direction input from PFNa, PFNp, and PFNm populations.",
         "hDeltaC activity is consistent with odor-gated wind-direction integration relevant to upwind orientation."
       ],
       "candidate_labels_for_release_specific_search": [
@@ -38,13 +38,13 @@
       "boundary": "Functional and connectomic evidence from earlier datasets/animals constrains what to search for; it does not authorize MaleCNS v1.0 body IDs or edges."
     },
     {
-      "key": "lyu_2025_steering_control",
-      "citation": "Neural circuit mechanisms for steering control in walking Drosophila. eLife (2025).",
-      "doi": "10.7554/eLife.102230",
-      "url": "https://doi.org/10.7554/eLife.102230",
+      "key": "rayshubskiy_2025_steering_control",
+      "citation": "Rayshubskiy et al. Neural circuit mechanisms for steering control in walking Drosophila. eLife 13:RP102230 (2025), version of record.",
+      "doi": "10.7554/eLife.102230.3",
+      "url": "https://doi.org/10.7554/eLife.102230.3",
       "claims_used_as_search_priors": [
-        "PFL3 activity is linked to steering commands downstream of the central complex.",
-        "Bilateral DNa02 activity predicts high-gain steering, making DNa02 a defensible steering readout candidate."
+        "PFL3 provides direct and indirect central-complex steering input to DNa02.",
+        "The right-left difference in DNa02 activity is linearly related to turning velocity, making bilateral DNa02 a defensible steering readout candidate."
       ],
       "candidate_labels_for_release_specific_search": ["PFL3", "DNa02"],
       "boundary": "Functional evidence motivates readout selection but does not prove the intervening MaleCNS odor-navigation route."
@@ -55,8 +55,8 @@
       "doi": "10.1038/s41467-026-75945-2",
       "url": "https://doi.org/10.1038/s41467-026-75945-2",
       "claims_used_as_search_priors": [
-        "hDeltaK-dominated local fan-shaped-body activity integrates odor evidence and can persist through odor blanks.",
-        "Recurrent hDeltaK/PFG connectivity is a candidate substrate for persistence."
+        "hDeltaK-dominated fan-shaped-body activity integrates odor evidence and can persist through odor blanks, supporting continued goal-directed movement after odor loss.",
+        "hDeltaK shows strong recurrent connectivity with PFG, motivating a separate structural persistence hypothesis."
       ],
       "candidate_labels_for_release_specific_search": ["hDeltaK", "PFG"],
       "boundary": "This is a separate odor-blank memory hypothesis. It is nonblocking for the primary steering hypothesis and must not be used to imply that hDeltaC itself provides the persistent memory mechanism."
