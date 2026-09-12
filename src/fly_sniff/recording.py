@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,9 @@ from .party_social import PartyAgent, _make_agent
 SCHEMA_VERSION = 1
 DEFAULT_SIM_SECONDS = 45.0
 DEFAULT_PLUME_POINTS = 220
+MATHEMATICAL_MODEL_CONTRACT = "docs/MATHEMATICAL_MODEL.md"
+PLUME_MODEL_ID = "stochastic-puff-2d-v1"
+SENSOR_MODEL_ID = "bilateral-phenomenological-v1"
 
 _CONTROLLER_FACTORIES: dict[str, tuple[str, type[Controller], str]] = {
     "proxy": ("PROXY", BilateralProxyController, "#38BDF8"),
@@ -125,6 +129,8 @@ def build_recording(
         colors[label] = color
 
     arena = agents[0].env.arena
+    plume_config = agents[0].env.plume_config
+    sensor_config = agents[0].env.sensor_config
     steps = min(arena.max_steps, round(sim_seconds / arena.dt))
     frames: list[dict[str, Any]] = []
     episode_step = 0
@@ -188,6 +194,20 @@ def build_recording(
         "claim_boundary": "DEVELOPMENT PROXY • NOT A MALECNS RESULT",
         "seed": int(seed),
         "dt": float(arena.dt),
+        "model_contract": {
+            "mathematical_model": MATHEMATICAL_MODEL_CONTRACT,
+            "plume_model": PLUME_MODEL_ID,
+            "sensor_model": SENSOR_MODEL_ID,
+            "claim": (
+                "benchmark phenomenology; not CFD, receptor kinetics, or recorded neural activity"
+            ),
+        },
+        "config": {
+            "arena": asdict(arena),
+            "plume": asdict(plume_config),
+            "sensor": asdict(sensor_config),
+        },
+        # Kept as a compact compatibility view for existing social renderers.
         "arena": {
             "width": float(arena.width),
             "height": float(arena.height),
