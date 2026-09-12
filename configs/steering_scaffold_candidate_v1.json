@@ -1,0 +1,39 @@
+{
+  "protocol": "malecns-steering-scaffold-candidate-v1",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "candidate",
+  "evidence_authority": "authority/malecns-v1.0-steering-structure-evidence.json",
+  "populations": {
+    "PFL3": [15210, 17000, 17286, 17290, 18327, 18803, 18851, 19009, 23159, 26038, 26488, 29836, 35322, 79549, 108478, 513032, 513266, 518378, 519346, 519351, 520811, 523032, 530071, 567101],
+    "DNa03": [10975, 519624],
+    "LAL010": [14986, 519129],
+    "DNa02": [10360, 523769]
+  },
+  "candidate_roles": {
+    "steer_left": [523769],
+    "steer_right": [10360],
+    "turn_drive_left": [18327, 18803, 18851, 19009, 23159, 26488, 35322, 79549, 513266, 518378, 520811, 567101],
+    "turn_drive_right": [15210, 17000, 17286, 17290, 26038, 29836, 108478, 513032, 519346, 519351, 523032, 530071]
+  },
+  "role_derivation": {
+    "steer_left": "MaleCNS DNa02_L body 523769; published DNa02 activation biases ipsilateral steering.",
+    "steer_right": "MaleCNS DNa02_R body 10360; published DNa02 activation biases ipsilateral steering.",
+    "turn_drive_left": "PFL3 body IDs with an observed direct structural edge to DNa02_L in literature-route-audit-v1.",
+    "turn_drive_right": "PFL3 body IDs with an observed direct structural edge to DNa02_R in literature-route-audit-v1."
+  },
+  "included_edge_families": [
+    "PFL3->DNa02",
+    "PFL3->DNa03",
+    "PFL3->LAL010",
+    "DNa03->DNa02",
+    "LAL010->DNa02"
+  ],
+  "excluded_from_this_scaffold": {
+    "odor_sensory_roles": "unresolved",
+    "FB5AB_hDeltaC_goal_layer": "structural evidence exists but hDeltaC->PFL3 is weak in MaleCNS v1.0",
+    "contralateral_inhibitory_arm": "not yet body-ID sealed",
+    "PFL2_gain_layer": "supported structurally but separated from directional steering qualification",
+    "behavioral_claim": "none"
+  },
+  "warning": "This config seals a candidate structural steering scaffold only. It must not be labeled a qualified MaleCNS controller until transmitter/sign provenance and steering perturbation gates pass."
+}
