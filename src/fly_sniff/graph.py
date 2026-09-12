@@ -11,6 +11,13 @@ from scipy import sparse
 from .controllers import Action, Controller
 from .env import Observation
 
+DEFAULT_RATE_DT_S = 0.05
+# Chosen to reproduce the historical per-step retention of 0.82 at dt=0.05 s,
+# while expressing the state update as an explicit time constant.
+DEFAULT_RATE_TAU_S = float(-DEFAULT_RATE_DT_S / np.log(0.82))
+DEFAULT_RATE_GAIN = 1.6
+DEFAULT_TURN_GAIN = 2.4
+
 
 @dataclass(frozen=True)
 class GraphBundle:
@@ -41,15 +48,32 @@ class GraphBundle:
             raise ValueError(f"nodes missing columns: {required_nodes - set(self.nodes.columns)}")
         if not required_edges.issubset(self.edges.columns):
             raise ValueError(f"edges missing columns: {required_edges - set(self.edges.columns)}")
+
+        node_ids = self.nodes.bodyId.astype(int)
+        if not node_ids.is_unique:
+            duplicated = sorted(node_ids[node_ids.duplicated()].unique())[:5]
+            raise ValueError(f"nodes contain duplicate body IDs: {duplicated}")
+
+        weights = pd.to_numeric(self.edges.weight, errors="coerce").astype(float)
+        if not np.isfinite(weights.to_numpy()).all():
+            raise ValueError("edge weights must be finite")
+        if (weights <= 0.0).any():
+            raise ValueError("structural edge weights must be strictly positive")
+
         if require_sign and "sign" not in self.edges.columns:
             raise ValueError(
                 "qualified neural dynamics require an explicit edge sign column; "
                 "unsigned synapse counts cannot silently become excitatory weights"
             )
         if "sign" in self.edges.columns:
-            signs = set(pd.Series(self.edges.sign).dropna().astype(int).unique())
+            if self.edges.sign.isna().any():
+                raise ValueError(
+                    "edge sign contains null values; unresolved signs must be explicit 0 values"
+                )
+            signs = set(pd.Series(self.edges.sign).astype(int).unique())
             if not signs.issubset({-1, 0, 1}):
                 raise ValueError(f"sign must be in -1/0/+1; observed {sorted(signs)}")
+
         if require_qualified and (
             not self.manifest or self.manifest.get("qualification_status") != "qualified"
         ):
@@ -57,11 +81,14 @@ class GraphBundle:
                 "graph is not sealed as qualification_status='qualified'; "
                 "candidate graphs may be explored but not labelled as a MaleCNS result"
             )
-        ids = set(self.nodes.bodyId.astype(int))
+
+        ids = set(node_ids)
         missing = (set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))) - ids
         if missing:
             raise ValueError(f"edges reference {len(missing)} unknown body IDs")
         for role, body_ids in self.roles.items():
+            if len(body_ids) != len(set(body_ids)):
+                raise ValueError(f"role {role!r} contains duplicate body IDs")
             unknown = set(body_ids) - ids
             if unknown:
                 raise ValueError(f"role {role!r} references unknown IDs: {sorted(unknown)[:5]}")
@@ -73,6 +100,15 @@ class MaleCNSRateController(Controller):
     Structural connectivity comes from MaleCNS. The state update is a modeled
     dynamical assumption, not a biological recording. Qualified mode refuses
     unsigned or unreviewed graph bundles.
+
+    The update is a first-order relaxation toward a nonlinear proposal:
+
+        da/dt = (tanh(gain * (W a + u)) - a) / tau
+
+    approximated with an exact exponential relaxation coefficient for the held
+    proposal during each controller step. `W` uses log-compressed structural
+    synapse counts and postsynaptic absolute-row normalization. These choices are
+    explicit engineering assumptions, not fitted physiological parameters.
     """
 
     name = "malecns-rate-v0"
@@ -80,15 +116,29 @@ class MaleCNSRateController(Controller):
     def __init__(
         self,
         bundle: GraphBundle,
-        leak: float = 0.82,
-        gain: float = 1.6,
+        tau_s: float = DEFAULT_RATE_TAU_S,
+        gain: float = DEFAULT_RATE_GAIN,
         *,
+        model_dt_s: float = DEFAULT_RATE_DT_S,
+        turn_gain: float = DEFAULT_TURN_GAIN,
         require_qualified: bool = True,
     ):
         bundle.validate(require_sign=True, require_qualified=require_qualified)
         self.bundle = bundle
-        self.leak = float(leak)
+        self.tau_s = float(tau_s)
         self.gain = float(gain)
+        self.model_dt_s = float(model_dt_s)
+        self.turn_gain = float(turn_gain)
+        for name, value in {
+            "tau_s": self.tau_s,
+            "gain": self.gain,
+            "model_dt_s": self.model_dt_s,
+            "turn_gain": self.turn_gain,
+        }.items():
+            if not np.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be finite and > 0")
+        self.retention = float(np.exp(-self.model_dt_s / self.tau_s))
+
         ids = bundle.nodes.bodyId.astype(int).tolist()
         self.ids = ids
         self.index = {body_id: i for i, body_id in enumerate(ids)}
@@ -102,6 +152,7 @@ class MaleCNSRateController(Controller):
         inv = np.divide(1.0, row_norm, out=np.ones_like(row_norm), where=row_norm > 0)
         self.w = sparse.diags(inv) @ mat
         self.activity = np.zeros(len(ids), dtype=float)
+        self.signed_fraction = float(np.mean(sign != 0.0)) if len(sign) else 0.0
         self._diag: dict[str, float] = {}
 
     def reset(self, seed: int) -> None:
@@ -128,15 +179,24 @@ class MaleCNSRateController(Controller):
         self._inject("wind_right", max(-obs.wind_y_body, 0.0), drive)
         recurrent = self.w @ self.activity
         proposal = np.tanh(self.gain * (recurrent + drive))
-        self.activity = self.leak * self.activity + (1.0 - self.leak) * proposal
+        self.activity = self.retention * self.activity + (1.0 - self.retention) * proposal
         left = self._role_mean("steer_left")
         right = self._role_mean("steer_right")
-        turn = float(np.tanh(2.4 * (right - left)))
+
+        # FlySniff uses positive heading change for a left/CCW turn. The role
+        # contract is ipsilateral: steer_left drives left and steer_right drives
+        # right. This is also consistent with PFL3 laterality reported in the
+        # central-complex steering literature.
+        turn = float(np.tanh(self.turn_gain * (left - right)))
         self._diag = {
             "dn_left": left,
             "dn_right": right,
             "activity_mean": float(np.abs(self.activity).mean()),
             "modeled_dynamics": 1.0,
+            "rate_tau_s": self.tau_s,
+            "rate_dt_s": self.model_dt_s,
+            "rate_retention": self.retention,
+            "signed_edge_fraction": self.signed_fraction,
         }
         return Action(turn=turn, speed=1.0)
 
