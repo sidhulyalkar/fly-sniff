@@ -12,13 +12,21 @@ import numpy as np
 from .env import Observation
 from .graph import GraphBundle
 from .rewire import lesion_incoming_to_roles
+from .runtime_provenance import verify_runtime_environment_receipt
 from .training import (
+    FINAL_TEST_MAX_SEED,
     DynamicsParameters,
     TaskOptimizedMaleCNSController,
+    _development_gate_from_summaries,
+    _validate_model_role_partition,
     canonical_sha256,
+    default_parameters,
     load_training_config,
+    make_training_seed_split,
+    optimizer_budget_receipt,
     validate_parameters,
 )
+from .training_budget_redteam import reconstruct_optimizer_execution
 
 REQUIRED_ROLES = (
     "odor_context_left",
@@ -141,8 +149,6 @@ def probe_trained_candidate(
     on_separation = abs(on_right_turn - on_left_turn)
     off_separation = abs(off_right_turn - off_left_turn)
 
-    # The physical antenna trace remains bilateral, but task-optimization v1
-    # intentionally supplies only mean odor to the FB5AB context roles.
     left_only = _observation(left_odor=odor, right_odor=0.0, wind_y=wind)
     right_only = _observation(left_odor=0.0, right_odor=odor, wind_y=wind)
     left_only_turns = _rollout(bundle, parameters, left_only, steps=steps, seed=seed)
@@ -162,8 +168,6 @@ def probe_trained_candidate(
         )
     )
 
-    # A positive body-frame downwind-y vector means air travels to the animal's
-    # left, so it arrives from the right and the upwind target is a right turn.
     laterality_correct = bool(on_left_turn < 0.0 and on_right_turn > 0.0)
     return TrainedProbeResult(
         odor_on_downwind_left_turn=on_left_turn,
@@ -180,6 +184,121 @@ def probe_trained_candidate(
     )
 
 
+def _require_equal_float(name: str, observed: Any, expected: float) -> None:
+    try:
+        value = float(observed)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"training report {name} is missing or invalid") from exc
+    if not np.isfinite(value) or not np.isclose(value, expected, rtol=0.0, atol=1e-12):
+        raise ValueError(
+            f"training report {name} does not match the value recomputed from frozen evidence"
+        )
+
+
+def _verify_seed_receipts(report: dict[str, Any], config: dict[str, Any]) -> tuple[list[int], list[int]]:
+    train, validation = make_training_seed_split(config)
+    observed_train = [int(x) for x in report.get("train_seeds", [])]
+    observed_validation = [int(x) for x in report.get("validation_seeds", [])]
+    if observed_train != train or observed_validation != validation:
+        raise ValueError("training report seed split/receipt does not match the frozen config")
+    if report.get("train_seed_sha256") != canonical_sha256(train):
+        raise ValueError("training report train seed hash mismatch")
+    if report.get("validation_seed_sha256") != canonical_sha256(validation):
+        raise ValueError("training report validation seed hash mismatch")
+    if int(report.get("train_seed_count", -1)) != len(train):
+        raise ValueError("training report train seed count mismatch")
+    if int(report.get("validation_seed_count", -1)) != len(validation):
+        raise ValueError("training report validation seed count mismatch")
+    if min(train + validation) <= FINAL_TEST_MAX_SEED:
+        raise ValueError("frozen development seed split overlaps the final-test namespace")
+    if report.get("final_test_namespace_touched") is not False:
+        raise ValueError("training report claims final-test namespace access")
+    return train, validation
+
+
+def _verify_budget_receipt(
+    report: dict[str, Any],
+    config: dict[str, Any],
+    *,
+    train_count: int,
+    validation_count: int,
+) -> dict[str, Any]:
+    expected = optimizer_budget_receipt(
+        config,
+        train_seed_count=train_count,
+        validation_seed_count=validation_count,
+    )
+    if report.get("optimizer_budget") != expected:
+        raise ValueError("training report optimizer compute-budget receipt mismatch")
+    expected_hash = canonical_sha256(expected)
+    if report.get("optimizer_budget_sha256") != expected_hash:
+        raise ValueError("training report optimizer budget hash mismatch")
+    try:
+        reconstructed = reconstruct_optimizer_execution(report, config)
+    except (RuntimeError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "training report optimizer history does not reconstruct to the frozen execution budget"
+        ) from exc
+    if reconstructed != expected:
+        raise ValueError("training report reconstructed optimizer execution budget mismatch")
+    return expected
+
+
+def _verify_history_receipt(report: dict[str, Any]) -> str:
+    history = report.get("history")
+    if not isinstance(history, list):
+        raise ValueError("training report is missing optimizer history")
+    history_sha256 = canonical_sha256(history)
+    if report.get("optimizer_history_sha256") != history_sha256:
+        raise ValueError("training report optimizer history hash mismatch")
+    return history_sha256
+
+
+def _verify_runtime_receipt(report: dict[str, Any]) -> tuple[str, str]:
+    receipt = report.get("runtime_environment")
+    if not isinstance(receipt, dict):
+        raise ValueError("training report is missing the sealed numerical runtime receipt")
+    runtime_sha256 = canonical_sha256(receipt)
+    if report.get("runtime_environment_sha256") != runtime_sha256:
+        raise ValueError("training report runtime environment hash mismatch")
+    try:
+        numerical_sha256 = verify_runtime_environment_receipt(
+            receipt,
+            require_current_numerical_match=True,
+        )
+    except (RuntimeError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "training report numerical runtime is incompatible with the current promotion runtime"
+        ) from exc
+    if report.get("numerical_runtime_sha256") != numerical_sha256:
+        raise ValueError("training report numerical runtime hash mismatch")
+    return runtime_sha256, numerical_sha256
+
+
+def _verify_development_gate(report: dict[str, Any], config: dict[str, Any]) -> None:
+    baseline_validation = report.get("baseline_validation")
+    trained_validation = report.get("trained_validation")
+    if not isinstance(baseline_validation, dict) or not isinstance(trained_validation, dict):
+        raise ValueError("training report is missing validation summaries needed to recompute gate")
+    objective_delta, success_delta, passed = _development_gate_from_summaries(
+        baseline_validation,
+        trained_validation,
+        config,
+    )
+    _require_equal_float(
+        "validation_objective_delta",
+        report.get("validation_objective_delta"),
+        objective_delta,
+    )
+    _require_equal_float(
+        "validation_success_rate_delta",
+        report.get("validation_success_rate_delta"),
+        success_delta,
+    )
+    if report.get("development_gate_passed") is not passed:
+        raise ValueError("training report development gate contradicts frozen validation evidence")
+
+
 def parameters_from_training_report(
     report: dict[str, Any],
     bundle: GraphBundle,
@@ -191,12 +310,44 @@ def parameters_from_training_report(
         raise ValueError("training report was produced under a different training config")
     if report.get("graph_sha256") != bundle.replay_fingerprint():
         raise ValueError("training report graph fingerprint does not match candidate bundle")
-    if report.get("final_test_namespace_touched") is not False:
-        raise ValueError("training report does not prove the final-test namespace stayed unopened")
+    if report.get("sensory_interface") != config["connectome_sensory_interface"]:
+        raise ValueError("training report sensory-interface receipt does not match frozen config")
+
+    _validate_model_role_partition(bundle)
+    train, validation = _verify_seed_receipts(report, config)
+    budget = _verify_budget_receipt(
+        report,
+        config,
+        train_count=len(train),
+        validation_count=len(validation),
+    )
+    history_sha256 = _verify_history_receipt(report)
+    runtime_sha256, numerical_sha256 = _verify_runtime_receipt(report)
+    _verify_development_gate(report, config)
+
+    baseline = default_parameters(config).to_dict()
+    if report.get("baseline_parameters") != baseline:
+        raise ValueError("training report baseline parameters do not match frozen defaults")
+
     parameters = DynamicsParameters.from_mapping(report["trained_parameters"])
     validate_parameters(parameters, config)
-    if report.get("trained_parameter_sha256") != canonical_sha256(parameters.to_dict()):
+    parameter_sha = canonical_sha256(parameters.to_dict())
+    if report.get("trained_parameter_sha256") != parameter_sha:
         raise ValueError("trained parameter hash mismatch")
+
+    audit_payload = {
+        "graph_sha256": bundle.replay_fingerprint(),
+        "training_config_sha256": canonical_sha256(config),
+        "train_seed_sha256": canonical_sha256(train),
+        "validation_seed_sha256": canonical_sha256(validation),
+        "trained_parameter_sha256": parameter_sha,
+        "optimizer_budget_sha256": canonical_sha256(budget),
+        "optimizer_history_sha256": history_sha256,
+        "runtime_environment_sha256": runtime_sha256,
+        "numerical_runtime_sha256": numerical_sha256,
+    }
+    if report.get("audit_receipt_sha256") != canonical_sha256(audit_payload):
+        raise ValueError("training report audit receipt hash mismatch")
     return parameters
 
 
@@ -236,7 +387,7 @@ def qualify_trained_candidate(
             "training_development_gate",
             bool(training_report.get("development_gate_passed")),
             int(bool(training_report.get("development_gate_passed"))),
-            "trained parameter set passed its frozen development-improvement gate",
+            "recomputed training report passed its frozen development-improvement gate",
         ),
         Gate(
             "required_roles",
@@ -315,6 +466,10 @@ def qualify_trained_candidate(
         "dataset": (bundle.manifest or {}).get("dataset", "unknown"),
         "graph_sha256": bundle.replay_fingerprint(),
         "training_config_sha256": canonical_sha256(config),
+        "training_audit_receipt_sha256": training_report["audit_receipt_sha256"],
+        "optimizer_history_sha256": training_report["optimizer_history_sha256"],
+        "runtime_environment_sha256": training_report["runtime_environment_sha256"],
+        "numerical_runtime_sha256": training_report["numerical_runtime_sha256"],
         "trained_parameter_sha256": canonical_sha256(parameters.to_dict()),
         "trained_parameters": parameters.to_dict(),
         "gates": [asdict(gate) for gate in gates],
@@ -331,9 +486,12 @@ def qualify_trained_candidate(
         },
         "memory_policy": frozen["memory_policy"],
         "warning": (
-            "Passing trained E002 supports internal consistency of the explicit modeled dynamics. "
-            "It does not establish measured physiology, peripheral sensory transduction, or final "
-            "navigation superiority over matched trained topology controls."
+            "Passing trained E002 supports internal consistency of the explicit modeled dynamics, "
+            "the supplied training receipts, cryptographically bound optimizer history, "
+            "reconstructed represented optimizer execution, and an exact numerical-runtime match "
+            "to training. It does not prove no external final-test peeking, measured physiology, "
+            "peripheral sensory transduction, or final navigation superiority over matched trained "
+            "topology controls."
         ),
     }
 
@@ -343,7 +501,7 @@ def main() -> None:
         description="Run trained E002 odor-gated PFN-basis qualification"
     )
     parser.add_argument("bundle", help="reviewed signed candidate GraphBundle")
-    parser.add_argument("training_report", help="single-graph task-optimization report")
+    parser.add_argument("training_report", help="runtime-sealed task-optimization report")
     parser.add_argument("--config", default="configs/task_optimization_v1.json")
     parser.add_argument("--output", default="results/e002/trained-qualification-v1.json")
     args = parser.parse_args()
