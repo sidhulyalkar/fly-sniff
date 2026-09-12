@@ -71,6 +71,10 @@ def build_manifest(
         "config": default_config_dict(),
         "ood_plume": default_ood_plume(),
         "rewire": {"seed": 913013, "swaps_per_edge": 8},
+        "lesion": {
+            "kind": "remove-incoming-edges-to-roles",
+            "roles": ["steer_left", "steer_right"],
+        },
         "gold": {
             "success_rate_min": 0.70,
             "spl_delta_vs_rewire_min": 0.10,
