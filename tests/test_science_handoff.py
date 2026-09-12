@@ -15,7 +15,7 @@ def test_science_handoff_collects_seed_anchor_and_depth_evidence(tmp_path):
             "subclass": ["olfactory", "PFN", "PFL", "DN", "FB"],
             "somaSide": ["L", "L", "L", "L", "L"],
             "predictedNt": ["acetylcholine"] * 5,
-            "predictedNtProb": [0.9, 0.8, 0.95, 0.94, 0.85],
+            "predictedNtProb": [0.9, 0.8, 0.95, 0.94, float("nan")],
         }
     )
     annotations_path = tmp_path / "annotations.feather"
@@ -82,6 +82,7 @@ def test_science_handoff_collects_seed_anchor_and_depth_evidence(tmp_path):
     assert report["anchor_populations"]["PFNa"]["exact_count"] == 1
     assert report["anchor_populations"]["DNa02"]["exact_rows"][0]["somaSide"] == "L"
     assert report["anchor_populations"]["DNa02"]["exact_rows"][0]["predictedNt"] == "acetylcholine"
+    assert report["anchor_populations"]["FB5AB"]["exact_rows"][0]["predictedNtProb"] is None
     assert report["anchor_corridor_membership"]["PFNa"]["retained_in_corridor_count"] == 0
     assert report["anchor_corridor_membership"]["PFL3"]["retained_in_corridor_count"] == 1
     assert report["anchor_corridor_membership"]["DNa02"]["retained_in_corridor_count"] == 1
@@ -93,3 +94,4 @@ def test_science_handoff_collects_seed_anchor_and_depth_evidence(tmp_path):
     ]
     assert len(report["inputs"]["annotations"]["sha256"]) == 64
     assert len(report["inputs"]["weights"]["sha256"]) == 64
+    json.dumps(report, allow_nan=False)
