@@ -4,7 +4,7 @@ import argparse
 import hashlib
 import json
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -65,11 +65,12 @@ class DynamicsParameters:
 
 
 class TaskOptimizedMaleCNSController(MaleCNSRateController):
-    """Fixed-topology MaleCNS model with a tiny task-optimized parameter set.
+    """Fixed-topology model with eight task-optimized global parameters.
 
-    Optimization may change eight global dynamical/interface gains, but never
-    body IDs, roles, edges, structural synapse counts, or transmitter-derived signs.
-    The learned values are model parameters, not measured physiology.
+    The connectome, roles, structural synapse counts, and edge signs are immutable.
+    Odor enters this v1 model as a nondirectional presence signal, while directional
+    information comes from body-frame airflow. This mirrors the primary functional
+    prior for FB5AB/PFN/hDeltaC rather than inventing odor laterality at that stage.
     """
 
     name = "malecns-rate-task-optimized-v1"
@@ -109,9 +110,14 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
         self.parameter_sha256 = canonical_sha256(parameters.to_dict())
 
     def act(self, obs: Observation) -> Action:
+        # Matheson et al. support odor-sensitive but non-directional FB tangential
+        # input and directional PFN airflow input. Preserve physical bilateral
+        # antenna sensing in the recording, but do not convert that asymmetry into
+        # an invented directional MB/FB drive in this connectome controller.
+        odor_presence = float(obs.mean_odor)
         raw_drive = {
-            "odor_left": float(obs.left_odor),
-            "odor_right": float(obs.right_odor),
+            "odor_left": odor_presence,
+            "odor_right": odor_presence,
             "wind_forward": float(max(obs.wind_x_body, 0.0)),
             "wind_backward": float(max(-obs.wind_x_body, 0.0)),
             "wind_left": float(max(obs.wind_y_body, 0.0)),
@@ -134,6 +140,13 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
 
         self._input_snapshot = {
             "signal_kind": "task_optimized_modeled_role_drive",
+            "odor_interface": "mean_bilateral_nondirectional",
+            "direction_interface": "body_frame_wind",
+            "antenna_context": {
+                "left_odor": float(obs.left_odor),
+                "right_odor": float(obs.right_odor),
+                "mean_odor": odor_presence,
+            },
             "interface_status": (self.bundle.manifest or {}).get(
                 "sensory_interface_status",
                 "modeled_interface_not_peripheral_sensory_qualification",
@@ -200,6 +213,11 @@ def load_training_config(path: str | Path) -> dict[str, Any]:
     config = json.loads(Path(path).read_text())
     if config.get("protocol") != "task-optimized-connectome-dynamics-v1":
         raise ValueError("unsupported task-optimization protocol")
+    interface = config.get("connectome_sensory_interface", {})
+    if interface.get("odor_mode") != "mean_bilateral_nondirectional":
+        raise ValueError("v1 requires nondirectional mean-odor connectome drive")
+    if interface.get("direction_source") != "body_frame_wind":
+        raise ValueError("v1 requires body-frame wind as directional input")
     specs = config.get("trainable_parameters", {})
     if set(specs) != set(PARAMETER_NAMES):
         raise ValueError(
@@ -435,7 +453,7 @@ def optimize_dynamics(
     low, mean, high = _parameter_bounds(config)
     sigma = np.maximum((high - low) * initial_sigma_fraction, minimum_sigma)
     rng = np.random.default_rng(int(optimizer["optimizer_seed"]))
-    elite_count = max(2, int(math.ceil(population_size * elite_fraction)))
+    elite_count = max(2, math.ceil(population_size * elite_fraction))
     history: list[dict[str, Any]] = []
 
     for generation in range(generations):
@@ -537,6 +555,7 @@ def optimize_dynamics(
         "qualification_status": (bundle.manifest or {}).get(
             "qualification_status", "candidate"
         ),
+        "sensory_interface": config["connectome_sensory_interface"],
         "training_config_sha256": canonical_sha256(config),
         "train_seed_sha256": canonical_sha256(train_seeds),
         "validation_seed_sha256": canonical_sha256(validation_seeds),
@@ -579,7 +598,7 @@ def train_matched_control_cohort(
     """Train intact, rewired, and lesioned topologies with identical budgets."""
     if rewire_count < 2:
         raise ValueError("matched control cohort requires at least two rewires")
-    results: dict[str, dict[str, Any]] = {}
+    results: dict[str, Any] = {}
     results["intact"] = optimize_dynamics(
         bundle,
         config,
