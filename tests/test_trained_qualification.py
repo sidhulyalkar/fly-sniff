@@ -5,7 +5,13 @@ import pytest
 
 from fly_sniff import trained_qualification as tq
 from fly_sniff.graph import GraphBundle
-from fly_sniff.training import DynamicsParameters, canonical_sha256
+from fly_sniff.training import (
+    DynamicsParameters,
+    canonical_sha256,
+    default_parameters,
+    make_training_seed_split,
+    optimizer_budget_receipt,
+)
 
 
 def _config():
@@ -16,6 +22,34 @@ def _config():
             "odor_roles": ["odor_context_left", "odor_context_right"],
             "direction_source": "signed_pfn_basis_from_body_frame_airflow_arrival",
             "wind_roles": ["wind_basis_left", "wind_basis_right"],
+        },
+        "seed_namespace": {
+            "base": 2_100_000_000,
+            "span": 1000,
+            "split_seed": 17,
+            "train_episodes": 6,
+            "validation_episodes": 4,
+        },
+        "objective": {
+            "success_weight": 0.5,
+            "spl_weight": 0.4,
+            "terminal_progress_weight": 0.1,
+        },
+        "optimizer": {
+            "kind": "log-space cross-entropy method",
+            "population": 4,
+            "generations": 2,
+            "elite_fraction": 0.5,
+            "episodes_per_candidate": 3,
+            "update_rate": 0.6,
+            "initial_sigma_fraction_of_log_range": 0.2,
+            "minimum_log_sigma": 0.03,
+            "optimizer_seed": 23,
+            "common_random_numbers": true
+        },
+        "development_gate": {
+            "minimum_validation_objective_delta_vs_own_untrained_default": 0.02,
+            "maximum_validation_success_rate_drop_vs_own_untrained_default": 0.01,
         },
         "trainable_parameters": {
             "tau_s": {"default": 0.25, "min": 0.05, "max": 2.0},
@@ -81,15 +115,53 @@ def _bundle():
 
 def _training_report(bundle, config, *, development_passed=True):
     parameters = _parameters()
-    return {
+    train, validation = make_training_seed_split(config)
+    budget = optimizer_budget_receipt(
+        config,
+        train_seed_count=len(train),
+        validation_seed_count=len(validation),
+    )
+    baseline_validation = {"objective": 0.50, "success_rate": 0.50}
+    trained_validation = {
+        "objective": 0.52 if development_passed else 0.49,
+        "success_rate": 0.50,
+    }
+    objective_delta = trained_validation["objective"] - baseline_validation["objective"]
+    success_delta = trained_validation["success_rate"] - baseline_validation["success_rate"]
+    report = {
         "protocol": config["protocol"],
         "training_config_sha256": canonical_sha256(config),
         "graph_sha256": bundle.replay_fingerprint(),
+        "sensory_interface": config["connectome_sensory_interface"],
+        "train_seeds": train,
+        "validation_seeds": validation,
+        "train_seed_sha256": canonical_sha256(train),
+        "validation_seed_sha256": canonical_sha256(validation),
+        "train_seed_count": len(train),
+        "validation_seed_count": len(validation),
         "final_test_namespace_touched": False,
+        "optimizer_budget": budget,
+        "optimizer_budget_sha256": canonical_sha256(budget),
+        "baseline_parameters": default_parameters(config).to_dict(),
+        "baseline_validation": baseline_validation,
+        "trained_validation": trained_validation,
         "trained_parameters": parameters.to_dict(),
         "trained_parameter_sha256": canonical_sha256(parameters.to_dict()),
         "development_gate_passed": development_passed,
+        "validation_objective_delta": objective_delta,
+        "validation_success_rate_delta": success_delta,
     }
+    report["audit_receipt_sha256"] = canonical_sha256(
+        {
+            "graph_sha256": report["graph_sha256"],
+            "training_config_sha256": report["training_config_sha256"],
+            "train_seed_sha256": report["train_seed_sha256"],
+            "validation_seed_sha256": report["validation_seed_sha256"],
+            "trained_parameter_sha256": report["trained_parameter_sha256"],
+            "optimizer_budget_sha256": report["optimizer_budget_sha256"],
+        }
+    )
+    return report
 
 
 def _passing_probe():
