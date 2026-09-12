@@ -88,5 +88,58 @@
       "rationale": "Separately test the reciprocal direction of the hDeltaK/PFG recurrent structural hypothesis implicated in odor-evidence persistence.",
       "evidence_scope": "Optional memory hypothesis from Kathman et al. 2026; nonblocking for the primary steering hypothesis."
     }
+  ],
+  "handoffs": [
+    {
+      "name": "fb5ab_body_id_continuity",
+      "required_for_primary_hypothesis": true,
+      "min_shared_body_ids": 1,
+      "members": [
+        {"stage": "odor_value_to_fb5ab", "role": "target"},
+        {"stage": "fb5ab_to_hDeltaC", "role": "source"}
+      ],
+      "rationale": "At least one exact retained FB5AB body ID must bridge the incoming odor-value corridor and the outgoing hDeltaC corridor."
+    },
+    {
+      "name": "hDeltaC_odor_wind_convergence",
+      "required_for_primary_hypothesis": true,
+      "min_shared_body_ids": 1,
+      "members": [
+        {"stage": "fb5ab_to_hDeltaC", "role": "target"},
+        {"stage": "wind_to_hDeltaC", "role": "target"},
+        {"stage": "hDeltaC_to_pfl3", "role": "source"}
+      ],
+      "rationale": "The primary integration hypothesis requires at least one exact hDeltaC body ID retained by the odor-input, wind-input, and outgoing steering-corridor searches."
+    },
+    {
+      "name": "pfl3_body_id_continuity",
+      "required_for_primary_hypothesis": true,
+      "min_shared_body_ids": 1,
+      "members": [
+        {"stage": "hDeltaC_to_pfl3", "role": "target"},
+        {"stage": "pfl3_to_dna02", "role": "source"}
+      ],
+      "rationale": "At least one exact retained PFL3 body ID must bridge the upstream central-complex corridor and the DNa02 output stage."
+    },
+    {
+      "name": "memory_hDeltaK_recurrence_continuity",
+      "required_for_primary_hypothesis": false,
+      "min_shared_body_ids": 1,
+      "members": [
+        {"stage": "memory_hDeltaK_to_pfg", "role": "source"},
+        {"stage": "memory_pfg_to_hDeltaK", "role": "target"}
+      ],
+      "rationale": "Optional check that at least one exact hDeltaK body ID participates in both directions of the separately traced recurrence hypothesis."
+    },
+    {
+      "name": "memory_pfg_recurrence_continuity",
+      "required_for_primary_hypothesis": false,
+      "min_shared_body_ids": 1,
+      "members": [
+        {"stage": "memory_hDeltaK_to_pfg", "role": "target"},
+        {"stage": "memory_pfg_to_hDeltaK", "role": "source"}
+      ],
+      "rationale": "Optional check that at least one exact PFG body ID participates in both directions of the separately traced recurrence hypothesis."
+    }
   ]
 }
