@@ -23,12 +23,19 @@ PARAMETER_NAMES = (
     "activation_gain",
     "recurrent_gain",
     "odor_gain",
-    "wind_forward_gain",
-    "wind_backward_gain",
-    "wind_cross_gain",
+    "wind_basis_gain",
     "turn_gain",
 )
+REQUIRED_MODEL_ROLES = (
+    "odor_context_left",
+    "odor_context_right",
+    "wind_basis_left",
+    "wind_basis_right",
+    "steer_left",
+    "steer_right",
+)
 FINAL_TEST_MAX_SEED = 1_999_999_999
+INV_SQRT_2 = float(1.0 / np.sqrt(2.0))
 
 
 def canonical_sha256(payload: Any) -> str:
@@ -47,9 +54,7 @@ class DynamicsParameters:
     activation_gain: float
     recurrent_gain: float
     odor_gain: float
-    wind_forward_gain: float
-    wind_backward_gain: float
-    wind_cross_gain: float
+    wind_basis_gain: float
     turn_gain: float
 
     @classmethod
@@ -65,12 +70,12 @@ class DynamicsParameters:
 
 
 class TaskOptimizedMaleCNSController(MaleCNSRateController):
-    """Fixed-topology model with eight task-optimized global parameters.
+    """Fixed-topology model with six task-optimized global parameters.
 
-    The connectome, roles, structural synapse counts, and edge signs are immutable.
-    Odor enters this v1 model as a nondirectional presence signal, while directional
-    information comes from body-frame airflow. This mirrors the primary functional
-    prior for FB5AB/PFN/hDeltaC rather than inventing odor laterality at that stage.
+    Odor is a nondirectional contextual drive. Airflow direction is represented by
+    two signed, orthogonal PFN-basis drives whose preferred *arrival* directions are
+    approximately 45 degrees left and right of the fly midline. The connectome,
+    body IDs, role membership, structural weights, and edge signs never train.
     """
 
     name = "malecns-rate-task-optimized-v1"
@@ -83,19 +88,14 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
         model_dt_s: float = 0.05,
         require_qualified: bool = True,
     ):
+        missing = [role for role in REQUIRED_MODEL_ROLES if not bundle.roles.get(role)]
+        if missing:
+            raise ValueError(f"task-optimized controller requires non-empty roles: {missing}")
         self.parameters = parameters
         self.recurrent_gain = float(parameters.recurrent_gain)
         self.odor_gain = float(parameters.odor_gain)
-        self.wind_forward_gain = float(parameters.wind_forward_gain)
-        self.wind_backward_gain = float(parameters.wind_backward_gain)
-        self.wind_cross_gain = float(parameters.wind_cross_gain)
-        for name in (
-            "recurrent_gain",
-            "odor_gain",
-            "wind_forward_gain",
-            "wind_backward_gain",
-            "wind_cross_gain",
-        ):
+        self.wind_basis_gain = float(parameters.wind_basis_gain)
+        for name in ("recurrent_gain", "odor_gain", "wind_basis_gain"):
             value = float(getattr(self, name))
             if not np.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and > 0")
@@ -109,30 +109,39 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
         )
         self.parameter_sha256 = canonical_sha256(parameters.to_dict())
 
+    @staticmethod
+    def pfn_basis_raw_drive(obs: Observation) -> tuple[float, float]:
+        """Project airflow-arrival direction onto +/-45 degree PFN bases.
+
+        `Observation.wind_*_body` stores the vector in the direction air travels.
+        Physiological airflow tuning is described by where airflow arrives *from*,
+        so the arrival vector is the negative of that downwind vector. Signed dot
+        products preserve the observed excitation/opposite-direction suppression
+        motif instead of rectifying four invented cardinal channels.
+        """
+        arrival_x = -float(obs.wind_x_body)
+        arrival_y = -float(obs.wind_y_body)
+        left = (arrival_x + arrival_y) * INV_SQRT_2
+        right = (arrival_x - arrival_y) * INV_SQRT_2
+        return float(left), float(right)
+
     def act(self, obs: Observation) -> Action:
-        # Matheson et al. support odor-sensitive but non-directional FB tangential
-        # input and directional PFN airflow input. Preserve physical bilateral
-        # antenna sensing in the recording, but do not convert that asymmetry into
-        # an invented directional MB/FB drive in this connectome controller.
         odor_presence = float(obs.mean_odor)
+        raw_left_basis, raw_right_basis = self.pfn_basis_raw_drive(obs)
         raw_drive = {
-            "odor_left": odor_presence,
-            "odor_right": odor_presence,
-            "wind_forward": float(max(obs.wind_x_body, 0.0)),
-            "wind_backward": float(max(-obs.wind_x_body, 0.0)),
-            "wind_left": float(max(obs.wind_y_body, 0.0)),
-            "wind_right": float(max(-obs.wind_y_body, 0.0)),
+            "odor_context_left": odor_presence,
+            "odor_context_right": odor_presence,
+            "wind_basis_left": raw_left_basis,
+            "wind_basis_right": raw_right_basis,
         }
         role_gain = {
-            "odor_left": self.odor_gain,
-            "odor_right": self.odor_gain,
-            "wind_forward": self.wind_forward_gain,
-            "wind_backward": self.wind_backward_gain,
-            "wind_left": self.wind_cross_gain,
-            "wind_right": self.wind_cross_gain,
+            "odor_context_left": self.odor_gain,
+            "odor_context_right": self.odor_gain,
+            "wind_basis_left": self.wind_basis_gain,
+            "wind_basis_right": self.wind_basis_gain,
         }
         role_drive = {
-            role: float(value * role_gain[role]) for role, value in raw_drive.items()
+            role: float(raw_drive[role] * role_gain[role]) for role in raw_drive
         }
         drive = np.zeros_like(self.activity)
         for role, value in role_drive.items():
@@ -141,7 +150,11 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
         self._input_snapshot = {
             "signal_kind": "task_optimized_modeled_role_drive",
             "odor_interface": "mean_bilateral_nondirectional",
-            "direction_interface": "body_frame_wind",
+            "direction_interface": "signed_pfn_basis_from_body_frame_airflow_arrival",
+            "airflow_arrival": {
+                "x": float(-obs.wind_x_body),
+                "y": float(-obs.wind_y_body),
+            },
             "antenna_context": {
                 "left_odor": float(obs.left_odor),
                 "right_odor": float(obs.right_odor),
@@ -164,16 +177,14 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
                 for role in raw_drive
             ],
             "warning": (
-                "Task-optimized role drives are modeled interface values, not receptor currents, "
-                "ORN spikes, or fitted physiological measurements."
+                "These task-optimized drives are explicit modeled interface values, not receptor "
+                "currents, antennal mechanoreceptor spikes, PFN recordings, or fitted physiology."
             ),
         }
 
         recurrent = self.recurrent_gain * (self.w @ self.activity)
         proposal = np.tanh(self.gain * (recurrent + drive))
-        self.activity = (
-            self.retention * self.activity + (1.0 - self.retention) * proposal
-        )
+        self.activity = self.retention * self.activity + (1.0 - self.retention) * proposal
         left = self._role_mean("steer_left")
         right = self._role_mean("steer_right")
         turn = float(np.tanh(self.turn_gain * (left - right)))
@@ -189,9 +200,7 @@ class TaskOptimizedMaleCNSController(MaleCNSRateController):
             "activation_gain": self.gain,
             "recurrent_gain": self.recurrent_gain,
             "odor_gain": self.odor_gain,
-            "wind_forward_gain": self.wind_forward_gain,
-            "wind_backward_gain": self.wind_backward_gain,
-            "wind_cross_gain": self.wind_cross_gain,
+            "wind_basis_gain": self.wind_basis_gain,
             "turn_gain": self.turn_gain,
             "signed_edge_fraction": self.signed_fraction,
         }
@@ -216,8 +225,13 @@ def load_training_config(path: str | Path) -> dict[str, Any]:
     interface = config.get("connectome_sensory_interface", {})
     if interface.get("odor_mode") != "mean_bilateral_nondirectional":
         raise ValueError("v1 requires nondirectional mean-odor connectome drive")
-    if interface.get("direction_source") != "body_frame_wind":
-        raise ValueError("v1 requires body-frame wind as directional input")
+    if interface.get("direction_source") != "signed_pfn_basis_from_body_frame_airflow_arrival":
+        raise ValueError("v1 requires the signed +/-45 degree PFN airflow-basis interface")
+    if interface.get("odor_roles") != ["odor_context_left", "odor_context_right"]:
+        raise ValueError("v1 odor-role contract changed")
+    if interface.get("wind_roles") != ["wind_basis_left", "wind_basis_right"]:
+        raise ValueError("v1 PFN-basis role contract changed")
+
     specs = config.get("trainable_parameters", {})
     if set(specs) != set(PARAMETER_NAMES):
         raise ValueError(
@@ -231,6 +245,7 @@ def load_training_config(path: str | Path) -> dict[str, Any]:
         high = float(spec["max"])
         if not (0.0 < low <= default <= high):
             raise ValueError(f"invalid positive bounds/default for {name}")
+
     objective = config.get("objective", {})
     weights = [
         float(objective["success_weight"]),
@@ -254,10 +269,7 @@ def default_parameters(config: dict[str, Any]) -> DynamicsParameters:
     )
 
 
-def validate_parameters(
-    parameters: DynamicsParameters,
-    config: dict[str, Any],
-) -> None:
+def validate_parameters(parameters: DynamicsParameters, config: dict[str, Any]) -> None:
     for name, value in parameters.to_dict().items():
         spec = config["trainable_parameters"][name]
         low = float(spec["min"])
@@ -384,9 +396,7 @@ def evaluate_parameters(
         "objective": float(np.mean([x.objective for x in episodes])),
         "success_rate": float(np.mean([x.success for x in episodes])),
         "mean_spl": float(np.mean([x.spl for x in episodes])),
-        "mean_terminal_progress": float(
-            np.mean([x.terminal_progress for x in episodes])
-        ),
+        "mean_terminal_progress": float(np.mean([x.terminal_progress for x in episodes])),
         "mean_path_length": float(np.mean([x.path_length for x in episodes])),
         "mean_final_distance": float(np.mean([x.final_distance for x in episodes])),
     }
@@ -415,7 +425,7 @@ def optimize_dynamics(
     *,
     require_qualified: bool = True,
 ) -> dict[str, Any]:
-    """Fit eight global dynamics parameters with deterministic log-space CEM."""
+    """Fit six global dynamics parameters with deterministic log-space CEM."""
     train_seeds, validation_seeds = make_training_seed_split(config)
     baseline_parameters = default_parameters(config)
     baseline_train = evaluate_parameters(
@@ -537,14 +547,11 @@ def optimize_dynamics(
     success_delta = float(
         trained_validation["success_rate"] - baseline_validation["success_rate"]
     )
-    minimum_delta = float(
-        gate["minimum_validation_objective_delta_vs_own_untrained_default"]
-    )
-    maximum_success_drop = float(
-        gate["maximum_validation_success_rate_drop_vs_own_untrained_default"]
-    )
     development_passed = bool(
-        objective_delta >= minimum_delta and success_delta >= -maximum_success_drop
+        objective_delta
+        >= float(gate["minimum_validation_objective_delta_vs_own_untrained_default"])
+        and success_delta
+        >= -float(gate["maximum_validation_success_rate_drop_vs_own_untrained_default"])
     )
 
     return {
@@ -631,32 +638,25 @@ def train_matched_control_cohort(
     )
 
     intact_validation = results["intact"]["trained_validation"]
-    rewire_validation_objective = np.asarray(
-        [item["trained_validation"]["objective"] for item in rewire_results],
-        dtype=float,
+    rewire_objectives = np.asarray(
+        [item["trained_validation"]["objective"] for item in rewire_results], dtype=float
     )
-    rewire_validation_success = np.asarray(
-        [item["trained_validation"]["success_rate"] for item in rewire_results],
-        dtype=float,
+    rewire_success = np.asarray(
+        [item["trained_validation"]["success_rate"] for item in rewire_results], dtype=float
     )
-    rewire_validation_spl = np.asarray(
-        [item["trained_validation"]["mean_spl"] for item in rewire_results],
-        dtype=float,
+    rewire_spl = np.asarray(
+        [item["trained_validation"]["mean_spl"] for item in rewire_results], dtype=float
     )
-    development_comparison = {
+    comparison = {
         "intact_validation_objective": float(intact_validation["objective"]),
-        "mean_trained_rewire_validation_objective": float(
-            rewire_validation_objective.mean()
-        ),
+        "mean_trained_rewire_validation_objective": float(rewire_objectives.mean()),
         "intact_minus_mean_rewire_validation_objective": float(
-            intact_validation["objective"] - rewire_validation_objective.mean()
+            intact_validation["objective"] - rewire_objectives.mean()
         ),
         "intact_validation_success_rate": float(intact_validation["success_rate"]),
-        "mean_trained_rewire_validation_success_rate": float(
-            rewire_validation_success.mean()
-        ),
+        "mean_trained_rewire_validation_success_rate": float(rewire_success.mean()),
         "intact_validation_mean_spl": float(intact_validation["mean_spl"]),
-        "mean_trained_rewire_validation_spl": float(rewire_validation_spl.mean()),
+        "mean_trained_rewire_validation_spl": float(rewire_spl.mean()),
         "lesion_validation": results["lesion"]["trained_validation"],
         "interpretation": (
             "Development evidence only. Every topology was separately optimized with the same "
@@ -670,11 +670,10 @@ def train_matched_control_cohort(
         "rewire_count": rewire_count,
         "swaps_per_edge": swaps_per_edge,
         "results": results,
-        "development_comparison": development_comparison,
+        "development_comparison": comparison,
         "claim_boundary": (
-            "This is development/model-selection evidence only. It cannot support the public "
-            "connectome navigation claim until E002 is rerun on frozen trained parameters and "
-            "the one-way final held-out/OOD benchmark is executed."
+            "Development/model-selection evidence only. It cannot support the public connectome "
+            "navigation claim until trained E002 passes and the one-way final benchmark runs."
         ),
     }
 
@@ -688,9 +687,9 @@ def write_report(path: str | Path, report: dict[str, Any]) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Task-optimize eight global dynamics parameters on a fixed graph"
+        description="Task-optimize six global dynamics parameters on a fixed graph"
     )
-    parser.add_argument("bundle", help="signed GraphBundle directory")
+    parser.add_argument("bundle", help="reviewed signed GraphBundle directory")
     parser.add_argument(
         "--config",
         default="configs/task_optimization_v1.json",
@@ -700,7 +699,7 @@ def main() -> None:
     parser.add_argument(
         "--exploratory-candidate",
         action="store_true",
-        help="allow an unqualified graph for plumbing only; result remains candidate evidence",
+        help="allow an unqualified graph for development only; result remains candidate evidence",
     )
     parser.add_argument(
         "--matched-controls",
