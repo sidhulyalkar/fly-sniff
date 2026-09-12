@@ -29,6 +29,27 @@ def test_observe_is_idempotent_at_fixed_physical_state():
     assert first_adapt == second_adapt
 
 
+def test_transduction_outputs_from_prior_adaptation_then_updates_state():
+    arena = ArenaConfig(dt=0.05)
+    sensors = SensorConfig(
+        concentration_gain=3.0,
+        concentration_half_sat=0.18,
+        adaptation_tau=0.8,
+    )
+    env = FlySniffEnv(seed=19, arena=arena, sensors=sensors)
+    env.agent.left_adapt = 0.0
+
+    concentration = 1.0
+    raw = sensors.concentration_gain * concentration
+    sat = raw / (sensors.concentration_half_sat + raw + 1e-12)
+    response = env._transduce(concentration, "left")
+
+    expected_response = sat
+    expected_next_adapt = env._adaptation_alpha() * sat
+    assert np.isclose(response, expected_response, rtol=0.0, atol=1e-12)
+    assert np.isclose(env.agent.left_adapt, expected_next_adapt, rtol=0.0, atol=1e-12)
+
+
 def test_sensor_adaptation_advances_once_per_simulator_step():
     env = FlySniffEnv(seed=17)
 
