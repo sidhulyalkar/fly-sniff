@@ -13,6 +13,9 @@ def test_science_handoff_collects_seed_anchor_and_depth_evidence(tmp_path):
             "instance": ["Or42b_L", "PFNa_L", "PFL3_L", "DNa02_L", "FB5AB_L"],
             "class": ["sensory", "CX", "CX", "descending", "FB"],
             "subclass": ["olfactory", "PFN", "PFL", "DN", "FB"],
+            "somaSide": ["L", "L", "L", "L", "L"],
+            "predictedNt": ["acetylcholine"] * 5,
+            "predictedNtProb": [0.9, 0.8, 0.95, 0.94, 0.85],
         }
     )
     annotations_path = tmp_path / "annotations.feather"
@@ -77,9 +80,12 @@ def test_science_handoff_collects_seed_anchor_and_depth_evidence(tmp_path):
     assert report["trace_audit"]["passed"]
     assert report["olfactory_seed_hypothesis"]["union_count"] == 1
     assert report["anchor_populations"]["PFNa"]["exact_count"] == 1
+    assert report["anchor_populations"]["DNa02"]["exact_rows"][0]["somaSide"] == "L"
+    assert report["anchor_populations"]["DNa02"]["exact_rows"][0]["predictedNt"] == "acetylcholine"
     assert report["anchor_corridor_membership"]["PFNa"]["retained_in_corridor_count"] == 0
     assert report["anchor_corridor_membership"]["PFL3"]["retained_in_corridor_count"] == 1
     assert report["anchor_corridor_membership"]["DNa02"]["retained_in_corridor_count"] == 1
+    assert report["corridor_enrichment"]["columns"]["type"]["available"]
     transitions = report["corridor_profiles"]["forward_depth_edge_transitions"]
     assert [(row["source_forward_depth"], row["target_forward_depth"]) for row in transitions] == [
         (0.0, 1.0),
