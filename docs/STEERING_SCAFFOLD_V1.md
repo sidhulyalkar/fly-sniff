@@ -38,18 +38,49 @@ All 24 PFL3 neurons have a direct structural edge to one of the two DNa02 neuron
 
 This is sufficient to define a **candidate steering scaffold** for mechanistic model probes. It is not sufficient to call the scaffold a functional neural circuit.
 
-## The critical weak link
+## Direct hDeltaC-to-PFL3 result and relay interpretation
 
-The direct `hDeltaC -> PFL3` prediction is weak in this MaleCNS release:
+The direct `hDeltaC -> PFL3` population pair is weak in this MaleCNS release:
 
 - 20 observed edge pairs;
 - total structural weight 23;
 - every observed edge has weight 1 or 2;
 - zero edges survive a minimum-weight threshold of 3, 5, or 10.
 
-This result must not be hidden by lowering a threshold after inspection. The v1 route therefore does **not** seal a direct `FB5AB -> hDeltaC -> PFL3 -> DNa02` odor-navigation chain.
+This result must not be hidden by lowering a threshold after inspection. However, it also must not be misinterpreted as a failed reproduction of the 2022 wind-guided navigation mechanism.
 
-Possible biological explanations include additional local fan-shaped-body intermediates, release-to-release circuit differences, or a functional mapping that is not captured by the simple type-level transfer hypothesis. Those are hypotheses for subsequent experiments, not repairs to this result.
+Matheson et al. explicitly state in their model Methods that the biological pathways connecting hDeltaC to the mutual-inhibition circuit, PFL3, and PFL2 **all involve at least one additional cell type**. Their model collapses these pathways into a simplified hDeltaC output. The paper specifically points to downstream local FB types including hDeltaA, hDeltaG, hDeltaH, and hDeltaM as candidate motifs with strong projections toward PFL3.
+
+Therefore the current conclusion is:
+
+- strong `FB5AB -> hDeltaC` structure is reproduced;
+- a strong **direct** `hDeltaC -> PFL3` edge family is not reproduced;
+- the literature does not require that direct edge family to be strong;
+- the correct next experiment is a preregistered multi-cell relay audit.
+
+Do not lower the direct-edge threshold and do not declare the multi-cell mechanism absent from this result alone.
+
+## Next preregistered goal-relay audit
+
+`configs/goal_relay_audit_v1.json` freezes three hypothesis families before inspecting their MaleCNS edge results:
+
+1. **2022 local-relay candidates**: `hDeltaC -> {hDeltaA,hDeltaG,hDeltaH,hDeltaM} -> {PFL3,PFL2}`;
+2. **independent goal-interface positive control**: `FC2A/FC2B/FC2C -> PFL3`, motivated by goal-steering work showing strong FC2 input to PFL3;
+3. **newer persistent-goal candidates**: `hDeltaK <-> PFG`, with direct access to PFL3 tested as exploratory rather than assumed.
+
+These families must be reported separately. A strong FC2 result cannot be used to rescue a failed hDelta relay, and a strong hDeltaK/PFG result cannot be retroactively called evidence for the 2022 hDeltaC model.
+
+Run:
+
+```bash
+bash scripts/run_goal_relay_audit.sh
+```
+
+Expected output:
+
+```text
+results/route/goal-relay-audit-v1.json
+```
 
 ## Restricted candidate graph
 
@@ -82,7 +113,7 @@ The PFL3 cells are grouped for the isolated model probe according to which DNa02
 
 For the restricted excitatory scaffold, the presynaptic types PFL3, DNa03, and LAL010 are treated as `+1` under a type-level predicted-acetylcholine modeling rule. This is an explicit engineering assumption, not measured synaptic physiology.
 
-The builder refuses an unresolved sign rather than silently converting structural synapse counts into excitation. It also records the exact sign-authority file path and SHA-256 in the generated manifest.
+The builder refuses an unresolved sign rather than silently converting structural synapse counts into excitation. The scaffold config is bound to the reviewed sign-authority path and SHA-256; generated manifests also record the exact authority used.
 
 The contralateral inhibitory arm remains outside this scaffold until its exact MaleCNS body IDs and transmitter/sign provenance are sealed.
 
@@ -132,7 +163,7 @@ and writes:
 results/e002/steering-scaffold-v1.json
 ```
 
-The graph builder is bound to the sealed route-audit SHA-256 and exact body-ID sets. Drift in either causes the build to fail.
+The graph builder is bound to the sealed route-audit SHA-256, reviewed sign-authority SHA-256, and exact body-ID sets. Drift causes the build to fail.
 
 ## Claim ladder
 
@@ -148,7 +179,7 @@ After this audit, the strongest defensible statements are:
 
 > We found the complete fly smell-navigation circuit.
 
-> hDeltaC functionally drives PFL3 in MaleCNS.
+> A specific hDeltaC-to-PFL relay is qualified in MaleCNS.
 
 > The full steering see-saw circuit is modeled.
 
