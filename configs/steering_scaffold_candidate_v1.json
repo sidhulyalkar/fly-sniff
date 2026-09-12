@@ -3,6 +3,7 @@
   "dataset": "male-cns:v1.0",
   "qualification_status": "candidate",
   "evidence_authority": "authority/malecns-v1.0-steering-structure-evidence.json",
+  "evidence_audit_sha256": "250459ad4128ec37b2ecfee45b77fcf9ca4c784f24a949c9744a95206c5323b7",
   "populations": {
     "PFL3": [15210, 17000, 17286, 17290, 18327, 18803, 18851, 19009, 23159, 26038, 26488, 29836, 35322, 79549, 108478, 513032, 513266, 518378, 519346, 519351, 520811, 523032, 530071, 567101],
     "DNa03": [10975, 519624],
