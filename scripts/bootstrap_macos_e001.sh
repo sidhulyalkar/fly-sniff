@@ -58,7 +58,9 @@ echo "[bootstrap] installing stable scientific ABI"
   'scipy>=1.12,<2'
 
 echo "[bootstrap] installing fly-sniff and development tools"
-"$VPY" -m pip install --upgrade -e '.[dev]'
+# Do not pass --upgrade here: NumPy <2 already satisfies the project floor and
+# must remain pinned for this reproducible macOS lane.
+"$VPY" -m pip install -e '.[dev]'
 
 echo "[bootstrap] validating scientific imports"
 "$VPY" - <<'PY'
