@@ -14,6 +14,7 @@ import pandas as pd
 
 from .trace import body_ids_matching
 from .trace_audit import audit_directory
+from .trace_enrichment import audit_enrichment
 
 DEFAULT_SOURCE_PATTERNS = ("ORN", "^Or", "^Ir")
 DEFAULT_ANCHORS = ("FB5AB", "PFNa", "PFNm", "PFNp", "hDeltaC", "PFL3", "DNa02")
@@ -290,6 +291,7 @@ def build_handoff(
     edges = pd.read_parquet(edges_path)
     provenance = pd.read_csv(provenance_path)
     audit = audit_directory(trace_dir, top_n=max_examples)
+    enrichment = audit_enrichment(annotations, nodes)
 
     return {
         "protocol": "fly-sniff-science-handoff-v1",
@@ -321,6 +323,7 @@ def build_handoff(
         "corridor_profiles": _depth_profiles(
             nodes, provenance, edges, max_examples=max_examples
         ),
+        "corridor_enrichment": enrichment,
         "anchor_corridor_membership": _anchor_depths(
             annotations, provenance, anchors
         ),
