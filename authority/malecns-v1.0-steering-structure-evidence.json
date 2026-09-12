@@ -1,0 +1,48 @@
+{
+  "authority_kind": "body-id-resolved-structural-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "evidence-only-not-a-qualified-functional-circuit",
+  "source_audit": {
+    "protocol": "malecns-literature-route-audit-v1",
+    "audit_sha256": "250459ad4128ec37b2ecfee45b77fcf9ca4c784f24a949c9744a95206c5323b7",
+    "git_sha": "329f9d016f9dbb5c34876f3410c8e4f0dd0b3fce",
+    "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "config_sha256": "90c4cc59bb702485d3f0eff6b859194bc51e34ce581f7d8b233ec8e2f63ea05b"
+  },
+  "body_id_sets": {
+    "FB5AB": [13033, 13101],
+    "hDeltaC": [14975, 17728, 20231, 20951, 23231, 23630, 25808, 32122, 32432, 33410, 39385, 39970, 43161, 58447, 69954, 80130, 109866, 518704, 518779, 521644],
+    "PFL3": [15210, 17000, 17286, 17290, 18327, 18803, 18851, 19009, 23159, 26038, 26488, 29836, 35322, 79549, 108478, 513032, 513266, 518378, 519346, 519351, 520811, 523032, 530071, 567101],
+    "PFL2": [11557, 11673, 13031, 13490, 14729, 19715, 27492, 511842, 513034, 518375, 520573, 522853],
+    "DNa03": [10975, 519624],
+    "LAL010": [14986, 519129],
+    "DNa02": [10360, 523769],
+    "MBON32": [11455, 519131]
+  },
+  "candidate_model_roles": {
+    "steer_left": [523769],
+    "steer_right": [10360],
+    "role_basis": "DNa02_L and DNa02_R annotations plus published ipsilateral DNa02 steering physiology. This is a candidate model-role mapping, not a qualification result."
+  },
+  "structural_support": {
+    "FB5AB_to_hDeltaC": {"edge_pairs": 40, "weight_sum": 1751.0, "edge_pairs_at_min_weight_10": 40},
+    "hDeltaC_to_PFL3": {"edge_pairs": 20, "weight_sum": 23.0, "edge_pairs_at_min_weight_3": 0, "edge_pairs_at_min_weight_5": 0, "edge_pairs_at_min_weight_10": 0},
+    "PFL3_to_DNa02": {"edge_pairs": 24, "weight_sum": 736.0, "edge_pairs_at_min_weight_10": 24},
+    "PFL3_to_DNa03": {"edge_pairs": 24, "weight_sum": 468.0, "edge_pairs_at_min_weight_10": 22},
+    "PFL3_to_LAL010": {"edge_pairs": 24, "weight_sum": 319.0, "edge_pairs_at_min_weight_10": 18},
+    "DNa03_to_DNa02": {"edge_pairs": 2, "weight_sum": 552.0, "edge_pairs_at_min_weight_10": 2},
+    "LAL010_to_DNa02": {"edge_pairs": 2, "weight_sum": 357.0, "edge_pairs_at_min_weight_10": 2},
+    "PFL2_to_DNa03": {"edge_pairs": 24, "weight_sum": 1571.0, "edge_pairs_at_min_weight_10": 24},
+    "PFL2_to_LAL010": {"edge_pairs": 24, "weight_sum": 240.0, "edge_pairs_at_min_weight_10": 11},
+    "MBON32_to_DNa02": {"edge_pairs": 2, "weight_sum": 104.0, "edge_pairs_at_min_weight_10": 2},
+    "PFL3_via_DNa03_to_DNa02": {"paths": 24, "paths_at_min_weight_each_edge_10": 22},
+    "PFL3_via_LAL010_to_DNa02": {"paths": 24, "paths_at_min_weight_each_edge_10": 18}
+  },
+  "interpretation": {
+    "steering_scaffold": "MaleCNS v1.0 strongly reproduces the direct and indirect PFL3-to-DNa02 steering-side architecture and bilateral PFL2 gain-related input motifs expected from the cited steering literature.",
+    "odor_goal_chain": "FB5AB-to-hDeltaC is strong, but direct hDeltaC-to-PFL3 support is only 1-2 synapses per observed edge and vanishes at the preregistered threshold sweep from weight 3 upward. The odor-to-goal chain therefore remains unresolved and must not be sealed as a functional route.",
+    "source_manifest": "The legacy ORN/^Or/^Ir regex set is not a valid receptor-family manifest. ORN and ^Or select the same 2,635 ORN_* rows and ^Ir selects zero; receptorType is null for the olfactory annotations in this release artifact."
+  },
+  "forbidden_inference": "Do not call this a measured functional circuit, neural firing, or a qualified odor-navigation controller. Exact edge sign/transmitter provenance, sensory-role sealing, E002 perturbations, matched rewiring, and frozen held-out behavioral evaluation remain required."
+}
