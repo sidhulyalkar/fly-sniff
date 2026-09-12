@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -44,6 +45,14 @@ class Controller(ABC):
 
     def diagnostics(self) -> dict[str, float]:
         return {}
+
+    def activity_snapshot(self, *, limit: int = 256) -> dict[str, Any] | None:
+        """Return sparse neural activity for visualization when it really exists.
+
+        Non-neural controllers intentionally return ``None``. Renderers must not
+        synthesize neuron firing from proxy diagnostics or steering commands.
+        """
+        return None
 
 
 class RandomWalkController(Controller):

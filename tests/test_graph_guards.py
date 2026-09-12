@@ -109,3 +109,24 @@ def test_rate_relaxation_is_time_consistent_for_constant_drive():
         fast.act(obs)
 
     assert np.allclose(slow.activity, fast.activity, rtol=0.0, atol=1e-12)
+
+
+def test_activity_snapshot_uses_real_body_ids_and_declares_modeled_state():
+    controller = MaleCNSRateController(_bundle(signed=True, qualified=False), require_qualified=False)
+    controller.reset(3)
+    obs = Observation(
+        left_odor=0.8,
+        right_odor=0.0,
+        mean_odor=0.4,
+        odor_delta=-0.8,
+        wind_x_body=0.7,
+        wind_y_body=0.0,
+        heading=0.0,
+    )
+    controller.act(obs)
+    snapshot = controller.activity_snapshot(limit=2)
+    assert snapshot is not None
+    assert snapshot["signal_kind"] == "modeled_rate_state"
+    assert snapshot["claim_status"] == "candidate"
+    assert {cell["body_id"] for cell in snapshot["cells"]}.issubset({1, 2})
+    assert snapshot["cells"]

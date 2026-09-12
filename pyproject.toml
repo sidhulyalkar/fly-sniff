@@ -21,7 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 malecns = ["neuprint-python>=0.5"]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff==0.16.7"]
 
 [project.scripts]
 fly-sniff-demo = "fly_sniff.cli:demo_main"
@@ -32,6 +32,8 @@ fly-sniff-party = "fly_sniff.party_social:main"
 fly-sniff-showcase = "fly_sniff.showcase:main"
 fly-sniff-record = "fly_sniff.recording:main"
 fly-sniff-replay-showcase = "fly_sniff.recorded_showcase:main"
+fly-sniff-export-neural-scene = "fly_sniff.neural_scene:main"
+fly-sniff-cinematic = "fly_sniff.cinematic_showcase:main"
 fly-sniff-doctor = "fly_sniff.doctor:main"
 fly-sniff-party-final = "fly_sniff.final_party:main"
 fly-sniff-extract-malecns = "fly_sniff.malecns:main"
@@ -41,6 +43,7 @@ fly-sniff-offline-discover = "fly_sniff.public_data:offline_discover_main"
 fly-sniff-explorer-discover = "fly_sniff.explorer_data:main"
 fly-sniff-trace = "fly_sniff.trace:main"
 fly-sniff-audit-trace = "fly_sniff.trace_audit:main"
+fly-sniff-staged-trace = "fly_sniff.staged_trace:main"
 fly-sniff-qualify = "fly_sniff.qualification:main"
 fly-sniff-freeze = "fly_sniff.freeze:main"
 fly-sniff-final = "fly_sniff.qualified_eval:main"

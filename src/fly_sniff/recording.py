@@ -9,17 +9,19 @@ from typing import Any
 
 import numpy as np
 
+from .config import ArenaConfig
 from .controllers import (
     BilateralProxyController,
     CastSurgeController,
     Controller,
     RandomWalkController,
 )
+from .graph import GraphBundle, MaleCNSRateController
 from .party_social import PartyAgent, _make_agent
 
 SCHEMA_VERSION = 1
 DEFAULT_SIM_SECONDS = 45.0
-DEFAULT_PLUME_POINTS = 220
+DEFAULT_PLUME_POINTS = 600
 MATHEMATICAL_MODEL_CONTRACT = "docs/MATHEMATICAL_MODEL.md"
 PLUME_MODEL_ID = "stochastic-puff-2d-v1"
 SENSOR_MODEL_ID = "bilateral-phenomenological-v1"
@@ -62,7 +64,8 @@ def _agent_payload(
     action: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     agent = live.env.agent
-    return {
+    neural_activity = live.controller.activity_snapshot(limit=256)
+    payload: dict[str, Any] = {
         "label": live.label,
         "controller": live.controller.name,
         "x": float(agent.x),
@@ -72,6 +75,7 @@ def _agent_payload(
         "distance_to_source": float(live.env.distance_to_source),
         "found": bool(agent.found),
         "done": bool(live.done),
+        "decision_valid": action is not None and not live.done,
         "observation": _obs_payload(live.obs),
         "action": action or {"turn": 0.0, "speed": 0.0},
         "diagnostics": {
@@ -79,6 +83,9 @@ def _agent_payload(
             for key, value in live.controller.diagnostics().items()
         },
     }
+    if neural_activity is not None:
+        payload["neural_activity"] = neural_activity
+    return payload
 
 
 def _plume_payload(live: PartyAgent, max_points: int) -> tuple[list[list[float]], dict[str, Any]]:
@@ -119,9 +126,12 @@ def build_recording(
     sim_seconds: float = DEFAULT_SIM_SECONDS,
     plume_points: int = DEFAULT_PLUME_POINTS,
     controller_names: tuple[str, ...] = ("proxy", "random"),
+    candidate_graph: GraphBundle | None = None,
 ) -> dict[str, Any]:
     if sim_seconds <= 0:
         raise ValueError("sim_seconds must be > 0")
+    if len(set(controller_names)) != len(controller_names):
+        raise ValueError("controller names must be unique")
     if plume_points < 1:
         raise ValueError("plume_points must be >= 1")
     if not controller_names:
@@ -137,6 +147,18 @@ def build_recording(
         agents.append(_make_agent(label, factory, seed, color))
         colors[label] = color
 
+    if candidate_graph is not None:
+        # Explicit exploratory lane, never a qualified result even for a sealed graph.
+        candidate_graph.validate(require_sign=True)
+        def factory():
+            return MaleCNSRateController(candidate_graph, require_qualified=False,
+                                         model_dt_s=ArenaConfig().dt)
+        agents.insert(0, _make_agent("CANDIDATE MODEL", factory, seed, "#38BDF8"))
+        # Candidate versus the requested baseline, normally random.
+        if len(agents) != 2:
+            raise ValueError("candidate replay requires exactly one baseline controller")
+        colors["CANDIDATE MODEL"] = "#38BDF8"
+
     arena = agents[0].env.arena
     plume_config = agents[0].env.plume_config
     sensor_config = agents[0].env.sensor_config
@@ -147,7 +169,7 @@ def build_recording(
     def capture(actions: list[dict[str, float]] | None = None) -> None:
         _assert_shared_plume(agents, plume_points)
         if actions is None:
-            actions = [{"turn": 0.0, "speed": 0.0} for _ in agents]
+            actions = [None for _ in agents]
         plume, plume_snapshot = _plume_payload(agents[0], plume_points)
         frames.append(
             {
@@ -190,6 +212,7 @@ def build_recording(
                 # The animal stays fixed after success, but exogenous plume time
                 # keeps moving so paired controllers remain on one frozen plume.
                 live.env.plume.step()
+                live.obs = live.env.observe()
             else:
                 live.obs, live.done = live.env.step(
                     action["turn"],
@@ -202,9 +225,18 @@ def build_recording(
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
-        "claim_boundary": "DEVELOPMENT PROXY • NOT A MALECNS RESULT",
+        "claim_boundary": (
+            "CANDIDATE MODELED ACTIVITY • NOT A QUALIFIED MALECNS RESULT"
+            if candidate_graph is not None else "DEVELOPMENT PROXY • NOT A MALECNS RESULT"
+        ),
+        "graph_sha256": candidate_graph.replay_fingerprint() if candidate_graph else None,
+        "graph_manifest": candidate_graph.manifest if candidate_graph else None,
         "seed": int(seed),
         "dt": float(arena.dt),
+        "implementation_files_sha256": {
+            filename: hashlib.sha256(Path(__file__).with_name(filename).read_bytes()).hexdigest()
+            for filename in ("config.py", "controllers.py", "env.py", "graph.py", "plume.py", "recording.py", "party_social.py")
+        },
         "model_contract": {
             "mathematical_model": MATHEMATICAL_MODEL_CONTRACT,
             "plume_model": PLUME_MODEL_ID,
@@ -297,12 +329,14 @@ def main() -> None:
         default=["proxy", "random"],
         choices=sorted(_CONTROLLER_FACTORIES),
     )
+    parser.add_argument("--candidate-graph", help="Explicit exploratory signed GraphBundle; never a qualified result")
     args = parser.parse_args()
     bundle = build_recording(
         seed=args.seed,
         sim_seconds=args.sim_seconds,
         plume_points=args.plume_points,
         controller_names=tuple(args.controllers),
+        candidate_graph=GraphBundle.load(args.candidate_graph) if args.candidate_graph else None,
     )
     path = write_recording(args.output, bundle)
     print(path)

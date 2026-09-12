@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -40,6 +42,23 @@ class GraphBundle:
             roles={k: [int(x) for x in v] for k, v in roles.items()},
             manifest=manifest,
         )
+
+    def replay_fingerprint(self) -> str:
+        """Bind visual state to topology, explicit signs, roles, and dataset.
+
+        This content identity is not proof of biological provenance or qualification.
+        """
+        columns = ["source", "target", "weight"]
+        if "sign" in self.edges:
+            columns.append("sign")
+        payload = {
+            "body_ids": sorted(int(x) for x in self.nodes.bodyId),
+            "edges": sorted(self.edges[columns].itertuples(index=False, name=None)),
+            "roles": {key: sorted(ids) for key, ids in self.roles.items()},
+            "dataset": (self.manifest or {}).get("dataset", "unspecified"),
+        }
+        encoded = json.dumps(payload, sort_keys=True, allow_nan=False, separators=(",", ":"))
+        return hashlib.sha256(encoded.encode()).hexdigest()
 
     def validate(self, require_sign: bool = False, require_qualified: bool = False) -> None:
         required_nodes = {"bodyId"}
@@ -125,6 +144,7 @@ class MaleCNSRateController(Controller):
     ):
         bundle.validate(require_sign=True, require_qualified=require_qualified)
         self.bundle = bundle
+        self.graph_sha256 = bundle.replay_fingerprint()
         self.tau_s = float(tau_s)
         self.gain = float(gain)
         self.model_dt_s = float(model_dt_s)
@@ -202,3 +222,37 @@ class MaleCNSRateController(Controller):
 
     def diagnostics(self) -> dict[str, float]:
         return self._diag.copy()
+
+    def activity_snapshot(self, *, limit: int = 256) -> dict[str, Any] | None:
+        """Return the strongest modeled neuron activities without inventing spikes.
+
+        The values are rate-model state variables in [-1, 1], not measured
+        electrophysiology. Sparse top-|activity| storage keeps social recordings
+        compact while preserving exact body IDs for an anatomical replay.
+        """
+        if limit < 1 or not len(self.activity):
+            return None
+        count = min(int(limit), len(self.activity))
+        if count == len(self.activity):
+            indices = np.arange(len(self.activity), dtype=int)
+        else:
+            indices = np.argpartition(np.abs(self.activity), -count)[-count:]
+        indices = indices[np.argsort(np.abs(self.activity[indices]))[::-1]]
+        cells = [
+            {
+                "body_id": int(self.ids[int(index)]),
+                "activity": float(self.activity[int(index)]),
+            }
+            for index in indices
+            if abs(float(self.activity[int(index)])) > 1e-9
+        ]
+        status = (self.bundle.manifest or {}).get("qualification_status", "candidate")
+        return {
+            "model": self.name,
+            "claim_status": str(status),
+            "signal_kind": "modeled_rate_state",
+            "graph_sha256": self.graph_sha256,
+            "nodes_total": len(self.ids),
+            "selection": "top_absolute_activity; omitted cells are not known to be silent",
+            "cells": cells,
+        }
