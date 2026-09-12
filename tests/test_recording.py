@@ -65,6 +65,33 @@ def test_recording_seals_model_contract_and_configs():
     assert payload["config"]["sensor"]["adaptation_tau"] > 0.0
 
 
+def test_recording_marks_sampled_plume_frames_as_incomplete():
+    bundle = build_recording(seed=17, sim_seconds=0.10, plume_points=8)
+    payload = bundle["recording"]
+
+    assert payload["plume_recording"]["max_recorded_points"] == 8
+    assert payload["plume_recording"]["puff_mass"] > 0.0
+    assert any(not frame["plume_snapshot"]["complete"] for frame in payload["frames"])
+    for frame in payload["frames"]:
+        meta = frame["plume_snapshot"]
+        assert meta["recorded_count"] == len(frame["plume"])
+        assert meta["recorded_count"] <= meta["full_count"]
+        assert 0.0 < meta["sample_fraction"] <= 1.0
+
+
+def test_recording_can_capture_complete_plume_for_exact_density_replay():
+    bundle = build_recording(seed=19, sim_seconds=0.10, plume_points=600)
+    payload = bundle["recording"]
+
+    assert payload["plume_recording"]["max_model_puffs"] == 600
+    assert payload["plume_recording"]["max_recorded_points"] == 600
+    for frame in payload["frames"]:
+        meta = frame["plume_snapshot"]
+        assert meta["complete"]
+        assert meta["recorded_count"] == meta["full_count"] == len(frame["plume"])
+        assert meta["sample_fraction"] == pytest.approx(1.0)
+
+
 def test_recording_rejects_tampering(tmp_path):
     bundle = build_recording(seed=12, sim_seconds=0.10, plume_points=8)
     path = write_recording(tmp_path / "episode.json", bundle)
