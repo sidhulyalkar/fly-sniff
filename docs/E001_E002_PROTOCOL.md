@@ -19,13 +19,17 @@ Discover exact v1.0 body IDs for candidate populations. Literature constrains wh
 The initial search families are:
 
 - olfactory sensory / antennal-lobe candidates;
-- MB/LH and fan-shaped-body tangential odor-pathway candidates;
-- wind-sensitive PFN families, especially MaleCNS homologues corresponding to PFNa/PFNp/PFNm-like functional pathways;
-- `hDeltaC` as the primary odor × wind integration hypothesis;
+- MB/LH and fan-shaped-body tangential olfactory-pathway candidates;
+- wind-sensitive ventral-PFN families, especially MaleCNS types corresponding to `PFNa`, `PFNp`, and `PFNm` functional pathways;
+- `hDeltaC` as a **structural convergence hypothesis** because earlier connectomics report direct FB5AB and PFN input;
 - additional local FB populations only when supported by v1.0 connectivity;
 - `PFL3` and bilateral `DNa02` as steering-output candidates.
 
-The 2026 evidence-integration work introduces a separate **memory hypothesis**: persistent local-FB circuitry can bridge odor blanks over several seconds. Candidate recurrence associated with this computation should be traced and tested separately rather than silently folded into the hDeltaC steering hypothesis.
+Do **not** interpret the hDeltaC search role as evidence that hDeltaC itself has been functionally shown to compute odor-gated wind direction. The 2024 addendum to Matheson et al. reports that the `VT062617` line used for the original sensory-response and behavioral experiments also or perhaps predominantly labels `hDeltaK`. Those functional results therefore cannot be assigned specifically to hDeltaC. The direct FB5AB/PFNa → hDeltaC connectomic observation remains a valid structural prior.
+
+Direct ventral-PFN recordings support a side-resolved airflow basis: tuning is approximately 45° ipsilateral and depends on the hemisphere containing the cell body. Consequently, `somaSide` is the primary laterality authority for PFN role review. `rootSide` and `instance` are weaker anatomical fallbacks and must remain explicitly identified as such.
+
+The 2026 evidence-integration work introduces a separate **memory hypothesis** centered on hDeltaK-dominated local-FB activity and recurrence with PFG. This hypothesis can motivate a distinct odor-blank persistence analysis, but it cannot rescue a missing hDeltaC structural corridor or be silently folded into the steering hypothesis.
 
 ### E001-D — corridor extraction
 
@@ -33,7 +37,7 @@ Run bounded forward/reverse tracing from reviewed sensory candidates to reviewed
 
 - exact body IDs;
 - source and target type/instance labels;
-- side labels;
+- side labels and the evidence source used for side inference;
 - raw edge weights;
 - forward and reverse hop depth;
 - extraction thresholds;
@@ -44,6 +48,8 @@ Every retained intermediate population must be reviewable by name. An anonymous 
 ### E001-E — sign provenance
 
 Attach presynaptic transmitter-derived signs conservatively. ACh is modeled excitatory and GABA inhibitory in v0. Glutamate, dopamine, serotonin, octopamine, and unresolved transmitter annotations remain sign `0` until a stronger receptor-level assumption is justified. Report signed and unresolved fractions.
+
+This is a model convention, not a claim that transmitter prediction proves the postsynaptic effect of every MaleCNS edge. Predicted transmitter identity and edge-specific physiological sign are different evidence classes.
 
 ## E002: modeled circuit sanity
 
@@ -71,19 +77,19 @@ The candidate steering circuit must pass all ten core gates:
 9. near-zero steering after bilateral steering-input lesion;
 10. exact-seed deterministic replay.
 
-Passing these gates qualifies only **modeled steering propagation sanity**. It does not establish biological dynamics or prove the functional identity of a candidate sensory pathway.
+Passing these gates qualifies only **modeled steering propagation sanity**. It does not establish biological dynamics, prove hDeltaC-specific physiology, or prove the functional identity of a candidate sensory pathway.
 
 ### Separate memory hypothesis
 
 `fly-sniff-qualify` also reports `blank_bridge_memory_hypothesis`, which measures modeled directional persistence through a short odor blank. This result is deliberately **nonblocking** for core steering qualification.
 
-The separation is important. 2026 work supports several-second odor-evidence integration and persistent local fan-shaped-body dynamics during turbulent plume navigation, but the responsible recurrent population need not be identical to the hDeltaC/PFL3 steering pathway. A candidate can therefore pass E002 steering while failing the memory hypothesis. Conversely, a persistent candidate does not become a valid steering circuit merely because it bridges a blank.
+The separation is important. 2026 work supports several-second odor-evidence integration and persistent local fan-shaped-body dynamics during turbulent plume navigation, with hDeltaK-dominated activity implicated in this process. A candidate can therefore pass E002 steering while failing the memory hypothesis. Conversely, a persistent candidate does not become a valid steering circuit merely because it bridges a blank.
 
 The v0 blank threshold is a model sanity floor, not a fit to or claim about the biological time constant. Persistent-circuit body IDs, recurrence, signs, and lesion effects require their own structural qualification before any memory claim.
 
 ## Promotion rule
 
-`fly-sniff-qualify` never changes `qualification_status` itself. Human review must inspect the report, exact body IDs, type labels, signs, unresolved edges, and pathway composition. Only then may a separate sealed manifest be written with:
+`fly-sniff-qualify` never changes `qualification_status` itself. Human review must inspect the report, exact body IDs, type labels, signs, unresolved edges, pathway composition, and literature-evidence class. Only then may a separate sealed manifest be written with:
 
 ```json
 {"qualification_status": "qualified"}
@@ -93,6 +99,9 @@ A candidate that fails is retained as a negative result. Do not tune the frozen 
 
 ## References
 
+- Currier, Matheson & Nagel, *Encoding and control of orientation to airflow by a set of Drosophila fan-shaped body neurons*, eLife 10:e61510 (2021). https://doi.org/10.7554/eLife.61510
 - Matheson et al., *A neural circuit for wind-guided olfactory navigation*, Nature Communications 13, 4613 (2022). https://doi.org/10.1038/s41467-022-32247-7
+- Matheson et al., *Addendum: A neural circuit for wind-guided olfactory navigation*, Nature Communications 15, 1903 (2024). https://doi.org/10.1038/s41467-024-46225-8
+- Rayshubskiy et al., *Neural circuit mechanisms for steering control in walking Drosophila*, eLife 13:RP102230 (2025). https://doi.org/10.7554/eLife.102230.3
 - Kathman et al., *Neural dynamics for working memory and evidence integration during olfactory navigation in Drosophila*, Nature Communications 17, 9082 (2026). https://doi.org/10.1038/s41467-026-75945-2
 - MaleCNS Cell Type Explorer: https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/

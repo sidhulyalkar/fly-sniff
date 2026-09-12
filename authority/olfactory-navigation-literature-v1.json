@@ -1,7 +1,7 @@
 {
   "authority_kind": "cross-dataset-literature-prior",
   "version": "v1",
-  "verified_on": "2026-09-11",
+  "verified_on": "2026-09-12",
   "qualification_status": "hypothesis-prior-only-not-malecns-body-id-evidence",
   "primary_navigation_hypothesis": {
     "question": "Does MaleCNS v1.0 contain a reviewable structural corridor linking literature-anchored odor and wind inputs through fan-shaped-body navigation circuitry to a bilateral steering readout?",
@@ -11,7 +11,8 @@
       "wind_to_hDeltaC",
       "hDeltaC_to_pfl3",
       "pfl3_to_dna02"
-    ]
+    ],
+    "interpretation": "The hDeltaC stage is a structural convergence hypothesis. It must not be described as a functionally proven odor-gated wind integrator because the original VT062617 physiology and perturbation experiments are confounded by hDeltaK labeling."
   },
   "evidence": [
     {
@@ -20,9 +21,8 @@
       "doi": "10.1038/s41467-022-32247-7",
       "url": "https://doi.org/10.1038/s41467-022-32247-7",
       "claims_used_as_search_priors": [
-        "FB5AB is an odor-responsive fan-shaped-body tangential input receiving mushroom-body/lateral-horn olfactory pathway input.",
-        "hDeltaC receives odor-pathway input involving FB5AB and wind-direction input from PFNa, PFNp, and PFNm populations.",
-        "hDeltaC activity is consistent with odor-gated wind-direction integration relevant to upwind orientation."
+        "FB5AB is a fan-shaped-body tangential input linked by earlier connectomics and functional experiments to olfactory navigation circuitry.",
+        "Earlier connectomics show direct FB5AB and wind-sensitive PFN input onto hDeltaC, motivating hDeltaC as a structural convergence candidate."
       ],
       "candidate_labels_for_release_specific_search": [
         "FB5AB",
@@ -35,7 +35,32 @@
         "PFNm",
         "hDeltaC"
       ],
-      "boundary": "Functional and connectomic evidence from earlier datasets/animals constrains what to search for; it does not authorize MaleCNS v1.0 body IDs or edges."
+      "boundary": "Functional and connectomic evidence from earlier datasets/animals constrains what to search for. The hDeltaC-specific functional interpretation in the original article is superseded by the 2024 addendum and must not be transferred to MaleCNS body IDs."
+    },
+    {
+      "key": "matheson_2024_hdelta_addendum",
+      "citation": "Matheson et al. Addendum: A neural circuit for wind-guided olfactory navigation. Nature Communications 15, 1903 (2024).",
+      "doi": "10.1038/s41467-024-46225-8",
+      "url": "https://doi.org/10.1038/s41467-024-46225-8",
+      "claims_used_as_constraints": [
+        "The VT062617 line used for the original sensory-response and behavioral experiments additionally or perhaps predominantly labels hDeltaK rather than hDeltaC.",
+        "The odor- and wind-related sensory responses and behavioral effects originally attributed to hDeltaC may arise from hDeltaK.",
+        "The direct connectomic projections from FB5AB and PFNa to hDeltaC remain distinct structural observations even though the functional attribution is confounded."
+      ],
+      "candidate_labels_for_release_specific_search": ["hDeltaC", "hDeltaK", "FB5AB", "PFNa"],
+      "boundary": "This addendum is a negative authority on hDeltaC-specific functional wording. It does not invalidate hDeltaC as a structural convergence candidate, and hDeltaK physiology must not be used to rescue a failed hDeltaC structural route."
+    },
+    {
+      "key": "currier_2021_airflow_encoding",
+      "citation": "Currier, Matheson & Nagel. Encoding and control of orientation to airflow by a set of Drosophila fan-shaped body neurons. eLife 10:e61510 (2021).",
+      "doi": "10.7554/eLife.61510",
+      "url": "https://doi.org/10.7554/eLife.61510",
+      "claims_used_as_search_priors": [
+        "Ventral PFNs, including PFNa, PFNm, and PFNp connectomic types, are robustly tuned to airflow direction.",
+        "Ventral-PFN tuning is organized as approximately 45-degree ipsilateral preferences and depends on the hemisphere containing the cell body."
+      ],
+      "candidate_labels_for_release_specific_search": ["PFNa", "PFNm", "PFNp"],
+      "boundary": "These recordings motivate a side-resolved airflow basis. They do not establish identical tuning for every MaleCNS PFN subtype or body ID, and soma hemisphere is stronger laterality evidence than root-side or instance fallbacks."
     },
     {
       "key": "rayshubskiy_2025_steering_control",
@@ -44,10 +69,10 @@
       "url": "https://doi.org/10.7554/eLife.102230.3",
       "claims_used_as_search_priors": [
         "PFL3 provides direct and indirect central-complex steering input to DNa02.",
-        "The right-left difference in DNa02 activity is linearly related to turning velocity, making bilateral DNa02 a defensible steering readout candidate."
+        "The right-left difference in DNa02 activity is approximately linearly related to turning velocity, making bilateral DNa02 a defensible steering readout candidate."
       ],
       "candidate_labels_for_release_specific_search": ["PFL3", "DNa02"],
-      "boundary": "Functional evidence motivates readout selection but does not prove the intervening MaleCNS odor-navigation route."
+      "boundary": "Functional evidence motivates readout selection but does not prove the intervening MaleCNS odor-navigation route or that DNa02 alone determines turning."
     },
     {
       "key": "kathman_2026_odor_evidence_memory",
@@ -56,7 +81,7 @@
       "url": "https://doi.org/10.1038/s41467-026-75945-2",
       "claims_used_as_search_priors": [
         "hDeltaK-dominated fan-shaped-body activity integrates odor evidence and can persist through odor blanks, supporting continued goal-directed movement after odor loss.",
-        "hDeltaK shows strong recurrent connectivity with PFG, motivating a separate structural persistence hypothesis."
+        "hDeltaK shows recurrent connectivity with PFG, motivating a separate structural persistence hypothesis."
       ],
       "candidate_labels_for_release_specific_search": ["hDeltaK", "PFG"],
       "boundary": "This is a separate odor-blank memory hypothesis. It is nonblocking for the primary steering hypothesis and must not be used to imply that hDeltaC itself provides the persistent memory mechanism."
@@ -65,7 +90,11 @@
   "forbidden_inferences": [
     "A matching type name across connectome releases does not establish homologous body IDs or identical edges.",
     "A bounded structural corridor does not establish physiological influence, odor tuning, synaptic sign, or causal navigation function.",
+    "The 2022 VT062617 sensory responses and behavioral perturbations must not be cited as hDeltaC-specific functional evidence without acknowledging the 2024 hDeltaK addendum.",
+    "hDeltaC may be described as a structural convergence candidate, but not as experimentally proven to compute odor-gated wind direction or source direction.",
     "The optional hDeltaK/PFG memory hypothesis cannot compensate for a missing primary odor/wind-to-steering corridor.",
+    "PFNa, PFNm, and PFNp role membership does not imply that all selected MaleCNS subtypes have identical airflow tuning or transmitter confidence.",
+    "Predicted neurotransmitter identity is not equivalent to measured postsynaptic effect or edge-specific sign.",
     "No literature prior may be converted into a qualified MaleCNS role without exact v1.0 body IDs, side labels, edge extraction, sign provenance, source-file hashes, and human review."
   ]
 }

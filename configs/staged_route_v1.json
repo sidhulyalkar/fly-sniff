@@ -25,8 +25,8 @@
       "max_hops": 3,
       "min_weight": 5,
       "fanout": 40,
-      "rationale": "Test the release-specific structural counterpart of the literature-supported odor-pathway input from FB5AB toward hDeltaC.",
-      "evidence_scope": "Structural discovery only. A path does not establish odor tuning or functional transmission in MaleCNS."
+      "rationale": "Test the release-specific structural counterpart of the literature-supported FB5AB input toward hDeltaC.",
+      "evidence_scope": "Structural discovery only. A path does not establish odor tuning or functional transmission in MaleCNS, and the 2024 VT062617 addendum prevents hDeltaC-specific attribution of the original functional response."
     },
     {
       "name": "wind_to_hDeltaC",
@@ -37,8 +37,8 @@
       "max_hops": 3,
       "min_weight": 5,
       "fanout": 40,
-      "rationale": "Test whether MaleCNS PFN candidates implicated in wind-direction signaling enter an hDeltaC structural corridor.",
-      "evidence_scope": "Cross-dataset wind-direction prior only; exact MaleCNS PFN identities, sides, and paths require review."
+      "rationale": "Test whether MaleCNS PFN candidates implicated in wind-direction signaling enter an hDeltaC structural convergence corridor.",
+      "evidence_scope": "Cross-dataset wind-direction prior only; exact MaleCNS PFN identities, sides, subtype physiology, and paths require review."
     },
     {
       "name": "hDeltaC_to_pfl3",
@@ -49,8 +49,8 @@
       "max_hops": 4,
       "min_weight": 5,
       "fanout": 40,
-      "rationale": "Search for a bounded MaleCNS corridor from the candidate odor-gated wind representation toward the steering-related PFL3 population without assuming a direct synapse.",
-      "evidence_scope": "Intervening populations are part of the result and must remain explicit; this stage does not assert a direct hDeltaC-to-PFL3 edge."
+      "rationale": "Search for a bounded MaleCNS corridor from the hDeltaC structural convergence candidate toward the steering-related PFL3 population without assuming a direct synapse or hDeltaC-specific functional representation.",
+      "evidence_scope": "Intervening populations are part of the result and must remain explicit; earlier central-complex connectomics and modeling motivate indirect local-FB-to-PFL pathways, but this stage does not assert a direct hDeltaC-to-PFL3 edge or measured physiological transfer."
     },
     {
       "name": "pfl3_to_dna02",
@@ -109,7 +109,7 @@
         {"stage": "wind_to_hDeltaC", "role": "target"},
         {"stage": "hDeltaC_to_pfl3", "role": "source"}
       ],
-      "rationale": "The primary integration hypothesis requires at least one exact hDeltaC body ID retained by the odor-input, wind-input, and outgoing steering-corridor searches."
+      "rationale": "The primary structural convergence hypothesis requires at least one exact hDeltaC body ID retained by the FB5AB-input, PFN-input, and outgoing steering-corridor searches. This continuity is anatomical evidence only."
     },
     {
       "name": "pfl3_body_id_continuity",

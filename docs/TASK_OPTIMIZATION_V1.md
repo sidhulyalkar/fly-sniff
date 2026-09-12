@@ -29,7 +29,7 @@ For task-optimization v1:
 - left/right antenna values remain recorded so the full physical sensory trace is auditable;
 - the bridge from physical antenna sensing to the selected MaleCNS role neurons remains explicitly modeled until a peripheral olfactory route is separately body-ID-qualified.
 
-This choice follows the primary functional prior behind the E001 route: FB tangential odor inputs including FB5AB were odor-sensitive without significant odor-direction tuning, whereas PFNa/PFNp/PFNm carried wind direction into hDeltaC, where odor gated the directional response.
+This interface combines two literature priors while keeping their evidence classes separate. Earlier work supports FB tangential inputs including FB5AB as olfactory-navigation-related inputs and ventral PFNs as airflow-direction-tuned populations. Earlier connectomics place FB5AB and wind-sensitive PFN input onto hDeltaC, which motivates the structural convergence hypothesis. However, the 2024 addendum to Matheson et al. reports that the `VT062617` line used for the original odor-gated directional physiology also or perhaps predominantly labels hDeltaK. Therefore **odor gating inside hDeltaC is a model hypothesis, not hDeltaC-specific measured physiology**.
 
 ## Eight trainable degrees of freedom
 
@@ -102,7 +102,7 @@ Task optimization does not bypass anatomical or dynamical qualification. The int
 2. **human route review:** laterality, intermediate populations, signs, and role assignments;
 3. **candidate GraphBundle:** exact reviewed nodes/edges/roles;
 4. **task optimization:** development seeds only;
-5. **trained E002:** odor-direction invariance, odor-gated wind steering, correct upwind laterality, deterministic replay, lesion dependency, and sign coverage;
+5. **trained E002:** odor-direction invariance, modeled odor-gated wind steering, correct upwind laterality, deterministic replay, lesion dependency, and sign coverage;
 6. **matched trained-control development comparison:** intact vs eight trained rewires vs trained lesion;
 7. **freeze code + trained parameters + final manifest**;
 8. **one-way held-out/OOD evaluation**.
@@ -117,8 +117,17 @@ A positive final result could support:
 
 That is stronger and more precise than "we trained a fly brain." It tests whether the measured topology contributes useful structure after both the intact network and null topologies receive a fair chance to adapt their unknown dynamics.
 
+It still would **not** establish that hDeltaC is the biological site of odor-gated wind integration. That mechanistic claim would require cell-type-specific physiological evidence beyond the structural and task-optimization result.
+
 ## Biological plasticity is a separate second lane
 
 Drosophila does possess biologically grounded olfactory learning mechanisms, especially dopamine-gated plasticity in mushroom-body circuits. We should test those next, but not conflate them with task optimization.
 
 A later `plasticity-v1` experiment should first qualify the relevant upstream KC/DAN/MBON body IDs and then restrict learning to literature-supported synaptic classes and explicit dopamine-gated updates. That experiment asks whether a plausible local learning rule can adapt behavior. The present experiment asks the cleaner topology question first.
+
+## Literature boundary references
+
+- Currier, Matheson & Nagel (2021), eLife 10:e61510. https://doi.org/10.7554/eLife.61510
+- Matheson et al. (2022), Nature Communications 13, 4613. https://doi.org/10.1038/s41467-022-32247-7
+- Matheson et al. Addendum (2024), Nature Communications 15, 1903. https://doi.org/10.1038/s41467-024-46225-8
+- Kathman et al. (2026), Nature Communications 17, 9082. https://doi.org/10.1038/s41467-026-75945-2
