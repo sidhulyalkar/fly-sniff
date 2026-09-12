@@ -18,7 +18,7 @@
     "privileged_training_signal": "source distance is available only to the optimizer's reward calculation and is never passed to the controller at inference"
   },
   "trainable_parameters": {
-    "tau_s": {"default": 0.251992, "min": 0.05, "max": 2.0, "meaning": "global modeled neural relaxation time constant"},
+    "tau_s": {"default": 0.2519514411044401, "min": 0.05, "max": 2.0, "meaning": "global modeled neural relaxation time constant"},
     "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0, "meaning": "global nonlinearity gain"},
     "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5, "meaning": "global scale on recurrent connectome drive"},
     "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied bilateral gain on modeled odor-role drive"},
