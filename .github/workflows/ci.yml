@@ -30,6 +30,7 @@ jobs:
           fly-sniff-redteam-training --help
           fly-sniff-redteam-rewires --help
           fly-sniff-redteam-budget --help
+          fly-sniff-redteam-cem-replay --help
           fly-sniff-freeze-trained-final --help
           fly-sniff-trained-final --help
       - name: Ruff
