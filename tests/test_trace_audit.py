@@ -54,6 +54,18 @@ def test_structural_audit_passes_closed_consistent_corridor():
     assert len(report["top_structural_hubs"]) == 2
 
 
+def test_structural_audit_parses_csv_style_boolean_strings():
+    nodes, edges, provenance, trace_report = _fixture()
+    provenance["is_source_seed"] = provenance.is_source_seed.map({True: "True", False: "False"})
+    provenance["is_target_seed"] = provenance.is_target_seed.map({True: "1", False: "0"})
+
+    report = audit_corridor(nodes, edges, provenance, trace_report)
+
+    assert report["passed"]
+    assert report["counts"]["source_seeds"] == 1
+    assert report["counts"]["target_seeds"] == 1
+
+
 def test_structural_audit_fails_edge_endpoint_escape():
     nodes, edges, provenance, trace_report = _fixture()
     edges = pd.concat(
@@ -80,6 +92,16 @@ def test_structural_audit_fails_weight_below_trace_threshold():
 
     assert not report["passed"]
     assert not report["checks"]["trace_min_weight_respected"]
+
+
+def test_structural_audit_fails_bounded_depth_above_trace_limit():
+    nodes, edges, provenance, trace_report = _fixture()
+    provenance.loc[1, "forward_depth"] = 4
+
+    report = audit_corridor(nodes, edges, provenance, trace_report)
+
+    assert not report["passed"]
+    assert not report["checks"]["bounded_hop_limit_respected"]
 
 
 def test_structural_audit_reports_count_mismatch():
