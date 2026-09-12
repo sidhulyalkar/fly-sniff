@@ -29,6 +29,10 @@ def _fixture():
     report = {
         "source_seed_count": 1,
         "target_seed_count": 1,
+        "input_source_seed_count": 1,
+        "input_target_seed_count": 1,
+        "retained_source_seed_count": 1,
+        "retained_target_seed_count": 1,
         "corridor_nodes": 4,
         "corridor_edges": 3,
         "min_weight": 5.0,
@@ -46,8 +50,10 @@ def test_structural_audit_passes_closed_consistent_corridor():
     assert report["counts"] == {
         "nodes": 4,
         "edges": 3,
-        "source_seeds": 1,
-        "target_seeds": 1,
+        "input_source_seeds": 1,
+        "input_target_seeds": 1,
+        "retained_source_seeds": 1,
+        "retained_target_seeds": 1,
     }
     assert report["depths"]["bounded_path_length"] == {"3": 4}
     assert report["edge_geometry"]["shortest_layer_step_fraction"] == 1.0
@@ -62,8 +68,21 @@ def test_structural_audit_parses_csv_style_boolean_strings():
     report = audit_corridor(nodes, edges, provenance, trace_report)
 
     assert report["passed"]
-    assert report["counts"]["source_seeds"] == 1
-    assert report["counts"]["target_seeds"] == 1
+    assert report["counts"]["retained_source_seeds"] == 1
+    assert report["counts"]["retained_target_seeds"] == 1
+
+
+def test_structural_audit_allows_more_input_seeds_than_retained_seeds():
+    nodes, edges, provenance, trace_report = _fixture()
+    trace_report = dict(trace_report)
+    trace_report["source_seed_count"] = 50
+    trace_report["input_source_seed_count"] = 50
+
+    report = audit_corridor(nodes, edges, provenance, trace_report)
+
+    assert report["passed"]
+    assert report["counts"]["input_source_seeds"] == 50
+    assert report["counts"]["retained_source_seeds"] == 1
 
 
 def test_structural_audit_fails_edge_endpoint_escape():
