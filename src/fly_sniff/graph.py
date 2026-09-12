@@ -57,16 +57,25 @@ class GraphBundle:
             "roles": {key: sorted(ids) for key, ids in self.roles.items()},
             "dataset": (self.manifest or {}).get("dataset", "unspecified"),
         }
-        encoded = json.dumps(payload, sort_keys=True, allow_nan=False, separators=(",", ":"))
+        encoded = json.dumps(
+            payload,
+            sort_keys=True,
+            allow_nan=False,
+            separators=(",", ":"),
+        )
         return hashlib.sha256(encoded.encode()).hexdigest()
 
     def validate(self, require_sign: bool = False, require_qualified: bool = False) -> None:
         required_nodes = {"bodyId"}
         required_edges = {"source", "target", "weight"}
         if not required_nodes.issubset(self.nodes.columns):
-            raise ValueError(f"nodes missing columns: {required_nodes - set(self.nodes.columns)}")
+            raise ValueError(
+                f"nodes missing columns: {required_nodes - set(self.nodes.columns)}"
+            )
         if not required_edges.issubset(self.edges.columns):
-            raise ValueError(f"edges missing columns: {required_edges - set(self.edges.columns)}")
+            raise ValueError(
+                f"edges missing columns: {required_edges - set(self.edges.columns)}"
+            )
 
         node_ids = self.nodes.bodyId.astype(int)
         if not node_ids.is_unique:
@@ -95,7 +104,8 @@ class GraphBundle:
                 raise ValueError(f"sign must be in -1/0/+1; observed {sorted(signs)}")
 
         if require_qualified and (
-            not self.manifest or self.manifest.get("qualification_status") != "qualified"
+            not self.manifest
+            or self.manifest.get("qualification_status") != "qualified"
         ):
             raise ValueError(
                 "graph is not sealed as qualification_status='qualified'; "
@@ -103,7 +113,9 @@ class GraphBundle:
             )
 
         ids = set(node_ids)
-        missing = (set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))) - ids
+        missing = (
+            set(self.edges.source.astype(int)) | set(self.edges.target.astype(int))
+        ) - ids
         if missing:
             raise ValueError(f"edges reference {len(missing)} unknown body IDs")
         for role, body_ids in self.roles.items():
@@ -111,7 +123,9 @@ class GraphBundle:
                 raise ValueError(f"role {role!r} contains duplicate body IDs")
             unknown = set(body_ids) - ids
             if unknown:
-                raise ValueError(f"role {role!r} references unknown IDs: {sorted(unknown)[:5]}")
+                raise ValueError(
+                    f"role {role!r} references unknown IDs: {sorted(unknown)[:5]}"
+                )
 
 
 class MaleCNSRateController(Controller):
@@ -168,18 +182,28 @@ class MaleCNSRateController(Controller):
         raw = np.log1p(bundle.edges.weight.astype(float).to_numpy())
         sign = bundle.edges.sign.astype(float).to_numpy()
         values = raw * sign
-        mat = sparse.coo_matrix((values, (dst, src)), shape=(len(ids), len(ids))).tocsr()
+        mat = sparse.coo_matrix(
+            (values, (dst, src)),
+            shape=(len(ids), len(ids)),
+        ).tocsr()
         row_norm = np.asarray(np.abs(mat).sum(axis=1)).ravel()
-        inv = np.divide(1.0, row_norm, out=np.ones_like(row_norm), where=row_norm > 0)
+        inv = np.divide(
+            1.0,
+            row_norm,
+            out=np.ones_like(row_norm),
+            where=row_norm > 0,
+        )
         self.w = sparse.diags(inv) @ mat
         self.activity = np.zeros(len(ids), dtype=float)
         self.signed_fraction = float(np.mean(sign != 0.0)) if len(sign) else 0.0
         self._diag: dict[str, float] = {}
+        self._input_snapshot: dict[str, Any] | None = None
 
     def reset(self, seed: int) -> None:
         super().reset(seed)
         self.activity.fill(0.0)
         self._diag = {}
+        self._input_snapshot = None
 
     def _inject(self, role: str, value: float, drive: np.ndarray) -> None:
         for body_id in self.bundle.roles.get(role, []):
@@ -187,20 +211,51 @@ class MaleCNSRateController(Controller):
                 drive[self.index[body_id]] += value
 
     def _role_mean(self, role: str) -> float:
-        idx = [self.index[x] for x in self.bundle.roles.get(role, []) if x in self.index]
+        idx = [
+            self.index[x]
+            for x in self.bundle.roles.get(role, [])
+            if x in self.index
+        ]
         return float(self.activity[idx].mean()) if idx else 0.0
 
     def act(self, obs: Observation) -> Action:
+        role_drive = {
+            "odor_left": float(obs.left_odor),
+            "odor_right": float(obs.right_odor),
+            "wind_forward": float(max(obs.wind_x_body, 0.0)),
+            "wind_backward": float(max(-obs.wind_x_body, 0.0)),
+            "wind_left": float(max(obs.wind_y_body, 0.0)),
+            "wind_right": float(max(-obs.wind_y_body, 0.0)),
+        }
         drive = np.zeros_like(self.activity)
-        self._inject("odor_left", obs.left_odor, drive)
-        self._inject("odor_right", obs.right_odor, drive)
-        self._inject("wind_forward", max(obs.wind_x_body, 0.0), drive)
-        self._inject("wind_backward", max(-obs.wind_x_body, 0.0), drive)
-        self._inject("wind_left", max(obs.wind_y_body, 0.0), drive)
-        self._inject("wind_right", max(-obs.wind_y_body, 0.0), drive)
+        for role, value in role_drive.items():
+            self._inject(role, value, drive)
+        self._input_snapshot = {
+            "signal_kind": "modeled_role_drive",
+            "interface_status": (self.bundle.manifest or {}).get(
+                "sensory_interface_status",
+                "modeled_interface_not_peripheral_sensory_qualification",
+            ),
+            "graph_sha256": self.graph_sha256,
+            "roles": [
+                {
+                    "role": role,
+                    "value": value,
+                    "body_ids": [int(x) for x in self.bundle.roles.get(role, [])],
+                }
+                for role, value in role_drive.items()
+            ],
+            "warning": (
+                "These are explicit modeled drives assigned to graph roles. They are not receptor "
+                "currents, ORN spikes, or proof that the role body IDs are peripheral sensory neurons."
+            ),
+        }
         recurrent = self.w @ self.activity
         proposal = np.tanh(self.gain * (recurrent + drive))
-        self.activity = self.retention * self.activity + (1.0 - self.retention) * proposal
+        self.activity = (
+            self.retention * self.activity
+            + (1.0 - self.retention) * proposal
+        )
         left = self._role_mean("steer_left")
         right = self._role_mean("steer_right")
 
@@ -223,6 +278,9 @@ class MaleCNSRateController(Controller):
 
     def diagnostics(self) -> dict[str, float]:
         return self._diag.copy()
+
+    def input_snapshot(self) -> dict[str, Any] | None:
+        return None if self._input_snapshot is None else dict(self._input_snapshot)
 
     def activity_snapshot(self, *, limit: int = 256) -> dict[str, Any] | None:
         """Return the strongest modeled neuron activities without inventing spikes.
@@ -247,7 +305,10 @@ class MaleCNSRateController(Controller):
             for index in indices
             if abs(float(self.activity[int(index)])) > 1e-9
         ]
-        status = (self.bundle.manifest or {}).get("qualification_status", "candidate")
+        status = (self.bundle.manifest or {}).get(
+            "qualification_status",
+            "candidate",
+        )
         return {
             "model": self.name,
             "claim_status": str(status),
