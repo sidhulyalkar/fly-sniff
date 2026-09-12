@@ -27,12 +27,15 @@ def current_git_ref() -> str:
 
 
 def make_seed_split(seed: int, n_id: int, n_ood: int) -> tuple[list[int], list[int]]:
+    if n_id < 0 or n_ood < 0 or n_id + n_ood > 1_999_999_999:
+        raise ValueError("split sizes must be nonnegative and fit the seed population")
     rng = np.random.default_rng(seed)
+    # Sampling integer indices is identical to indexing arange, without 16 GB allocation.
     values = rng.choice(
-        np.arange(1, 2_000_000_000, dtype=np.int64),
+        1_999_999_999,
         size=n_id + n_ood,
         replace=False,
-    )
+    ) + 1
     return [int(x) for x in values[:n_id]], [int(x) for x in values[n_id:]]
 
 

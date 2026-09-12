@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 EDGE_COLUMN_ALIASES = {
     "source": ("source", "body_pre", "bodyId_pre", "pre", "pre_root_id"),
     "target": ("target", "body_post", "bodyId_post", "post", "post_root_id"),
