@@ -98,8 +98,9 @@ def trace_corridor(
 
     Forward and reverse searches retain only the strongest local fanout at each
     expansion step. A node survives if its forward distance plus reverse distance
-    can participate in a path no longer than max_hops. This is a discovery tool,
-    not proof of functional influence.
+    can participate in a path no longer than max_hops. Saved edges obey the same
+    ``min_weight`` threshold used during discovery. This is a discovery tool, not
+    proof of functional influence.
     """
     source_col, target_col, weight_col = resolve_edge_columns(weights)
     normalized = weights[[source_col, target_col, weight_col]].rename(
@@ -107,6 +108,8 @@ def trace_corridor(
     )
     normalized["source"] = normalized.source.astype(int)
     normalized["target"] = normalized.target.astype(int)
+    normalized["weight"] = normalized.weight.astype(float)
+
     forward = _frontier_depths(
         normalized,
         source_ids,
@@ -136,18 +139,22 @@ def trace_corridor(
     }
     corridor |= source_ids & set(reverse)
     corridor |= target_ids & set(forward)
-    edges = normalized[
-        normalized.source.isin(corridor) & normalized.target.isin(corridor)
+
+    # The persisted edge table must obey the same edge-strength contract that
+    # created the frontier. Otherwise a trace reported as min_weight=N could
+    # silently contain weaker edges that never participated in discovery.
+    edges = normalized.loc[
+        (normalized.weight >= min_weight)
+        & normalized.source.isin(corridor)
+        & normalized.target.isin(corridor)
     ].copy()
-    edges = edges[
-        edges.apply(
-            lambda row: forward.get(int(row.source), max_hops + 1)
-            + 1
-            + reverse.get(int(row.target), max_hops + 1)
-            <= max_hops,
-            axis=1,
-        )
-    ]
+
+    # Vectorized bounded-path filter. This is equivalent to the former row-wise
+    # apply but substantially faster on the full MaleCNS corridor.
+    source_forward = edges.source.map(forward).fillna(max_hops + 1).astype(int)
+    target_reverse = edges.target.map(reverse).fillna(max_hops + 1).astype(int)
+    edges = edges.loc[(source_forward + 1 + target_reverse) <= max_hops].copy()
+
     nodes = annotations[annotations.bodyId.astype(int).isin(corridor)].copy()
     provenance = pd.DataFrame(
         {
@@ -205,6 +212,7 @@ def main() -> None:
         "max_hops": args.max_hops,
         "min_weight": args.min_weight,
         "fanout_per_node": args.fanout,
+        "saved_edge_policy": "weight>=min_weight and bounded source-target path",
         "warning": "structural corridor only; not evidence of functional influence",
     }
     (out / "trace_report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
