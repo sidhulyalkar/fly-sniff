@@ -1,0 +1,8 @@
+{
+  "protocol": "malecns-v1.0-body-sign-overrides-v1",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "empty-explicit-body-override-authority",
+  "body_ids": {},
+  "policy": "Exact body-ID records may override type-level transmitter evidence only when independently reviewed and source-cited. An absent body ID remains governed by type-level evidence or unknown. Unknown never inherits a nonzero sign by default.",
+  "forbidden_inference": "Do not add body-ID transmitter or sign records because a navigation result improves."
+}
