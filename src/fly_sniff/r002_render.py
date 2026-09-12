@@ -7,8 +7,8 @@ from dataclasses import asdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 from .graph import GraphBundle
 from .looming import LoomConfig, generate_loom_frames
