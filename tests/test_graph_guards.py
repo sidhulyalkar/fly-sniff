@@ -112,7 +112,10 @@ def test_rate_relaxation_is_time_consistent_for_constant_drive():
 
 
 def test_activity_snapshot_uses_real_body_ids_and_declares_modeled_state():
-    controller = MaleCNSRateController(_bundle(signed=True, qualified=False), require_qualified=False)
+    controller = MaleCNSRateController(
+        _bundle(signed=True, qualified=False),
+        require_qualified=False,
+    )
     controller.reset(3)
     obs = Observation(
         left_odor=0.8,
@@ -130,3 +133,29 @@ def test_activity_snapshot_uses_real_body_ids_and_declares_modeled_state():
     assert snapshot["claim_status"] == "candidate"
     assert {cell["body_id"] for cell in snapshot["cells"]}.issubset({1, 2})
     assert snapshot["cells"]
+
+
+def test_input_snapshot_binds_observation_values_to_exact_role_body_ids():
+    controller = MaleCNSRateController(_drive_only_bundle(), require_qualified=False)
+    controller.reset(4)
+    assert controller.input_snapshot() is None
+
+    obs = Observation(
+        left_odor=0.8,
+        right_odor=0.2,
+        mean_odor=0.5,
+        odor_delta=-0.6,
+        wind_x_body=0.7,
+        wind_y_body=-0.3,
+        heading=0.0,
+    )
+    controller.act(obs)
+    snapshot = controller.input_snapshot()
+    assert snapshot is not None
+    assert snapshot["signal_kind"] == "modeled_role_drive"
+    assert snapshot["interface_status"] == "modeled_interface_not_peripheral_sensory_qualification"
+    by_role = {entry["role"]: entry for entry in snapshot["roles"]}
+    assert by_role["odor_left"] == {"role": "odor_left", "value": 0.8, "body_ids": [1]}
+    assert by_role["odor_right"] == {"role": "odor_right", "value": 0.2, "body_ids": [2]}
+    assert by_role["wind_forward"]["value"] == pytest.approx(0.7)
+    assert by_role["wind_right"]["value"] == pytest.approx(0.3)
