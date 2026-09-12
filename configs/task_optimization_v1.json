@@ -54,6 +54,21 @@
     "optimizer_seed": 713013,
     "common_random_numbers": true
   },
+  "trained_e002": {
+    "protocol": "E002-trained-odor-gated-wind-v1",
+    "probe_seed": 13013,
+    "probe_steps": 40,
+    "odor_level": 0.8,
+    "crosswind_magnitude": 0.7,
+    "minimum_signed_edge_fraction": 0.60,
+    "minimum_odor_on_wind_turn_separation": 0.05,
+    "minimum_odor_gating_separation_delta": 0.02,
+    "maximum_odor_laterality_error": 1e-12,
+    "maximum_lesioned_peak_turn": 0.02,
+    "maximum_deterministic_replay_error": 1e-12,
+    "laterality_rule": "positive body-frame downwind-y points left, so the upwind target is right/negative turn; negative downwind-y points right, so the upwind target is left/positive turn",
+    "memory_policy": "odor-blank persistence is not part of the primary v1 qualification because the optional hDeltaK/PFG MaleCNS label hypothesis did not qualify in E001"
+  },
   "matched_control_rule": {
     "required": true,
     "topologies": ["intact", "eight independently seeded degree-preserving rewires", "prespecified steering-input lesion"],
