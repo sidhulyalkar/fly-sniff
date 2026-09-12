@@ -1,0 +1,92 @@
+{
+  "dataset": "male-cns:v1.0",
+  "dataset_release": "v1.0",
+  "purpose": "preregistered structural discovery for an odor-and-wind-to-steering hypothesis; not a qualified functional circuit",
+  "literature_authority": "authority/olfactory-navigation-literature-v1.json",
+  "stages": [
+    {
+      "name": "odor_value_to_fb5ab",
+      "hypothesis_class": "primary_navigation",
+      "required_for_primary_hypothesis": true,
+      "source": ["^MBON12(?:\\b|_)", "^MBON13(?:\\b|_)", "^MBON19(?:\\b|_)", "^AD1b2(?:\\b|_)"],
+      "target": ["^FB5AB(?:\\b|_)"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test whether MaleCNS contains a compact structural route from literature-anchored mushroom-body/lateral-horn odor-value candidates into FB5AB.",
+      "evidence_scope": "Cross-dataset literature prior from Matheson et al. 2022; exact MaleCNS body IDs and intervening cells must be discovered and reviewed here."
+    },
+    {
+      "name": "fb5ab_to_hDeltaC",
+      "hypothesis_class": "primary_navigation",
+      "required_for_primary_hypothesis": true,
+      "source": ["^FB5AB(?:\\b|_)"],
+      "target": ["^hDeltaC(?:\\b|_)"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test the release-specific structural counterpart of the literature-supported odor-pathway input from FB5AB toward hDeltaC.",
+      "evidence_scope": "Structural discovery only. A path does not establish odor tuning or functional transmission in MaleCNS."
+    },
+    {
+      "name": "wind_to_hDeltaC",
+      "hypothesis_class": "primary_navigation",
+      "required_for_primary_hypothesis": true,
+      "source": ["^PFNa(?:\\b|_)", "^PFNp(?:\\b|_)", "^PFNm(?:\\b|_)"],
+      "target": ["^hDeltaC(?:\\b|_)"],
+      "max_hops": 3,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Test whether MaleCNS PFN candidates implicated in wind-direction signaling enter an hDeltaC structural corridor.",
+      "evidence_scope": "Cross-dataset wind-direction prior only; exact MaleCNS PFN identities, sides, and paths require review."
+    },
+    {
+      "name": "hDeltaC_to_pfl3",
+      "hypothesis_class": "primary_navigation",
+      "required_for_primary_hypothesis": true,
+      "source": ["^hDeltaC(?:\\b|_)"],
+      "target": ["^PFL3(?:\\b|_)"],
+      "max_hops": 4,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Search for a bounded MaleCNS corridor from the candidate odor-gated wind representation toward the steering-related PFL3 population without assuming a direct synapse.",
+      "evidence_scope": "Intervening populations are part of the result and must remain explicit; this stage does not assert a direct hDeltaC-to-PFL3 edge."
+    },
+    {
+      "name": "pfl3_to_dna02",
+      "hypothesis_class": "primary_navigation",
+      "required_for_primary_hypothesis": true,
+      "source": ["^PFL3(?:\\b|_)"],
+      "target": ["^DNa02(?:\\b|_)"],
+      "max_hops": 2,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Resolve the MaleCNS body-ID-level structural route from PFL3 steering output candidates to the bilateral DNa02 steering readout.",
+      "evidence_scope": "Type-level PFL3-to-DNa02 connectivity is independently anchored in the MaleCNS Cell Type Explorer; this run must still recover exact v1.0 body IDs and edges."
+    },
+    {
+      "name": "memory_hDeltaK_to_pfg",
+      "hypothesis_class": "odor_blank_memory",
+      "required_for_primary_hypothesis": false,
+      "source": ["^hDeltaK(?:\\b|_)"],
+      "target": ["^PFG(?:\\b|_)"],
+      "max_hops": 2,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Separately test one direction of the hDeltaK/PFG recurrent structural hypothesis implicated in odor-evidence persistence.",
+      "evidence_scope": "Optional memory hypothesis from Kathman et al. 2026; nonblocking for the primary steering hypothesis."
+    },
+    {
+      "name": "memory_pfg_to_hDeltaK",
+      "hypothesis_class": "odor_blank_memory",
+      "required_for_primary_hypothesis": false,
+      "source": ["^PFG(?:\\b|_)"],
+      "target": ["^hDeltaK(?:\\b|_)"],
+      "max_hops": 2,
+      "min_weight": 5,
+      "fanout": 40,
+      "rationale": "Separately test the reciprocal direction of the hDeltaK/PFG recurrent structural hypothesis implicated in odor-evidence persistence.",
+      "evidence_scope": "Optional memory hypothesis from Kathman et al. 2026; nonblocking for the primary steering hypothesis."
+    }
+  ]
+}
