@@ -1,0 +1,63 @@
+{
+  "protocol": "task-optimized-connectome-dynamics-v1",
+  "claim_boundary": "Task optimization fits unknown modeled dynamics on a fixed MaleCNS-derived graph. It does not train or modify biological connectivity and is not evidence that a living fly learned the task.",
+  "seed_namespace": {
+    "base": 2100000000,
+    "span": 40000000,
+    "split_seed": 20260912,
+    "train_episodes": 96,
+    "validation_episodes": 96,
+    "final_test_rule": "Training/development seeds are >2.1e9; final held-out/OOD seeds are generated only from 1..1,999,999,999. The namespaces are disjoint by construction."
+  },
+  "objective": {
+    "version": "navigation-objective-v1",
+    "success_weight": 0.50,
+    "spl_weight": 0.40,
+    "terminal_progress_weight": 0.10,
+    "terminal_progress_definition": "clip((initial_center_distance-final_center_distance)/max(initial_center_distance-source_radius,1e-12),-1,1)",
+    "privileged_training_signal": "source distance is available only to the optimizer's reward calculation and is never passed to the controller at inference"
+  },
+  "trainable_parameters": {
+    "tau_s": {"default": 0.251992, "min": 0.05, "max": 2.0, "meaning": "global modeled neural relaxation time constant"},
+    "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0, "meaning": "global nonlinearity gain"},
+    "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5, "meaning": "global scale on recurrent connectome drive"},
+    "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied bilateral gain on modeled odor-role drive"},
+    "wind_forward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on positive body-forward airflow drive"},
+    "wind_backward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on negative body-forward airflow drive"},
+    "wind_cross_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied left/right crosswind drive gain"},
+    "turn_gain": {"default": 2.4, "min": 0.5, "max": 6.0, "meaning": "bilateral steering readout gain"}
+  },
+  "forbidden_training_freedom": [
+    "adding or deleting neurons",
+    "adding, deleting, or redirecting edges",
+    "changing body IDs or role membership during optimization",
+    "changing transmitter-derived edge signs",
+    "individually fitting edge weights",
+    "using source coordinates, distance, plume ground truth, or final-test outcomes as controller inputs"
+  ],
+  "optimizer": {
+    "kind": "log-space cross-entropy method",
+    "population": 20,
+    "generations": 16,
+    "elite_fraction": 0.25,
+    "episodes_per_candidate": 12,
+    "update_rate": 0.60,
+    "initial_sigma_fraction_of_log_range": 0.20,
+    "minimum_log_sigma": 0.03,
+    "optimizer_seed": 713013,
+    "common_random_numbers": true
+  },
+  "matched_control_rule": {
+    "required": true,
+    "topologies": ["intact", "eight independently seeded degree-preserving rewires", "prespecified steering-input lesion"],
+    "training_budget": "identical seed split, parameter bounds, population size, generation count, objective, and optimizer seed for every topology",
+    "primary_development_comparison": "intact validation performance versus mean performance of separately trained rewired topologies",
+    "warning": "A trained intact model must never be compared against untrained rewires as evidence that topology helps."
+  },
+  "development_gate": {
+    "minimum_validation_objective_delta_vs_own_untrained_default": 0.02,
+    "maximum_validation_success_rate_drop_vs_own_untrained_default": 0.01,
+    "interpretation": "This gate only decides whether task optimization is useful enough to carry forward. It is not the final scientific claim."
+  },
+  "final_test_policy": "No final held-out or OOD episode may be evaluated until the training algorithm, parameterization, trained parameter files, E002 checks, and final manifest are frozen."
+}
