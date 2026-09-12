@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 
@@ -28,10 +27,18 @@ def _quantiles(values: pd.Series) -> dict[str, float]:
         "q99": 0.99,
         "max": 1.0,
     }
-    return {
-        label: float(numeric.quantile(q))
-        for label, q in quantile_points.items()
-    }
+    return {label: float(numeric.quantile(q)) for label, q in quantile_points.items()}
+
+
+def _bool_mask(values: pd.Series) -> pd.Series:
+    if pd.api.types.is_bool_dtype(values.dtype):
+        return values.fillna(False).astype(bool)
+    normalized = values.astype(str).str.strip().str.lower()
+    allowed = {"true", "false", "1", "0"}
+    unexpected = sorted(set(normalized.dropna()) - allowed)
+    if unexpected:
+        raise ValueError(f"cannot interpret boolean provenance values {unexpected}")
+    return normalized.isin({"true", "1"})
 
 
 def _annotation_label(row: pd.Series) -> str | None:
@@ -77,16 +84,22 @@ def audit_corridor(
 
     node_ids = set(nodes.bodyId.astype(int))
     provenance_ids = set(provenance.bodyId.astype(int))
-    source_ids = set(provenance.loc[provenance.is_source_seed.astype(bool), "bodyId"].astype(int))
-    target_ids = set(provenance.loc[provenance.is_target_seed.astype(bool), "bodyId"].astype(int))
+    source_mask = _bool_mask(provenance.is_source_seed)
+    target_mask = _bool_mask(provenance.is_target_seed)
+    source_ids = set(provenance.loc[source_mask, "bodyId"].astype(int))
+    target_ids = set(provenance.loc[target_mask, "bodyId"].astype(int))
 
     edge_sources = edges.source.astype(int)
     edge_targets = edges.target.astype(int)
     endpoint_ids = set(edge_sources) | set(edge_targets)
 
     minimum_weight = None
-    if trace_report is not None and trace_report.get("min_weight") is not None:
-        minimum_weight = float(trace_report["min_weight"])
+    max_hops = None
+    if trace_report is not None:
+        if trace_report.get("min_weight") is not None:
+            minimum_weight = float(trace_report["min_weight"])
+        if trace_report.get("max_hops") is not None:
+            max_hops = int(trace_report["max_hops"])
 
     weight_threshold_ok = True
     if minimum_weight is not None and len(edges):
@@ -96,6 +109,9 @@ def audit_corridor(
     forward = pd.to_numeric(prov.forward_depth, errors="coerce")
     reverse = pd.to_numeric(prov.reverse_depth, errors="coerce")
     bounded_length = forward + reverse
+    bounded_hop_limit_ok = True
+    if max_hops is not None and bounded_length.notna().any():
+        bounded_hop_limit_ok = bool((bounded_length.dropna() <= max_hops).all())
 
     edge_geometry = pd.DataFrame(
         {
@@ -134,7 +150,11 @@ def audit_corridor(
     for body_id, row in degree.sort_values(
         ["total_degree", "weighted_total"], ascending=False
     ).head(max(0, int(top_n))).iterrows():
-        annotation = annotation_rows.loc[body_id] if body_id in annotation_rows.index else pd.Series(dtype=object)
+        annotation = (
+            annotation_rows.loc[body_id]
+            if body_id in annotation_rows.index
+            else pd.Series(dtype=object)
+        )
         hubs.append(
             {
                 "bodyId": int(body_id),
@@ -173,6 +193,7 @@ def audit_corridor(
         "target_seed_closure": target_ids.issubset(node_ids),
         "nonnegative_weights": bool((edges.weight.astype(float) >= 0.0).all()),
         "trace_min_weight_respected": weight_threshold_ok,
+        "bounded_hop_limit_respected": bounded_hop_limit_ok,
         "trace_report_counts_match": report_counts_match,
     }
 
