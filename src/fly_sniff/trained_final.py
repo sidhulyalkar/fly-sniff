@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import CastSurgeController, Controller
@@ -151,6 +152,8 @@ def build_trained_final_manifest(
     code_ref: str,
 ) -> dict[str, Any]:
     """Freeze a new final protocol only after all trained artifacts are immutable."""
+    if not code_ref or code_ref == "UNKNOWN":
+        raise ValueError("trained final manifest requires an exact git commit")
     verified = validate_matched_training_artifact(bundle, config, matched_report)
     intact_report = verified["intact"]["report"]
     _verify_e002(
