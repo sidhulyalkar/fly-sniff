@@ -11,7 +11,6 @@ import pandas as pd
 from .trace import body_ids_matching, trace_corridor
 from .trace_audit import audit_corridor
 
-
 SEED_COLUMNS = ("bodyId", "type", "instance", "class", "subclass", "side")
 
 
