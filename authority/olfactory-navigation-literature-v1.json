@@ -12,7 +12,7 @@
       "hDeltaC_to_pfl3",
       "pfl3_to_dna02"
     ],
-    "interpretation": "The hDeltaC stage is a structural convergence hypothesis. It must not be described as a functionally proven odor-gated wind integrator because the original VT062617 physiology and perturbation experiments are confounded by hDeltaK labeling."
+    "interpretation": "The hDeltaC stage is a structural convergence hypothesis. It must not be described as a functionally proven odor-gated wind integrator because the original VT062617 physiology and perturbation experiments are confounded by hDeltaK labeling. The v1 sensory interface deliberately tests a restricted odor-context-plus-airflow hypothesis rather than a complete model of Drosophila plume navigation."
   },
   "evidence": [
     {
@@ -62,6 +62,19 @@
       ],
       "candidate_labels_for_release_specific_search": ["PFNa", "PFNm", "PFNp"],
       "boundary": "These recordings motivate a side-resolved airflow basis. They do not establish identical tuning for every MaleCNS PFN subtype or body ID, and soma hemisphere is stronger laterality evidence than root-side or instance fallbacks."
+    },
+    {
+      "key": "kadakia_2022_odor_motion",
+      "citation": "Kadakia et al. Odour motion sensing enhances navigation of complex plumes. Nature 611, 754-761 (2022).",
+      "doi": "10.1038/s41586-022-05423-4",
+      "url": "https://doi.org/10.1038/s41586-022-05423-4",
+      "claims_used_as_constraints": [
+        "Walking Drosophila can use odor-motion direction as an additional directional cue during plume navigation.",
+        "Odor-motion direction can be extracted from temporal correlations between signals at the two antennae.",
+        "Odor-motion information can improve navigation and is not reducible to airflow direction alone."
+      ],
+      "candidate_labels_for_release_specific_search": [],
+      "boundary": "Task-optimization v1 intentionally collapses bilateral odor into nondirectional odor context and therefore omits a known biological directional cue. This is acceptable for the restricted topology hypothesis, but v1 must not be described as a complete sensory model of Drosophila plume navigation."
     },
     {
       "key": "hulse_2021_central_complex_connectome",
@@ -121,6 +134,7 @@
     "hDeltaC may be described as a structural convergence candidate, but not as experimentally proven to compute odor-gated wind direction or source direction.",
     "The optional hDeltaK/PFG memory hypothesis cannot compensate for a missing primary odor/wind-to-steering corridor.",
     "PFNa, PFNm, and PFNp role membership does not imply that all selected MaleCNS subtypes have identical airflow tuning or transmitter confidence.",
+    "The v1 mean-bilateral-odor interface must not be presented as the complete Drosophila sensory algorithm because it intentionally omits antenna-to-antenna odor-motion correlations.",
     "Previously described hDelta/vDelta intermediates must not be made mandatory after inspecting the MaleCNS route; unexpected intermediates are results to review rather than reasons to retune the preregistered search.",
     "PFL3 steering side must not be inferred from soma, root, or bridge side alone because PFL3 functional left/right is defined by LAL projection and can be contralateral to bridge innervation.",
     "Predicted neurotransmitter identity is not equivalent to measured postsynaptic effect or edge-specific sign.",
