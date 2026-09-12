@@ -46,8 +46,14 @@ fly-sniff-audit-trace = "fly_sniff.trace_audit:main"
 fly-sniff-staged-trace = "fly_sniff.staged_trace:main"
 fly-sniff-review-route = "fly_sniff.route_review:main"
 fly-sniff-qualify = "fly_sniff.qualification:main"
-fly-sniff-train-dynamics = "fly_sniff.training:main"
+fly-sniff-train-dynamics = "fly_sniff.reproducible_training:main"
 fly-sniff-qualify-trained = "fly_sniff.trained_qualification:main"
+fly-sniff-redteam-training = "fly_sniff.training_redteam:main"
+fly-sniff-redteam-rewires = "fly_sniff.rewire_redteam:main"
+fly-sniff-redteam-budget = "fly_sniff.training_budget_redteam:main"
+fly-sniff-redteam-cem-replay = "fly_sniff.optimizer_replay:main"
+fly-sniff-freeze-trained-final = "fly_sniff.trained_final:freeze_main"
+fly-sniff-trained-final = "fly_sniff.trained_final:main"
 fly-sniff-freeze = "fly_sniff.freeze:main"
 fly-sniff-final = "fly_sniff.qualified_eval:main"
 fly-sniff-render-final = "fly_sniff.final_social:main"
@@ -62,3 +68,9 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+# These checks intentionally use domain-contract exceptions: malformed report schema is
+# a ValueError and a missing runtime budget receipt is a RuntimeError, not Python API typing.
+"src/fly_sniff/trained_qualification.py" = ["TRY004"]
+"src/fly_sniff/training.py" = ["TRY004"]

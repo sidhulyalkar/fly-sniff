@@ -27,6 +27,12 @@ jobs:
           fly-sniff-cinematic --help
           fly-sniff-train-dynamics --help
           fly-sniff-qualify-trained --help
+          fly-sniff-redteam-training --help
+          fly-sniff-redteam-rewires --help
+          fly-sniff-redteam-budget --help
+          fly-sniff-redteam-cem-replay --help
+          fly-sniff-freeze-trained-final --help
+          fly-sniff-trained-final --help
       - name: Ruff
         id: ruff
         continue-on-error: true
