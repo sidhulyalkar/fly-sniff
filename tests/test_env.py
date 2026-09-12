@@ -71,6 +71,31 @@ def test_sensor_adaptation_advances_once_per_simulator_step():
     assert after_step[1] > before[1]
 
 
+def test_sensor_trace_matches_cached_observation_without_advancing_state():
+    env = FlySniffEnv(seed=18)
+
+    def constant_concentration(x: float, y: float) -> float:
+        return 0.25 if y >= env.agent.y else 0.10
+
+    env.plume.concentration = constant_concentration
+    obs = env.observe()
+    adapt_after_observe = (env.agent.left_adapt, env.agent.right_adapt)
+    trace = env.sensor_trace()
+    trace_again = env.sensor_trace()
+
+    assert trace == trace_again
+    assert (env.agent.left_adapt, env.agent.right_adapt) == adapt_after_observe
+    assert np.isclose(trace.left.concentration, 0.25)
+    assert np.isclose(trace.right.concentration, 0.10)
+    assert np.isclose(trace.left.response, obs.left_odor)
+    assert np.isclose(trace.right.response, obs.right_odor)
+    assert trace.left.adaptation_before == 0.0
+    assert trace.right.adaptation_before == 0.0
+    assert trace.left.adaptation_after == env.agent.left_adapt
+    assert trace.right.adaptation_after == env.agent.right_adapt
+    assert trace.signal_kind == "modeled_antenna_transduction"
+
+
 def test_adaptation_discretization_is_exact_first_order_hold():
     arena = ArenaConfig(dt=0.05)
     sensors = SensorConfig(adaptation_tau=0.8)
