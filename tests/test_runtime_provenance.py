@@ -21,6 +21,7 @@ def _minimal_training_report():
         "validation_seed_sha256": "validation",
         "trained_parameter_sha256": "parameters",
         "optimizer_budget_sha256": "budget",
+        "history": [{"generation": 0, "candidate_receipts": []}],
     }
 
 
@@ -50,6 +51,7 @@ def test_runtime_seal_rehashes_training_audit_receipt():
         sealed["runtime_environment"]
     )
     assert sealed["numerical_runtime_sha256"] == numerical_compatibility_sha256()
+    assert sealed["optimizer_history_sha256"] == canonical_sha256(sealed["history"])
     expected_audit = canonical_sha256(
         {
             "graph_sha256": "graph",
@@ -58,11 +60,19 @@ def test_runtime_seal_rehashes_training_audit_receipt():
             "validation_seed_sha256": "validation",
             "trained_parameter_sha256": "parameters",
             "optimizer_budget_sha256": "budget",
+            "optimizer_history_sha256": sealed["optimizer_history_sha256"],
             "runtime_environment_sha256": sealed["runtime_environment_sha256"],
             "numerical_runtime_sha256": sealed["numerical_runtime_sha256"],
         }
     )
     assert sealed["audit_receipt_sha256"] == expected_audit
+
+
+def test_runtime_seal_rejects_missing_optimizer_history():
+    report = _minimal_training_report()
+    report.pop("history")
+    with pytest.raises(TypeError, match="optimizer history"):
+        seal_training_runtime(report)
 
 
 def test_matched_runtime_seal_uses_one_identity_for_every_topology():
@@ -86,3 +96,7 @@ def test_matched_runtime_seal_uses_one_identity_for_every_topology():
     ]
     assert all(report["numerical_runtime_sha256"] == expected for report in reports)
     assert len({report["runtime_environment_sha256"] for report in reports}) == 1
+    assert all(
+        report["optimizer_history_sha256"] == canonical_sha256(report["history"])
+        for report in reports
+    )
