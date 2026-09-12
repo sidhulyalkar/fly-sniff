@@ -29,6 +29,7 @@ jobs:
           fly-sniff-qualify-trained --help
           fly-sniff-redteam-training --help
           fly-sniff-redteam-rewires --help
+          fly-sniff-redteam-budget --help
           fly-sniff-freeze-trained-final --help
           fly-sniff-trained-final --help
       - name: Ruff
