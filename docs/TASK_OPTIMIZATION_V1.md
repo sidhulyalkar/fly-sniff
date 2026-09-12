@@ -1,6 +1,6 @@
 # Task optimization v1: make the model better without training away the connectome
 
-`fly-sniff` now has a positive preregistered E001 structural result, but structure alone does not determine neural dynamics. The next question is therefore not "can we hand-tune the graph until it navigates?" It is:
+`fly-sniff` currently records a reported positive local E001 structural result, but structure alone does not determine neural dynamics. The checked-in manual `e001-realdata` Actions workflow has not yet produced a hosted evidence bundle, so reproducible CI provenance for that real-data result remains a required release step. The next modeling question is not "can we hand-tune the graph until it navigates?" It is:
 
 > **If MaleCNS supplies the fixed wiring scaffold, can a very small set of unknown dynamical parameters be task-optimized to support odor-source navigation, and does that scaffold remain useful when the same optimization budget is given to degree-preserving rewired controls?**
 
@@ -30,6 +30,8 @@ For task-optimization v1:
 - the bridge from physical antenna sensing to the selected MaleCNS role neurons remains explicitly modeled until a peripheral olfactory route is separately body-ID-qualified.
 
 This interface combines two literature priors while keeping their evidence classes separate. Earlier work supports FB tangential inputs including FB5AB as olfactory-navigation-related inputs and ventral PFNs as airflow-direction-tuned populations. Earlier connectomics place FB5AB and wind-sensitive PFN input onto hDeltaC, which motivates the structural convergence hypothesis. However, the 2024 addendum to Matheson et al. reports that the `VT062617` line used for the original odor-gated directional physiology also or perhaps predominantly labels hDeltaK. Therefore **odor gating inside hDeltaC is a model hypothesis, not hDeltaC-specific measured physiology**.
+
+There is also a known sensory mechanism that v1 deliberately leaves out. Kadakia et al. (2022) showed that walking Drosophila can infer **odor-motion direction from temporal correlations between the two antennae**, providing directional information beyond airflow alone. Because v1 collapses bilateral odor into a mean nondirectional context signal before neural injection, it cannot exploit this odor-motion channel. This restriction is intentional: v1 asks a narrower topology question about an odor-context-plus-airflow controller. It must therefore not be described as a complete sensory algorithm for Drosophila plume navigation. The recorded left/right antenna traces are retained so a later, separately preregistered sensory-interface experiment can test odor-motion information without retrofitting it after seeing v1 performance.
 
 ## Eight trainable degrees of freedom
 
@@ -92,7 +94,9 @@ The trained gate requires:
 - collapse of steering after the prespecified incoming-to-steering lesion;
 - successful passage of the frozen development-improvement gate.
 
-Odor-blank persistence is deliberately not a primary v1 gate because the optional hDeltaK/PFG label hypothesis did not qualify in the first real-data E001 run.
+The left/right odor invariance gate is a **v1 model contract**, not a statement that biological flies ignore bilateral odor timing. In particular, it intentionally excludes the odor-motion computation described by Kadakia et al. (2022).
+
+Odor-blank persistence is deliberately not a primary v1 gate because the optional hDeltaK/PFG label hypothesis did not qualify in the reported first local real-data E001 run. That negative should be preserved and independently reproduced rather than repaired by changing the frozen route plan.
 
 ## Qualification order
 
@@ -102,7 +106,7 @@ Task optimization does not bypass anatomical or dynamical qualification. The int
 2. **human route review:** laterality, intermediate populations, signs, and role assignments;
 3. **candidate GraphBundle:** exact reviewed nodes/edges/roles;
 4. **task optimization:** development seeds only;
-5. **trained E002:** odor-direction invariance, modeled odor-gated wind steering, correct upwind laterality, deterministic replay, lesion dependency, and sign coverage;
+5. **trained E002:** v1 odor-direction invariance, modeled odor-gated wind steering, correct upwind laterality, deterministic replay, lesion dependency, and sign coverage;
 6. **matched trained-control development comparison:** intact vs eight trained rewires vs trained lesion;
 7. **freeze code + trained parameters + final manifest**;
 8. **one-way held-out/OOD evaluation**.
@@ -117,7 +121,7 @@ A positive final result could support:
 
 That is stronger and more precise than "we trained a fly brain." It tests whether the measured topology contributes useful structure after both the intact network and null topologies receive a fair chance to adapt their unknown dynamics.
 
-It still would **not** establish that hDeltaC is the biological site of odor-gated wind integration. That mechanistic claim would require cell-type-specific physiological evidence beyond the structural and task-optimization result.
+It still would **not** establish that hDeltaC is the biological site of odor-gated wind integration, nor would it show that the model captures every sensory strategy available to a real fly. Those claims require cell-type-specific physiology and additional sensory-interface experiments beyond the structural and task-optimization result.
 
 ## Biological plasticity is a separate second lane
 
@@ -128,6 +132,10 @@ A later `plasticity-v1` experiment should first qualify the relevant upstream KC
 ## Literature boundary references
 
 - Currier, Matheson & Nagel (2021), eLife 10:e61510. https://doi.org/10.7554/eLife.61510
+- Hulse et al. (2021), eLife 10:e66039. https://doi.org/10.7554/eLife.66039
 - Matheson et al. (2022), Nature Communications 13, 4613. https://doi.org/10.1038/s41467-022-32247-7
+- Kadakia et al. (2022), Nature 611, 754-761. https://doi.org/10.1038/s41586-022-05423-4
 - Matheson et al. Addendum (2024), Nature Communications 15, 1903. https://doi.org/10.1038/s41467-024-46225-8
+- Westeinde et al. (2024), Nature 626, 819-826. https://doi.org/10.1038/s41586-024-07039-2
+- Rayshubskiy et al. (2025), eLife 13:RP102230. https://doi.org/10.7554/eLife.102230.3
 - Kathman et al. (2026), Nature Communications 17, 9082. https://doi.org/10.1038/s41467-026-75945-2
