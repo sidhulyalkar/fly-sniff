@@ -26,15 +26,20 @@ def _seal_single_report_runtime(
 ) -> None:
     if report.get("protocol") != "task-optimized-connectome-dynamics-v1":
         raise ValueError("cannot runtime-seal an unexpected training report protocol")
+    history = report.get("history")
+    if not isinstance(history, list):
+        raise TypeError("cannot runtime-seal a training report without optimizer history")
     runtime_sha256 = canonical_sha256(runtime_receipt)
     numerical_sha256 = verify_runtime_environment_receipt(
         runtime_receipt,
         require_current_numerical_match=True,
     )
+    history_sha256 = canonical_sha256(history)
     report["report_schema"] = RUNTIME_SEALED_REPORT_SCHEMA
     report["runtime_environment"] = runtime_receipt
     report["runtime_environment_sha256"] = runtime_sha256
     report["numerical_runtime_sha256"] = numerical_sha256
+    report["optimizer_history_sha256"] = history_sha256
     report["audit_receipt_sha256"] = canonical_sha256(
         {
             "graph_sha256": report["graph_sha256"],
@@ -43,6 +48,7 @@ def _seal_single_report_runtime(
             "validation_seed_sha256": report["validation_seed_sha256"],
             "trained_parameter_sha256": report["trained_parameter_sha256"],
             "optimizer_budget_sha256": report["optimizer_budget_sha256"],
+            "optimizer_history_sha256": history_sha256,
             "runtime_environment_sha256": runtime_sha256,
             "numerical_runtime_sha256": numerical_sha256,
         }
