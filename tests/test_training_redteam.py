@@ -7,6 +7,7 @@ from fly_sniff import trained_qualification as tq
 from fly_sniff import training
 from fly_sniff.env import Observation
 from fly_sniff.graph import GraphBundle
+from fly_sniff.reproducible_training import seal_training_runtime
 from fly_sniff.training import (
     TaskOptimizedMaleCNSController,
     canonical_sha256,
@@ -150,17 +151,7 @@ def _training_report(bundle, config):
         "validation_success_rate_delta": 0.0,
         "history": history,
     }
-    report["audit_receipt_sha256"] = canonical_sha256(
-        {
-            "graph_sha256": report["graph_sha256"],
-            "training_config_sha256": report["training_config_sha256"],
-            "train_seed_sha256": report["train_seed_sha256"],
-            "validation_seed_sha256": report["validation_seed_sha256"],
-            "trained_parameter_sha256": report["trained_parameter_sha256"],
-            "optimizer_budget_sha256": report["optimizer_budget_sha256"],
-        }
-    )
-    return report
+    return seal_training_runtime(report)
 
 
 def test_candidate_selection_never_uses_validation_inside_cem(monkeypatch):
@@ -360,6 +351,15 @@ def test_training_report_development_gate_is_recomputed_not_trusted():
     report["validation_objective_delta"] = -1.0
     report["validation_success_rate_delta"] = -1.0
     with pytest.raises(ValueError, match="development|gate|validation|recomputed"):
+        tq.parameters_from_training_report(report, bundle, config)
+
+
+def test_training_report_runtime_receipt_is_not_self_asserted():
+    config = _config()
+    bundle = _bundle()
+    report = _training_report(bundle, config)
+    report["numerical_runtime_sha256"] = "forged"
+    with pytest.raises(ValueError, match="runtime|numerical"):
         tq.parameters_from_training_report(report, bundle, config)
 
 
