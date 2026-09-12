@@ -1,6 +1,6 @@
 # Task-optimization scientific red-team v1
 
-This lane is intentionally adversarial. Its job is not to improve navigation performance. Its job is to find ways the task-optimization result could look stronger than the evidence warrants.
+This lane is intentionally adversarial. Its job is not to improve navigation performance. Its job is to find ways the task-optimization result could look stronger than the evidence warrants, then make those failure modes executable wherever possible.
 
 Target: PR #16, `feat/task-optimized-connectome-v1`.
 
@@ -8,149 +8,199 @@ Target: PR #16, `feat/task-optimized-connectome-v1`.
 
 Do not relax biological, statistical, development, or final-test thresholds because a model or test fails. A red sentry means the implementation or claim boundary must be repaired, or the claim must be weakened.
 
-## Current positive findings
+No red-team repair may add controller inputs, trainable parameters, edge-level freedom, topology mutations, role mutations, or extra optimization budget.
 
-The implementation already has several strong protections:
+## Current status
 
-- development seeds occupy a namespace above 2.1e9 while the final benchmark samples only from 1..1,999,999,999;
+The first red-team tranche found nine implementation-level validity holes. They are now hardened on `redteam/task-optimization-validity-v1` and covered by regression sentries. The ordinary CI suite passed after this hardening before the shortcut-diagnostic tranche was added.
+
+The repaired guarantees are about **internal artifact integrity**. They do not prove that an external human/process never inspected final outcomes, that accepted double-edge swaps establish Markov-chain stationarity, or that a high navigation score necessarily depends on odor. Those are kept as explicit residual risks rather than silently promoted to guarantees.
+
+## Positive protections retained
+
+The implementation retains the following strong boundaries:
+
+- development seeds occupy a namespace above 2.1e9 while final benchmark seeds are restricted to `1..1,999,999,999`;
 - CEM candidate ranking uses training seeds, not development-validation seeds;
-- common random numbers are used within each generation;
-- the task-optimized controller has no direct x/y, source-coordinate, distance-to-source, or wall-distance input;
-- the controller ignores world heading when body-frame odor and airflow are held fixed;
-- intact, rewired, and lesioned topologies all call the same optimizer implementation with the same config object;
-- the graph fingerprint binds nodes, weighted signed edges, role membership, and dataset identity.
+- common random numbers are mandatory within each generation;
+- the controller has no direct x/y, source-coordinate, distance-to-source, or wall-distance input;
+- world heading does not affect the task controller when body-frame sensory inputs are held fixed;
+- graph fingerprints bind body IDs, weighted signed edges, role membership, and dataset identity;
+- the model remains limited to the same six global dynamics parameters.
 
-These protections are worth keeping. The red-team suite includes positive sentries so future cleanup cannot accidentally remove them.
+These are positive sentries, not claims about living-fly physiology.
 
-## Vulnerabilities found
+## Repaired implementation vulnerabilities
 
-### RT-01: final-test non-peeking is partly self-asserted
+### RT-01: final-test non-peeking was partly self-asserted
 
-`optimize_dynamics()` writes `final_test_namespace_touched: false`, and trained qualification currently trusts that boolean. The report also contains train/validation seed hashes, but qualification does not recompute the frozen split and verify those receipts.
+Previous state: qualification trusted `final_test_namespace_touched=false` and did not reconstruct the frozen seed split.
 
-Risk: a forged, stale, or hand-edited report can claim that the final namespace stayed unopened while retaining a valid graph/config/parameter hash.
+Repair:
 
-Required repair: qualification must recompute the frozen train/validation split, verify seed counts and hashes, verify every persisted CEM seed batch is a subset of the training split, and refuse contradictory receipts. This still cannot prove that an untrusted external process never peeked; it only makes the artifact internally auditable.
+- reports now persist exact train and validation seed lists, counts, and hashes;
+- qualification recomputes the split from the frozen config and requires exact equality;
+- optimizer/evaluation entry points reject final-test-namespace seeds;
+- a compound audit receipt binds graph, config, seed, parameter, and budget identities.
 
 Sentry: `test_training_report_seed_receipts_are_recomputed_not_trusted`.
 
-### RT-02: development gate is trusted as a boolean
+Boundary: this establishes internal consistency of the supplied run. It cannot prove an external person or process never peeked at a final result.
 
-Trained qualification reads `development_gate_passed` without recomputing it from the persisted validation deltas and frozen gate thresholds.
+### RT-02: development gate was trusted as mutable metadata
 
-Risk: a report can flip the boolean without changing parameters or hashes.
+Previous state: qualification trusted `development_gate_passed`.
 
-Required repair: recompute the gate from sealed deltas/summaries and reject contradictions.
+Repair: qualification recomputes objective and success deltas from persisted baseline/trained validation summaries and applies the unchanged frozen thresholds. Contradictory booleans or deltas are rejected.
 
 Sentry: `test_training_report_development_gate_is_recomputed_not_trusted`.
 
-### RT-03: frozen eight-rewire contract is not actually enforced
+### RT-03: the frozen null budget was configurable at runtime
 
-The v1 config says the matched topology control is eight independently seeded rewires at 8 swaps per edge. The public function/CLI accepts any `rewire_count >= 2`, and `swaps_per_edge` remains a free function argument.
+Previous state: the v1 prose required eight rewires at 8 swaps/edge, but the function accepted smaller ensembles and arbitrary swap counts.
 
-Risk: a cheaper or luckier null ensemble can be run and still look like the v1 matched-control protocol.
-
-Required repair: encode `rewire_count` and `swaps_per_edge` as structured frozen config values and require exact equality for protocol v1. A different budget must use a different protocol/version.
+Repair: v1 now requires exactly eight independently seeded rewires and exactly 8 accepted swaps per edge. A different design must use a different protocol version rather than masquerading as v1.
 
 Sentries:
 
 - `test_v1_matched_control_contract_refuses_fewer_than_eight_rewires`
 - `test_v1_matched_control_contract_refuses_changed_swap_budget`
 
-### RT-04: rewire completion trusts a mutable manifest flag
+### RT-04: rewire completion trusted one boolean
 
-`_require_complete_rewire()` currently checks only `rewire.mixing_complete`.
+Previous state: `mixing_complete=true` was sufficient.
 
-Risk: contradictory metadata such as `mixing_complete=true`, `accepted_swaps=0`, `target_swaps=100` is accepted. More importantly, reaching a requested number of accepted double-edge swaps is a heuristic amount of rewiring, not a mathematical proof that the Markov chain has mixed.
-
-Required repair: independently verify the swap receipt, exact in/out-degree preservation, node/role identity, edge count, absence of self-loops/duplicates, and changed-topology diagnostics. Rename any language that implies proven Markov-chain mixing unless such a proof/diagnostic is actually supplied.
+Repair: the training path now verifies the swap receipt, edge count, node/body-ID identity, role identity, and exact directed in/out-degree preservation. Contradictory accepted/target/attempted counts fail closed.
 
 Sentry: `test_rewire_completion_cannot_be_asserted_by_boolean_only`.
 
-### RT-05: graph identity is fingerprinted after training but not guarded during training
+Important limitation: reaching eight accepted double-edge swaps per edge is **rewire-budget completion**, not proof that a degree-preserving Markov chain has mixed to stationarity. Public wording must not call this a proved mixed null. Additional topology-distance diagnostics should be reported for the actual eight rewires.
 
-`GraphBundle` is a frozen dataclass, but its DataFrames, role dictionary, and role lists remain mutable objects. `optimize_dynamics()` does not currently seal the starting fingerprint and check it after evaluation calls.
+### RT-05: mutable graph objects were not guarded throughout optimization
 
-Risk: an accidental or malicious evaluator can mutate role membership or topology during optimization, after which the report simply fingerprints the mutated graph.
+Previous state: `GraphBundle` is a frozen dataclass whose DataFrames/dicts/lists are still mutable.
 
-Required repair: capture the graph fingerprint before any baseline/training evaluation, assert it before and after every optimization phase, and fail closed on mutation.
+Repair: optimization seals the initial replay fingerprint and checks it before and after parameter evaluations and matched-control runs. Mutation of topology, weights, signs, body IDs, or roles kills the run.
 
 Sentry: `test_optimizer_rejects_role_or_topology_mutation_during_training`.
 
-### RT-06: sensory/steering role overlap can bypass the lesion
+### RT-06: sensory/steering role overlap could bypass the lesion
 
-The controller requires all six modeled roles to be non-empty, but does not require the sensory-drive roles to be disjoint from the steering roles.
+Previous state: a body ID could theoretically be both a directly injected sensory role and a steering role. Removing structural input edges would not prevent direct modeled drive from entering that neuron.
 
-If a body ID belongs to both a PFN/odor role and a DNa02 steering role, `lesion_incoming_to_roles()` removes structural incoming edges but `TaskOptimizedMaleCNSController.act()` can still inject sensory drive directly into that steering neuron. Optimization can then compensate through unrelated sensory/readout gains, making the lesion uninterpretable.
+Repair: all six modeled role populations are required to be pairwise disjoint before task optimization. The lesion therefore cannot be bypassed through direct role injection.
 
-Required repair: enforce role-disjointness needed by the causal claim before training and in trained E002. At minimum, all four directly injected sensory roles must be disjoint from both steering roles; left/right steering must remain mutually disjoint.
+Sentries:
 
-Sentry: `test_sensory_and_steering_roles_must_be_disjoint_to_make_lesion_interpretable`.
+- `test_sensory_and_steering_roles_must_be_disjoint_to_make_lesion_interpretable`
+- `test_steering_lesion_cannot_be_rescued_by_global_gain_extremes`
 
-### RT-07: objective component contracts are assumed, not checked
+The second sentry explicitly drives every trainable global parameter to its allowed maximum after the steering-input lesion and verifies that steering remains zero in a connected synthetic graph.
 
-The optimizer assumes success is boolean, SPL is finite and in [0,1], and terminal progress is finite and in [-1,1]. `_episode_objective()` itself accepts invalid or non-finite components.
+### RT-07: invalid objective components could enter CEM
 
-Risk: a simulator/metric regression can silently create an exploitable objective rather than failing at the scientific boundary.
-
-Required repair: validate component finiteness/ranges before combining them. This changes no thresholds and no model power.
+Repair: SPL must be finite in `[0,1]`; terminal progress must be finite in `[-1,1]`; aggregate objective values and evaluation summaries must be finite and internally consistent. Simulator path/distance outputs fail closed if invalid.
 
 Sentry: `test_objective_rejects_nonfinite_or_out_of_contract_components`.
 
-### RT-08: CEM tie selection has no canonical tie-break contract
+### RT-08: exact CEM ties lacked a frozen secondary key
 
-The implementation uses `np.argsort(scores)[::-1]`. Equal-score candidates are therefore resolved by sort behavior rather than an explicit scientific rule. The first population member is deliberately the current mean, but a complete tie need not select it as the best candidate.
-
-Risk: exact ties can alter elite membership across implementations/versions and make replay less robust than the deterministic claim suggests.
-
-Required repair: use an explicit deterministic secondary key, for example candidate index ascending, and seal that tie-break rule in the protocol/report.
+Repair: candidates are ordered by descending objective then ascending candidate index. The tie rule is written into generation history.
 
 Sentry: `test_cem_ties_have_a_canonical_candidate_order`.
 
-### RT-09: equal compute budget is implemented by shared code path but not auditable from the report
+### RT-09: equal compute budget was implicit rather than auditable
 
-Every topology currently calls `optimize_dynamics()` with the same config, which is good. The resulting report does not include a normalized compute-budget receipt such as candidate evaluations and candidate episodes.
+Repair: every optimization report now contains a normalized budget receipt with population, generations, episodes/candidate, candidate evaluations, candidate episodes, full-pool evaluations, and total episode evaluations. Matched controls require identical budget hashes before a comparison is emitted.
 
-Risk: future early stopping, retries, topology-specific shortcuts, or config plumbing changes can create unequal budgets while leaving a superficially similar report.
+Sentries:
 
-Required repair: persist the frozen optimizer budget and actual evaluation/episode counts. Matched-control assembly must verify equality before reporting a comparison.
+- `test_optimizer_report_seals_an_auditable_compute_budget`
+- `test_matched_controls_require_identical_optimizer_budget_receipts`
 
-Sentry: `test_optimizer_report_seals_an_auditable_compute_budget`.
+## Candidate-selection leakage boundary
 
-## Candidate-selection leakage audit
+CEM candidate ranking does not consume validation seeds. Validation remains a post-optimization development measurement. That is enforced by `test_candidate_selection_never_uses_validation_inside_cem`.
 
-The current CEM implementation does **not** use validation seeds to score candidates. Validation is evaluated for the untrained default and final trained mean only. That is a positive result.
+However, development validation is human-visible. Repeatedly changing the config, optimizer seed, role policy, graph construction, or parameterization after inspecting validation would convert that cohort into a de facto training set. Software cannot cryptographically prove that this never happened.
 
-However, development validation is still human-visible. Repeatedly editing the frozen config, optimizer seed, graph/roles, or parameterization after seeing validation would convert the validation set into a de facto training set. The code cannot cryptographically prove that a human never did this.
+Operational rule: once development validation is exposed for a frozen v1 artifact, any subsequent model-selection change requires a new explicitly versioned development protocol and a fresh validation namespace. The final benchmark remains one-way and separate.
 
-Operational requirement: only the exact frozen config hash and reviewed graph/role artifact may advance. Any new hyperparameter/config/role choice after validation exposure requires a fresh development-validation namespace or an explicitly exploratory protocol version.
+## Source-location and simulator shortcut battery
 
-Sentry: `test_candidate_selection_never_uses_validation_inside_cem`.
+No direct source coordinates, agent coordinates, source distance, or wall distances are exposed through `Observation`. The task controller uses mean odor and body-frame airflow and does not consume `heading`.
 
-## Source-location and simulator-boundary leakage audit
+That does not eliminate an indirect shortcut: in the default benchmark the source is always upwind. A policy that mainly turns upwind and exploits arena geometry could appear competent while depending weakly on odor.
 
-No direct source coordinates, agent coordinates, distance-to-source, or wall distances are exposed through `Observation`. The task-optimized controller uses mean odor and body-frame airflow; it does not use the `heading` field. Those are positive boundaries.
+`fly-sniff-redteam-training` therefore evaluates the frozen trained parameters on a separate diagnostic seed namespace under seven counterfactuals:
 
-Residual scientific risk remains indirect rather than API-level: the source is fixed at the upwind side of the arena, so airflow plus wall dynamics may support useful behavior even with weak odor dependence. That is not a code leak, but it can inflate an informal "smell found the source" interpretation.
+1. normal sensory input;
+2. odor clamped to zero at the controller boundary;
+3. wind clamped to zero;
+4. odor and wind both clamped;
+5. source shifted to the lower crosswind quarter of the arena;
+6. source shifted to the upper crosswind quarter;
+7. mirrored source/start positions with reversed world-frame wind.
 
-Before a public odor-navigation claim, report negative-control performance with odor drive clamped or permuted and with arena/source geometry perturbations chosen before looking at results. Do not invent a pass threshold after seeing those controls; initially report them as diagnostics unless a threshold is preregistered.
+The same frozen parameters are used in every case. There is no retraining and no diagnostic result feeds CEM.
+
+These outputs are deliberately `diagnostic_only_not_a_gate`. No pass threshold is invented after looking at the result. The correct interpretation is comparative: if odor-clamped or geometry-counterfactual performance remains close to normal, the public wording must be weaker than “the connectome smelled out the source,” even if the primary benchmark score is high.
 
 Sentries:
 
 - `test_observation_api_exposes_no_direct_position_source_or_wall_state`
 - `test_controller_does_not_use_world_heading_when_body_sensory_inputs_match`
+- `test_diagnostic_seed_namespace_is_separate_from_training_validation_and_final`
+- `test_sensory_masks_change_only_explicit_controller_channels`
+- `test_shortcut_battery_is_diagnostic_only_and_contains_geometry_attacks`
 
-## Lesion interpretation rule
+## Rewire-null interpretation
 
-A lesion result is only causal evidence for the removed pathway if unrelated free parameters cannot route the same information around the lesion. The v1 steering-input lesion therefore needs both:
+The current directed double-edge-swap null preserves exact directed in/out degree, retains the same node/body-ID set and role assignments, and carries presynaptic edge attributes through target swaps. This is a useful topology-disruption control, not a universal null for every graph statistic.
 
-1. structural verification that all incoming edges to the steering roles were removed; and
-2. role-interface verification that no directly injected sensory role overlaps a steering role.
+Before using the null in a public topology claim, the actual eight rewires should additionally report, without post-hoc pass thresholds:
 
-If either fails, the lesion is an implementation control, not causal evidence.
+- intact-vs-rewire directed edge overlap;
+- pairwise rewire edge overlap;
+- unique replay fingerprints for all eight rewires;
+- self-loop and duplicate-edge counts;
+- degree equality checks;
+- sign/weight distribution summaries globally and by presynaptic role/type where interpretable.
 
-## Status of the red-team branch
+If the rewires remain unusually close to intact or to one another, the correct response is to qualify the null design, not to increase swap counts after seeing navigation results under the same protocol label.
 
-`redteam/task-optimization-validity-v1` is expected to be red against the current PR #16 head. That is intentional. The failing sentries define the smallest scientific hardening tranche. Positive sentries should remain green throughout repair.
+## What this lane can and cannot certify
 
-No scientific threshold is changed by this red-team lane, and no additional model freedom is introduced.
+It can certify, for the implementation and artifacts it verifies:
+
+- train/validation/final namespace separation inside the training path;
+- fixed model freedom;
+- fixed graph/role identity during optimization;
+- deterministic CEM behavior under the frozen software stack;
+- exact matched optimizer budgets;
+- exact v1 rewire count and swap budget;
+- lesion interface integrity;
+- internal report/config/hash consistency;
+- diagnostic measurement of sensory and geometry shortcuts.
+
+It cannot certify by itself:
+
+- that nobody externally peeked at final outcomes;
+- that the rewire Markov chain reached stationarity;
+- that modeled neural states equal measured physiology;
+- that the selected body-ID roles are biologically correct without the independent literature/role-review lane;
+- that successful navigation is odor-dependent until shortcut diagnostics are actually run on the frozen trained candidate;
+- that a result is publication-grade merely because CI is green.
+
+## Claim rule
+
+A strong public result requires all lanes to agree:
+
+1. reviewed body-ID-resolved biological role evidence;
+2. frozen task-optimization contract and internally auditable training receipt;
+3. trained E002 internal-consistency qualification;
+4. matched intact/rewire/lesion training under equal budgets;
+5. shortcut diagnostics disclosed beside the main result;
+6. one-way final held-out/OOD evaluation after all preceding artifacts are frozen.
+
+If one of those is missing, wording must stop at the strongest completed rung.
