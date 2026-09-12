@@ -8,13 +8,37 @@ from pathlib import Path
 import pandas as pd
 
 
+EDGE_COLUMN_ALIASES = {
+    "source": ("source", "body_pre", "bodyId_pre", "pre", "pre_root_id"),
+    "target": ("target", "body_post", "bodyId_post", "post", "post_root_id"),
+    "weight": ("weight", "syn_count", "count", "n_synapses"),
+}
+
+
+def _resolve_column(frame: pd.DataFrame, role: str) -> str:
+    aliases = EDGE_COLUMN_ALIASES[role]
+    match = next((column for column in aliases if column in frame.columns), None)
+    if match is None:
+        raise ValueError(
+            f"cannot resolve {role} edge column; expected one of {list(aliases)}, "
+            f"found {list(frame.columns)}"
+        )
+    return match
+
+
 def resolve_edge_columns(frame: pd.DataFrame) -> tuple[str, str, str]:
-    source = next((c for c in ["source", "bodyId_pre", "pre", "pre_root_id"] if c in frame.columns), None)
-    target = next((c for c in ["target", "bodyId_post", "post", "post_root_id"] if c in frame.columns), None)
-    weight = next((c for c in ["weight", "syn_count", "count", "n_synapses"] if c in frame.columns), None)
-    if not all([source, target, weight]):
-        raise ValueError(f"cannot resolve edge columns from {list(frame.columns)}")
-    return source, target, weight
+    """Resolve supported edge-table schemas to source, target, and weight columns.
+
+    The public Janelia MaleCNS flat-connectome tables use ``body_pre`` and
+    ``body_post``. Other supported inputs include normalized ``source`` / ``target``
+    tables and common neuPrint-style aliases. Downstream tracing always renames the
+    resolved columns to the canonical ``source`` / ``target`` / ``weight`` schema.
+    """
+    return (
+        _resolve_column(frame, "source"),
+        _resolve_column(frame, "target"),
+        _resolve_column(frame, "weight"),
+    )
 
 
 def body_ids_matching(annotations: pd.DataFrame, patterns: list[str]) -> set[int]:
