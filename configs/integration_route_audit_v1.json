@@ -1,0 +1,35 @@
+{
+  "protocol": "malecns-integration-route-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "thresholds": [1, 3, 5, 10],
+  "population_selectors": {
+    "FB5AB": {"column": "type", "exact": "FB5AB"},
+    "PFNa_family": {"column": "type", "regex": "^PFNa$"},
+    "PFNm_family": {"column": "type", "regex": "^PFNm(?:_|$)"},
+    "PFNp_family": {"column": "type", "regex": "^PFNp(?:_|$)"},
+    "hDeltaC": {"column": "type", "exact": "hDeltaC"},
+    "hDeltaG": {"column": "type", "exact": "hDeltaG"},
+    "PFL3": {"column": "type", "exact": "PFL3"},
+    "PFL2": {"column": "type", "exact": "PFL2"}
+  },
+  "direct_predictions": [
+    {"source": "FB5AB", "target": "hDeltaC", "analysis_role": "odor-gating input", "reference": "https://doi.org/10.1038/s41467-022-32247-7"},
+    {"source": "PFNa_family", "target": "hDeltaC", "analysis_role": "wind-direction input", "reference": "https://doi.org/10.1038/s41467-022-32247-7"},
+    {"source": "PFNm_family", "target": "hDeltaC", "analysis_role": "wind-direction input", "reference": "https://doi.org/10.1038/s41467-022-32247-7"},
+    {"source": "PFNp_family", "target": "hDeltaC", "analysis_role": "wind-direction input", "reference": "https://doi.org/10.1038/s41467-022-32247-7"},
+    {"source": "hDeltaC", "target": "hDeltaG", "analysis_role": "discovery-selected local relay input", "reference": "authority/malecns-v1.0-goal-relay-evidence.json"},
+    {"source": "hDeltaG", "target": "PFL3", "analysis_role": "directional steering output interface", "reference": "authority/malecns-v1.0-goal-relay-evidence.json"},
+    {"source": "hDeltaG", "target": "PFL2", "analysis_role": "speed-output interface", "reference": "authority/malecns-v1.0-goal-relay-evidence.json"}
+  ],
+  "three_hop_predictions": [
+    {"source": "FB5AB", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL3", "analysis_role": "odor-to-steering structural bridge"},
+    {"source": "PFNa_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL3", "analysis_role": "wind-to-steering structural bridge"},
+    {"source": "PFNm_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL3", "analysis_role": "wind-to-steering structural bridge"},
+    {"source": "PFNp_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL3", "analysis_role": "wind-to-steering structural bridge"},
+    {"source": "FB5AB", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL2", "analysis_role": "odor-to-speed structural bridge"},
+    {"source": "PFNa_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL2", "analysis_role": "wind-to-speed structural bridge"},
+    {"source": "PFNm_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL2", "analysis_role": "wind-to-speed structural bridge"},
+    {"source": "PFNp_family", "via1": "hDeltaC", "via2": "hDeltaG", "target": "PFL2", "analysis_role": "wind-to-speed structural bridge"}
+  ],
+  "claim_boundary": "Preregistered structural audit only. A complete path in the MaleCNS weight table does not establish odor tuning, wind tuning, effective connectivity, sign, neural dynamics, necessity, sufficiency, or behavioral navigation. hDeltaG identity is frozen from an earlier structural discovery audit and may not be re-selected using this audit or downstream performance."
+}
