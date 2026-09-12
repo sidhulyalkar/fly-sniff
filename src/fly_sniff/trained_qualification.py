@@ -12,6 +12,7 @@ import numpy as np
 from .env import Observation
 from .graph import GraphBundle
 from .rewire import lesion_incoming_to_roles
+from .runtime_provenance import verify_runtime_environment_receipt
 from .training import (
     FINAL_TEST_MAX_SEED,
     DynamicsParameters,
@@ -243,6 +244,27 @@ def _verify_budget_receipt(
     return expected
 
 
+def _verify_runtime_receipt(report: dict[str, Any]) -> tuple[str, str]:
+    receipt = report.get("runtime_environment")
+    if not isinstance(receipt, dict):
+        raise ValueError("training report is missing the sealed numerical runtime receipt")
+    runtime_sha256 = canonical_sha256(receipt)
+    if report.get("runtime_environment_sha256") != runtime_sha256:
+        raise ValueError("training report runtime environment hash mismatch")
+    try:
+        numerical_sha256 = verify_runtime_environment_receipt(
+            receipt,
+            require_current_numerical_match=True,
+        )
+    except (RuntimeError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "training report numerical runtime is incompatible with the current promotion runtime"
+        ) from exc
+    if report.get("numerical_runtime_sha256") != numerical_sha256:
+        raise ValueError("training report numerical runtime hash mismatch")
+    return runtime_sha256, numerical_sha256
+
+
 def _verify_development_gate(report: dict[str, Any], config: dict[str, Any]) -> None:
     baseline_validation = report.get("baseline_validation")
     trained_validation = report.get("trained_validation")
@@ -289,6 +311,7 @@ def parameters_from_training_report(
         train_count=len(train),
         validation_count=len(validation),
     )
+    runtime_sha256, numerical_sha256 = _verify_runtime_receipt(report)
     _verify_development_gate(report, config)
 
     baseline = default_parameters(config).to_dict()
@@ -308,6 +331,8 @@ def parameters_from_training_report(
         "validation_seed_sha256": canonical_sha256(validation),
         "trained_parameter_sha256": parameter_sha,
         "optimizer_budget_sha256": canonical_sha256(budget),
+        "runtime_environment_sha256": runtime_sha256,
+        "numerical_runtime_sha256": numerical_sha256,
     }
     if report.get("audit_receipt_sha256") != canonical_sha256(audit_payload):
         raise ValueError("training report audit receipt hash mismatch")
@@ -430,6 +455,8 @@ def qualify_trained_candidate(
         "graph_sha256": bundle.replay_fingerprint(),
         "training_config_sha256": canonical_sha256(config),
         "training_audit_receipt_sha256": training_report["audit_receipt_sha256"],
+        "runtime_environment_sha256": training_report["runtime_environment_sha256"],
+        "numerical_runtime_sha256": training_report["numerical_runtime_sha256"],
         "trained_parameter_sha256": canonical_sha256(parameters.to_dict()),
         "trained_parameters": parameters.to_dict(),
         "gates": [asdict(gate) for gate in gates],
@@ -446,11 +473,11 @@ def qualify_trained_candidate(
         },
         "memory_policy": frozen["memory_policy"],
         "warning": (
-            "Passing trained E002 supports internal consistency of the explicit modeled dynamics "
-            "and the supplied training receipts, including reconstructed represented optimizer "
-            "execution. It does not prove no external final-test peeking, measured physiology, "
-            "peripheral sensory transduction, or final navigation superiority over matched trained "
-            "topology controls."
+            "Passing trained E002 supports internal consistency of the explicit modeled dynamics, "
+            "the supplied training receipts, reconstructed represented optimizer execution, and "
+            "an exact numerical-runtime match to training. It does not prove no external final-test "
+            "peeking, measured physiology, peripheral sensory transduction, or final navigation "
+            "superiority over matched trained topology controls."
         ),
     }
 
@@ -460,7 +487,7 @@ def main() -> None:
         description="Run trained E002 odor-gated PFN-basis qualification"
     )
     parser.add_argument("bundle", help="reviewed signed candidate GraphBundle")
-    parser.add_argument("training_report", help="single-graph task-optimization report")
+    parser.add_argument("training_report", help="runtime-sealed task-optimization report")
     parser.add_argument("--config", default="configs/task_optimization_v1.json")
     parser.add_argument("--output", default="results/e002/trained-qualification-v1.json")
     args = parser.parse_args()
