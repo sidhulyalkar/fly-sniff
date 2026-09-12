@@ -36,7 +36,7 @@ The same config contains two **nonblocking** exploratory stages for `hDeltaK ↔
 
 ```bash
 fly-sniff-staged-trace \
-  data/raw/body-annotations-male-cns-v1.0.feather \
+  data/raw/body-annotations-male-cns-v1.0-minconf-0.5.feather \
   data/raw/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
   --config configs/staged_route_v1.json \
   --output data/cache/staged-route-v1 \
@@ -44,6 +44,8 @@ fly-sniff-staged-trace \
 ```
 
 `--strict` succeeds only when every **primary required** stage produces a candidate corridor, every candidate passes its structural audit, and every required exact-body-ID handoff passes. Optional memory stages and handoffs are still executed and reported but cannot make the primary gate pass or fail.
+
+The same command is encoded in `.github/workflows/e001-realdata.yml`. That workflow downloads the pinned public MaleCNS v1.0 flat-connectome files, records their SHA-256 digests, runs the frozen v1 plan, and uploads the full evidence bundle before enforcing the scientific pass/fail result. A failed biological hypothesis therefore remains inspectable instead of disappearing behind a red CI badge.
 
 ## Required artifacts
 
@@ -63,13 +65,15 @@ These artifacts are the review surface. A regex count or a type-level path is no
 
 For every primary stage, inspect the exact seed tables, retained intermediate types, and required handoff body IDs. Reject obviously over-broad matches, cross-side mistakes, anonymous/uninterpretable route composition, or dataset-schema surprises before building a GraphBundle. Preserve a failing E001 run as a negative result rather than tuning the final benchmark around it.
 
-Only after the route is reviewed should we construct the signed candidate GraphBundle, run E002 mirrored perturbation/laterality/lesion/replay checks, and freeze the intact/rewired/lesioned navigation cohort.
+Only after the route is reviewed should we construct the signed candidate GraphBundle and run E002 mirrored perturbation, laterality, lesion, and deterministic replay checks. The final navigation-control design is already versioned in code, but its manifest must not be sealed until it contains the digest of that reviewed and E002-qualified GraphBundle.
+
+`fly-sniff-final-v2` uses the same held-out/OOD plume seeds for intact, lesion, classical, and eight independently seeded directed degree-preserving rewires. The original designated rewire remains available for backwards-comparable reporting, while the wiring claim additionally requires intact SPL superiority over the per-environment mean of the sealed rewire ensemble.
 
 ## Claim ladder
 
 - **E001 passes:** "The MaleCNS release contains this audited, body-ID-continuous structural hypothesis under the preregistered search plan."
 - **E002 passes:** "Under our explicit rate-model assumptions, the reviewed corridor propagates mirrored inputs to the expected bilateral steering sign and survives deterministic replay checks."
-- **Frozen navigation comparison passes:** report the measured intact-vs-control effect with uncertainty.
+- **Frozen navigation comparison passes:** report the measured intact-vs-control and intact-vs-null-ensemble effects with uncertainty.
 - **Only then:** a social headline may describe what the connectome-derived model did in the odor-navigation task. It must still identify the activity as modeled rather than recorded physiology.
 
 See `authority/olfactory-navigation-literature-v1.json` for the literature priors and explicit forbidden inferences.
