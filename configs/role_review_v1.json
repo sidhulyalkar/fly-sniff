@@ -1,0 +1,92 @@
+{
+  "protocol": "e001-role-review-v1",
+  "dataset": "male-cns:v1.0",
+  "input_protocol": "staged-structural-discovery-v3",
+  "claim_boundary": "This policy derives a candidate model-role map from the preregistered E001 evidence. It does not qualify dynamics or assert that the modeled sensory drive equals measured activity in these neurons.",
+  "side_inference": {
+    "source": "instance string only",
+    "left_pattern": "(?:^|_)L(?:\\d|_|$)",
+    "right_pattern": "(?:^|_)R(?:\\d|_|$)",
+    "ambiguous_policy": "exclude from side-specific model roles and report"
+  },
+  "roles": {
+    "odor_context_left": {
+      "stage": "fb5ab_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^FB5AB$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "rationale": "FB5AB is the E001 literature-anchored odor-sensitive FB tangential input; task v1 injects the same nondirectional odor-context value bilaterally."
+    },
+    "odor_context_right": {
+      "stage": "fb5ab_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^FB5AB$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "rationale": "Right-side counterpart of the tied bilateral FB5AB odor-context role."
+    },
+    "wind_basis_left": {
+      "stage": "wind_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^(?:PFNa|PFNm(?:_a|_b)?)$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "rationale": "Conservative side-resolved ventral-PFN basis population. Retained PFNp cells are not assigned to a side-specific model role when the MaleCNS instance string does not expose side."
+    },
+    "wind_basis_right": {
+      "stage": "wind_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^(?:PFNa|PFNm(?:_a|_b)?)$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "rationale": "Right-side counterpart of the conservative side-resolved ventral-PFN basis population."
+    },
+    "steer_left": {
+      "stage": "pfl3_to_dna02",
+      "seed_role": "target",
+      "type_regex": "^DNa02$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "maximum_count": 1,
+      "rationale": "Left DNa02 is the bilateral high-gain steering readout; left DNa02 activity predicts leftward turning in direct recordings."
+    },
+    "steer_right": {
+      "stage": "pfl3_to_dna02",
+      "seed_role": "target",
+      "type_regex": "^DNa02$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "maximum_count": 1,
+      "rationale": "Right counterpart of the DNa02 steering readout."
+    }
+  },
+  "structural_context_roles": {
+    "integration_hdelta_c": {
+      "handoff": "hDeltaC_odor_wind_convergence",
+      "source": "shared_body_ids",
+      "rationale": "Exact hDeltaC body IDs retained by odor-input, PFN-input, and outgoing PFL3 stages."
+    },
+    "pfl3_output": {
+      "handoff": "pfl3_body_id_continuity",
+      "source": "shared_body_ids",
+      "rationale": "Exact PFL3 body IDs continuous across the hDeltaC-to-PFL3 and PFL3-to-DNa02 stages."
+    }
+  },
+  "wind_unresolved_policy": {
+    "report_retained_side_unresolved_pfn": true,
+    "include_in_training_role": false,
+    "reason": "The optimizer must not invent hemisphere assignments for PFN candidates whose exported MaleCNS instance identity does not resolve side."
+  },
+  "promotion_policy": {
+    "automatic_qualification": false,
+    "required_before_training": [
+      "all six model roles non-empty",
+      "no body ID appears in both left and right versions of the same role family",
+      "exact role IDs and side evidence are persisted",
+      "intermediate-type composition is summarized for each primary E001 stage",
+      "sign coverage is computed on the eventual candidate GraphBundle",
+      "review artifact is frozen before real optimization"
+    ]
+  }
+}
