@@ -38,6 +38,8 @@ def _config() -> dict:
         "dataset": "male-cns:v1.0",
         "evidence_audit_sha256": "abc",
         "evidence_authority": "authority/example.json",
+        "sign_authority": "authority/signs.json",
+        "sign_authority_sha256": "sign-sha",
         "populations": {
             "PFL3": [1],
             "DNa03": [2],
@@ -54,40 +56,50 @@ def _config() -> dict:
     }
 
 
-def test_builds_candidate_scaffold_with_explicit_signs() -> None:
-    bundle = build_steering_scaffold(
-        _audit(),
-        _config(),
-        type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
-        source_audit_sha256="abc",
-    )
+def _build(**overrides):
+    kwargs = {
+        "type_signs": {"PFL3": 1, "DNa03": 1, "LAL010": 1},
+        "source_audit_sha256": "abc",
+        "sign_authority_path": "authority/signs.json",
+        "sign_authority_sha256": "sign-sha",
+    }
+    kwargs.update(overrides)
+    return build_steering_scaffold(_audit(), _config(), **kwargs)
+
+
+def test_builds_candidate_scaffold_with_explicit_signs_and_provenance() -> None:
+    bundle = _build()
     assert bundle.manifest["qualification_status"] == "candidate"
     assert len(bundle.nodes) == 5
     assert len(bundle.edges) == 5
     assert set(bundle.edges.sign) == {1}
     assert bundle.roles["steer_left"] == [4]
     assert "odor_left" not in bundle.roles
+    assert bundle.manifest["sign_authority"] == {
+        "path": "authority/signs.json",
+        "sha256": "sign-sha",
+    }
     bundle.validate(require_sign=True, require_qualified=False)
 
 
 def test_rejects_audit_hash_drift() -> None:
-    with pytest.raises(ValueError, match="SHA-256"):
-        build_steering_scaffold(
-            _audit(),
-            _config(),
-            type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
-            source_audit_sha256="different",
-        )
+    with pytest.raises(ValueError, match="route-audit SHA-256"):
+        _build(source_audit_sha256="different")
+
+
+def test_rejects_sign_authority_hash_drift() -> None:
+    with pytest.raises(ValueError, match="sign-authority SHA-256"):
+        _build(sign_authority_sha256="different")
+
+
+def test_rejects_sign_authority_path_drift() -> None:
+    with pytest.raises(ValueError, match="sign-authority path"):
+        _build(sign_authority_path="authority/other.json")
 
 
 def test_rejects_unresolved_presynaptic_sign() -> None:
     with pytest.raises(ValueError, match="sign unresolved"):
-        build_steering_scaffold(
-            _audit(),
-            _config(),
-            type_signs={"PFL3": 0, "DNa03": 1, "LAL010": 1},
-            source_audit_sha256="abc",
-        )
+        _build(type_signs={"PFL3": 0, "DNa03": 1, "LAL010": 1})
 
 
 def test_rejects_population_body_id_drift() -> None:
@@ -99,4 +111,6 @@ def test_rejects_population_body_id_drift() -> None:
             _config(),
             type_signs={"PFL3": 1, "DNa03": 1, "LAL010": 1},
             source_audit_sha256="abc",
+            sign_authority_path="authority/signs.json",
+            sign_authority_sha256="sign-sha",
         )
