@@ -1,0 +1,99 @@
+{
+  "protocol": "e001-role-review-v1",
+  "dataset": "male-cns:v1.0",
+  "input_protocol": "staged-structural-discovery-v3",
+  "literature_authority": {
+    "path": "authority/olfactory-navigation-literature-v1.json",
+    "git_blob_sha1": "d8fd5bfdc5951feb4581ad1c24cdb7d06aab522b"
+  },
+  "claim_boundary": "This policy derives a candidate model-role map from the preregistered E001 evidence. It does not qualify dynamics or assert that the modeled sensory drive equals measured activity in these neurons. hDeltaC is treated as a structural convergence candidate only; the original VT062617 functional attribution is confounded by hDeltaK labeling.",
+  "side_inference": {
+    "priority": ["somaSide", "rootSide", "instance"],
+    "left_values": ["L", "left", "Left"],
+    "right_values": ["R", "right", "Right"],
+    "left_pattern": "(?:^|_)L(?:\\d|_|$)",
+    "right_pattern": "(?:^|_)R(?:\\d|_|$)",
+    "ambiguous_policy": "exclude from side-specific model roles and report",
+    "rationale": "Direct ventral-PFN recordings show airflow preference tied to the hemisphere containing the cell body. MaleCNS somaSide is therefore the primary laterality authority; rootSide and instance remain explicitly weaker anatomical fallbacks."
+  },
+  "roles": {
+    "odor_context_left": {
+      "stage": "fb5ab_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^FB5AB$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "rationale": "FB5AB is an E001 literature-anchored olfactory-navigation input candidate; task v1 deliberately imposes the same nondirectional odor-context value bilaterally. The injected scalar is a model abstraction, not measured MaleCNS FB5AB activity."
+    },
+    "odor_context_right": {
+      "stage": "fb5ab_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^FB5AB$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "rationale": "Right-side counterpart of the tied bilateral FB5AB model odor-context role."
+    },
+    "wind_basis_left": {
+      "stage": "wind_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^(?:PFNa|PFNp(?:_[a-e])?|PFNm(?:_[a-b])?)$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "rationale": "Retained ventral-PFN source neurons assigned to the left model airflow basis. Soma-side assignment has direct literature support; rootSide or instance are weaker anatomical fallbacks and must remain identifiable in the review artifact. Role membership does not assert identical physiology across PFN subtypes."
+    },
+    "wind_basis_right": {
+      "stage": "wind_to_hDeltaC",
+      "seed_role": "source",
+      "type_regex": "^(?:PFNa|PFNp(?:_[a-e])?|PFNm(?:_[a-b])?)$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "rationale": "Right-side counterpart of the side-resolved retained ventral-PFN model basis population, with the same evidence hierarchy and subtype caveats."
+    },
+    "steer_left": {
+      "stage": "pfl3_to_dna02",
+      "seed_role": "target",
+      "type_regex": "^DNa02$",
+      "required_side": "L",
+      "minimum_count": 1,
+      "maximum_count": 1,
+      "rationale": "Left DNa02 is a literature-supported bilateral steering readout candidate; direct recordings show ipsilateral DNa02 activity preceding and covarying with ipsilateral turning. This does not imply DNa02 alone determines turning."
+    },
+    "steer_right": {
+      "stage": "pfl3_to_dna02",
+      "seed_role": "target",
+      "type_regex": "^DNa02$",
+      "required_side": "R",
+      "minimum_count": 1,
+      "maximum_count": 1,
+      "rationale": "Right counterpart of the DNa02 steering readout, under the same functional boundary."
+    }
+  },
+  "structural_context_roles": {
+    "integration_hdelta_c": {
+      "handoff": "hDeltaC_odor_wind_convergence",
+      "source": "shared_body_ids",
+      "rationale": "Exact hDeltaC body IDs retained by odor-input, PFN-input, and outgoing PFL3 stages. This qualifies body-ID-continuous structural convergence only. It must not be used as hDeltaC-specific physiological evidence because the original VT062617 functional experiments are confounded by hDeltaK labeling."
+    },
+    "pfl3_output": {
+      "handoff": "pfl3_body_id_continuity",
+      "source": "shared_body_ids",
+      "rationale": "Exact PFL3 body IDs continuous across the hDeltaC-to-PFL3 and PFL3-to-DNa02 stages. Continuity is structural and does not establish the modeled transfer function or steering-output side. PFL3 steering laterality requires LAL projection evidence or qualified perturbation/readout behavior."
+    }
+  },
+  "wind_unresolved_policy": {
+    "report_retained_side_unresolved_pfn": true,
+    "include_in_training_role": false,
+    "reason": "The optimizer must not invent hemisphere assignments for any retained PFN whose somaSide, rootSide, and instance evidence all fail to resolve side."
+  },
+  "promotion_policy": {
+    "automatic_qualification": false,
+    "required_before_training": [
+      "all six model roles non-empty",
+      "no body ID appears in both left and right versions of the same role family",
+      "exact role IDs and side evidence source are persisted",
+      "intermediate-type composition is summarized for each primary E001 stage",
+      "sign coverage is computed on the eventual candidate GraphBundle",
+      "review artifact is frozen before real optimization"
+    ]
+  }
+}
