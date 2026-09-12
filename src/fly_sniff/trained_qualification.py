@@ -21,12 +21,10 @@ from .training import (
 )
 
 REQUIRED_ROLES = (
-    "odor_left",
-    "odor_right",
-    "wind_forward",
-    "wind_backward",
-    "wind_left",
-    "wind_right",
+    "odor_context_left",
+    "odor_context_right",
+    "wind_basis_left",
+    "wind_basis_right",
     "steer_left",
     "steer_right",
 )
@@ -143,8 +141,8 @@ def probe_trained_candidate(
     on_separation = abs(on_right_turn - on_left_turn)
     off_separation = abs(off_right_turn - off_left_turn)
 
-    # Keep mean odor fixed while swapping which physical antenna supplied it.
-    # The v1 connectome interface must ignore this instantaneous odor laterality.
+    # The physical antenna trace remains bilateral, but task-optimization v1
+    # intentionally supplies only mean odor to the FB5AB context roles.
     left_only = _observation(left_odor=odor, right_odor=0.0, wind_y=wind)
     right_only = _observation(left_odor=0.0, right_odor=odor, wind_y=wind)
     left_only_turns = _rollout(bundle, parameters, left_only, steps=steps, seed=seed)
@@ -164,8 +162,8 @@ def probe_trained_candidate(
         )
     )
 
-    # wind_y > 0 is a downwind vector to the animal's left, so the upwind target
-    # is right/negative turn. wind_y < 0 implies an upwind target left/positive.
+    # A positive body-frame downwind-y vector means air travels to the animal's
+    # left, so it arrives from the right and the upwind target is a right turn.
     laterality_correct = bool(on_left_turn < 0.0 and on_right_turn > 0.0)
     return TrainedProbeResult(
         odor_on_downwind_left_turn=on_left_turn,
@@ -218,12 +216,10 @@ def qualify_trained_candidate(
     signed_fraction = float(bundle.edges.sign.astype(int).ne(0).mean()) if len(bundle.edges) else 0.0
 
     sensory = set().union(
-        roles.get("odor_left", set()),
-        roles.get("odor_right", set()),
-        roles.get("wind_forward", set()),
-        roles.get("wind_backward", set()),
-        roles.get("wind_left", set()),
-        roles.get("wind_right", set()),
+        roles.get("odor_context_left", set()),
+        roles.get("odor_context_right", set()),
+        roles.get("wind_basis_left", set()),
+        roles.get("wind_basis_right", set()),
     )
     reached = _reachable(bundle.edges, sensory)
     steering_reached = bool(
@@ -246,7 +242,7 @@ def qualify_trained_candidate(
             "required_roles",
             not missing_roles,
             ",".join(missing_roles) if missing_roles else "complete",
-            "odor, wind, and bilateral steering roles are all non-empty",
+            "bilateral FB5AB context, PFN basis, and DNa02 steering roles are non-empty",
         ),
         Gate(
             "role_body_id_closure",
@@ -270,7 +266,7 @@ def qualify_trained_candidate(
             "structural_reachability",
             steering_reached,
             int(steering_reached),
-            "odor/wind role populations structurally reach both steering roles",
+            "FB5AB-context/PFN-basis roles structurally reach both DNa02 steering roles",
         ),
         Gate(
             "odor_on_wind_separation",
@@ -286,7 +282,7 @@ def qualify_trained_candidate(
             "mirrored crosswind inputs with odor produce opposite turns toward upwind",
         ),
         Gate(
-            "odor_gates_wind_response",
+            "odor_gates_pfn_basis_response",
             probe.odor_gating_separation_delta
             >= float(frozen["minimum_odor_gating_separation_delta"]),
             probe.odor_gating_separation_delta,
@@ -328,12 +324,14 @@ def qualify_trained_candidate(
         "coordinate_convention": {
             "positive_turn": "left/counterclockwise",
             "negative_turn": "right/clockwise",
-            "wind_y_positive": "downwind vector points to animal's left",
-            "wind_y_negative": "downwind vector points to animal's right",
+            "wind_vector": "direction air travels (downwind)",
+            "pfn_basis_vector": "direction airflow arrives from",
+            "wind_y_positive": "air travels left, arrives from right",
+            "wind_y_negative": "air travels right, arrives from left",
         },
         "memory_policy": frozen["memory_policy"],
         "warning": (
-            "Passing E002-trained supports internal consistency of the explicit modeled dynamics. "
+            "Passing trained E002 supports internal consistency of the explicit modeled dynamics. "
             "It does not establish measured physiology, peripheral sensory transduction, or final "
             "navigation superiority over matched trained topology controls."
         ),
@@ -342,14 +340,11 @@ def qualify_trained_candidate(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run trained E002 odor-gated wind qualification on a candidate graph"
+        description="Run trained E002 odor-gated PFN-basis qualification"
     )
     parser.add_argument("bundle", help="reviewed signed candidate GraphBundle")
     parser.add_argument("training_report", help="single-graph task-optimization report")
-    parser.add_argument(
-        "--config",
-        default="configs/task_optimization_v1.json",
-    )
+    parser.add_argument("--config", default="configs/task_optimization_v1.json")
     parser.add_argument("--output", default="results/e002/trained-qualification-v1.json")
     args = parser.parse_args()
 
