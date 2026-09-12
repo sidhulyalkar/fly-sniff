@@ -5,7 +5,10 @@ on:
   pull_request:
     paths:
       - "src/fly_sniff/r002_graph.py"
+      - "src/fly_sniff/r002_probe.py"
+      - "src/fly_sniff/looming.py"
       - "tests/test_r002_graph.py"
+      - "tests/test_r002_probe.py"
       - "authority/r002_malecns_v1_candidate.json"
       - ".github/workflows/r002-graph.yml"
       - "pyproject.toml"
@@ -50,8 +53,33 @@ jobs:
           print('qualification:', manifest['qualification_status'])
           print('readout:', manifest['behavioral_readout_status'])
           PY
+      - name: Probe modeled DNp01 escape readout
+        run: |
+          fly-sniff-r002-probe artifacts/r002/graph \
+            --allow-candidate \
+            --trials 40 \
+            --seed 24017 \
+            --rewire-seed 24018 \
+            --output artifacts/r002/probe.json
+      - name: Show escape probe summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('artifacts/r002/probe.json').read_text())
+          intact = report['intact']
+          rewired = report['degree_preserving_rewire']
+          print('intact direct>near:', intact['direct_stronger_than_near_rate'])
+          print('intact direct-near:', intact['mean_direct_minus_near_target'])
+          print('intact lateralization:', intact['mean_direct_lateralization'])
+          print('rewired direct-near:', rewired['mean_direct_minus_near_target'])
+          print('rewired lateralization:', rewired['mean_direct_lateralization'])
+          print('delta direct-near:', report['delta_direct_minus_near_target'])
+          print('delta lateralization:', report['delta_lateralization'])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: r002-malecns-graph
-          path: artifacts/r002/graph
+          path: artifacts/r002
           if-no-files-found: error
