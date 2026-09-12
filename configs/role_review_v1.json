@@ -4,7 +4,7 @@
   "input_protocol": "staged-structural-discovery-v3",
   "literature_authority": {
     "path": "authority/olfactory-navigation-literature-v1.json",
-    "git_blob_sha1": "7bdf33935b5846b335bfc060e4cda87ccde98f1a"
+    "git_blob_sha1": "d8fd5bfdc5951feb4581ad1c24cdb7d06aab522b"
   },
   "claim_boundary": "This policy derives a candidate model-role map from the preregistered E001 evidence. It does not qualify dynamics or assert that the modeled sensory drive equals measured activity in these neurons. hDeltaC is treated as a structural convergence candidate only; the original VT062617 functional attribution is confounded by hDeltaK labeling.",
   "side_inference": {
