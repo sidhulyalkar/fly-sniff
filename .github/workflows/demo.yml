@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - release/showcase-today
+      - feat/recorded-sensory-replay-v1
     paths:
       - "src/fly_sniff/**"
       - "pyproject.toml"
@@ -19,7 +20,7 @@ on:
 jobs:
   render-development-demo:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       MPLBACKEND: Agg
       SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -29,14 +30,29 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -n 1
       - name: Install
         run: python -m pip install -e ".[dev]"
       - name: Build auditable demo pack
-        run: fly-sniff-demo-pack --output-dir artifacts/demo --seconds 6 --fps 10 --trials 100 --format gif
-      - name: Build fast 4:5 preview
-        run: fly-sniff-showcase --output artifacts/showcase/who-farted-4x5.gif --seconds 6 --fps 10
-      - name: Build share-ready 4:5 MP4
-        run: fly-sniff-showcase --output artifacts/showcase/who-farted-4x5.mp4 --seconds 15 --fps 30
+        run: >-
+          fly-sniff-demo-pack --output-dir artifacts/demo --seconds 6
+          --fps 10 --trials 100 --format gif
+      - name: Record authoritative social episode
+        run: >-
+          fly-sniff-record --output artifacts/showcase/who-farted-run.json
+          --seed 13013 --sim-seconds 45 --plume-points 220
+      - name: Build recorded 4:5 preview
+        run: >-
+          fly-sniff-replay-showcase artifacts/showcase/who-farted-run.json
+          --output artifacts/showcase/who-farted-4x5.gif --seconds 6 --fps 10
+      - name: Build recorded share-ready 4:5 MP4
+        run: >-
+          fly-sniff-replay-showcase artifacts/showcase/who-farted-run.json
+          --output artifacts/showcase/who-farted-4x5.mp4 --seconds 15 --fps 30
       - name: Show manifest
         run: cat artifacts/demo/demo-manifest.json
       - name: Upload demo pack
