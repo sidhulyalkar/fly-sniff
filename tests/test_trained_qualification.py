@@ -13,20 +13,20 @@ def _config():
         "protocol": "task-optimized-connectome-dynamics-v1",
         "connectome_sensory_interface": {
             "odor_mode": "mean_bilateral_nondirectional",
-            "direction_source": "body_frame_wind",
+            "odor_roles": ["odor_context_left", "odor_context_right"],
+            "direction_source": "signed_pfn_basis_from_body_frame_airflow_arrival",
+            "wind_roles": ["wind_basis_left", "wind_basis_right"],
         },
         "trainable_parameters": {
             "tau_s": {"default": 0.25, "min": 0.05, "max": 2.0},
             "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0},
             "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5},
             "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_forward_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_backward_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_cross_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
+            "wind_basis_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
             "turn_gain": {"default": 2.4, "min": 0.5, "max": 6.0},
         },
         "trained_e002": {
-            "protocol": "E002-trained-odor-gated-wind-v1",
+            "protocol": "E002-trained-odor-gated-pfn-basis-v1",
             "probe_seed": 13013,
             "probe_steps": 40,
             "odor_level": 0.8,
@@ -48,32 +48,28 @@ def _parameters():
         activation_gain=1.6,
         recurrent_gain=1.0,
         odor_gain=1.0,
-        wind_forward_gain=1.0,
-        wind_backward_gain=1.0,
-        wind_cross_gain=1.0,
+        wind_basis_gain=1.0,
         turn_gain=2.4,
     )
 
 
 def _bundle():
-    nodes = pd.DataFrame({"bodyId": list(range(1, 9))})
+    nodes = pd.DataFrame({"bodyId": list(range(1, 7))})
     edges = pd.DataFrame(
         {
-            "source": [1, 2, 3, 4, 5, 6],
-            "target": [7, 8, 7, 8, 7, 8],
-            "weight": [5, 5, 5, 5, 5, 5],
-            "sign": [1, 1, 1, 1, 1, 1],
+            "source": [1, 2, 3, 4],
+            "target": [5, 6, 5, 6],
+            "weight": [5, 5, 5, 5],
+            "sign": [1, 1, 1, 1],
         }
     )
     roles = {
-        "odor_left": [1],
-        "odor_right": [2],
-        "wind_forward": [3],
-        "wind_backward": [4],
-        "wind_left": [5],
-        "wind_right": [6],
-        "steer_left": [7],
-        "steer_right": [8],
+        "odor_context_left": [1],
+        "odor_context_right": [2],
+        "wind_basis_left": [3],
+        "wind_basis_right": [4],
+        "steer_left": [5],
+        "steer_right": [6],
     }
     return GraphBundle(
         nodes,
@@ -148,7 +144,7 @@ def test_trained_e002_requires_every_frozen_gate(monkeypatch):
     qualified = tq.qualify_trained_candidate(bundle, report, config)
     assert qualified["passed"]
     assert qualified["passed_gate_count"] == qualified["gate_count"]
-    assert qualified["protocol"] == "E002-trained-odor-gated-wind-v1"
+    assert qualified["protocol"] == "E002-trained-odor-gated-pfn-basis-v1"
 
     failed_report = _training_report(bundle, config, development_passed=False)
     failed = tq.qualify_trained_candidate(bundle, failed_report, config)
@@ -161,17 +157,16 @@ def test_trained_e002_rejects_bad_odor_gating(monkeypatch):
     config = _config()
     bundle = _bundle()
     report = _training_report(bundle, config)
-    bad = _passing_probe()
+    passing = _passing_probe()
     bad = tq.TrainedProbeResult(
-        **{
-            **bad.__dict__,
-            "odor_gating_separation_delta": 0.0,
-        }
+        **{**passing.__dict__, "odor_gating_separation_delta": 0.0}
     )
     monkeypatch.setattr(tq, "probe_trained_candidate", lambda *args, **kwargs: bad)
     result = tq.qualify_trained_candidate(bundle, report, config)
     assert not result["passed"]
-    gate = next(gate for gate in result["gates"] if gate["name"] == "odor_gates_wind_response")
+    gate = next(
+        gate for gate in result["gates"] if gate["name"] == "odor_gates_pfn_basis_response"
+    )
     assert gate["passed"] is False
 
 
