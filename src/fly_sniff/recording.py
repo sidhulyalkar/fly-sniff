@@ -81,8 +81,17 @@ def _agent_payload(
     }
 
 
-def _plume_payload(live: PartyAgent, max_points: int) -> list[list[float]]:
-    return live.env.plume.snapshot(max_points=max_points).astype(float).tolist()
+def _plume_payload(live: PartyAgent, max_points: int) -> tuple[list[list[float]], dict[str, Any]]:
+    plume = live.env.plume
+    snapshot = plume.snapshot(max_points=max_points)
+    full_count = len(plume.x)
+    recorded_count = len(snapshot)
+    return snapshot.astype(float).tolist(), {
+        "full_count": int(full_count),
+        "recorded_count": int(recorded_count),
+        "complete": bool(plume.snapshot_is_complete(max_points)),
+        "sample_fraction": float(recorded_count / full_count) if full_count else 1.0,
+    }
 
 
 def _assert_shared_plume(agents: list[PartyAgent], max_points: int) -> None:
@@ -139,12 +148,14 @@ def build_recording(
         _assert_shared_plume(agents, plume_points)
         if actions is None:
             actions = [{"turn": 0.0, "speed": 0.0} for _ in agents]
+        plume, plume_snapshot = _plume_payload(agents[0], plume_points)
         frames.append(
             {
                 "step": episode_step,
                 "t": float(episode_step * arena.dt),
                 "plume_t": float(agents[0].env.plume.t),
-                "plume": _plume_payload(agents[0], plume_points),
+                "plume": plume,
+                "plume_snapshot": plume_snapshot,
                 "agents": [
                     _agent_payload(live, action=action)
                     for live, action in zip(agents, actions, strict=True)
@@ -206,6 +217,16 @@ def build_recording(
             "arena": asdict(arena),
             "plume": asdict(plume_config),
             "sensor": asdict(sensor_config),
+        },
+        "plume_recording": {
+            "component_columns": ["x", "y", "sigma"],
+            "max_recorded_points": int(plume_points),
+            "max_model_puffs": int(plume_config.max_puffs),
+            "puff_mass": float(plume_config.puff_mass),
+            "exact_density_rule": (
+                "Gaussian density reconstruction is exact only for frames where "
+                "plume_snapshot.complete is true"
+            ),
         },
         # Kept as a compact compatibility view for existing social renderers.
         "arena": {
