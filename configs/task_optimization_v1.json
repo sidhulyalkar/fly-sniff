@@ -11,9 +11,15 @@
   },
   "connectome_sensory_interface": {
     "odor_mode": "mean_bilateral_nondirectional",
-    "direction_source": "body_frame_wind",
-    "rationale": "Matheson et al. 2022 found odor-sensitive FB tangential inputs including FB5AB without significant odor-direction tuning, while PFNa/PFNp/PFNm carry wind direction into hDeltaC. Physical bilateral antenna values remain recorded but their instantaneous difference is not injected as a directional connectome cue.",
-    "claim_boundary": "This remains a modeled sensory interface until a peripheral olfactory bridge is separately body-ID-qualified."
+    "odor_roles": ["odor_context_left", "odor_context_right"],
+    "direction_source": "signed_pfn_basis_from_body_frame_airflow_arrival",
+    "wind_roles": ["wind_basis_left", "wind_basis_right"],
+    "basis_angles_degrees": {"wind_basis_left": 45.0, "wind_basis_right": -45.0},
+    "airflow_arrival_definition": "arrival_x=-wind_x_body; arrival_y=-wind_y_body",
+    "basis_drive_definition": "signed dot product of airflow-arrival vector with unit vectors at +45 and -45 degrees; opposite-direction airflow may therefore produce negative modeled drive",
+    "role_population_policy": "For v1, wind basis roles are restricted to retained E001 PFNa/PFNm source neurons with explicit L/R instance identity. Retained PFNp and other side-unresolved PFN candidates remain structural evidence but are excluded from sensory drive roles until their laterality is independently resolved.",
+    "rationale": "Currier et al. 2020 found ventral P-FNs in each hemisphere tuned around 45 degrees ipsilateral, forming two orthogonal airflow bases. Matheson et al. 2022 found PFNa/PFNp/PFNm carry wind direction while odor-sensitive FB tangential inputs including FB5AB lack significant odor-direction tuning and hDeltaC combines these streams.",
+    "claim_boundary": "This remains a modeled sensory interface until the peripheral olfactory and mechanosensory bridges are separately body-ID-qualified."
   },
   "objective": {
     "version": "navigation-objective-v1",
@@ -27,11 +33,9 @@
     "tau_s": {"default": 0.2519514411044401, "min": 0.05, "max": 2.0, "meaning": "global modeled neural relaxation time constant"},
     "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0, "meaning": "global nonlinearity gain"},
     "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5, "meaning": "global scale on recurrent connectome drive"},
-    "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied bilateral gain on modeled nondirectional odor-presence drive"},
-    "wind_forward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on positive body-forward airflow drive"},
-    "wind_backward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on negative body-forward airflow drive"},
-    "wind_cross_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied left/right crosswind drive gain"},
-    "turn_gain": {"default": 2.4, "min": 0.5, "max": 6.0, "meaning": "bilateral steering readout gain"}
+    "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied gain on nondirectional odor-context drive to bilateral FB5AB roles"},
+    "wind_basis_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "single tied gain on the left/right signed PFN airflow-basis drives"},
+    "turn_gain": {"default": 2.4, "min": 0.5, "max": 6.0, "meaning": "bilateral DNa02 steering-readout gain"}
   },
   "forbidden_training_freedom": [
     "adding or deleting neurons",
@@ -39,7 +43,9 @@
     "changing body IDs or role membership during optimization",
     "changing transmitter-derived edge signs",
     "individually fitting edge weights",
+    "independently fitting left and right odor or PFN-basis gains",
     "injecting instantaneous left-right odor difference as a directional FB cue in v1",
+    "assigning side-unresolved PFN cells to left/right basis roles by optimizer choice",
     "using source coordinates, distance, plume ground truth, or final-test outcomes as controller inputs"
   ],
   "optimizer": {
@@ -55,7 +61,7 @@
     "common_random_numbers": true
   },
   "trained_e002": {
-    "protocol": "E002-trained-odor-gated-wind-v1",
+    "protocol": "E002-trained-odor-gated-pfn-basis-v1",
     "probe_seed": 13013,
     "probe_steps": 40,
     "odor_level": 0.8,
@@ -66,7 +72,7 @@
     "maximum_odor_laterality_error": 1e-12,
     "maximum_lesioned_peak_turn": 0.02,
     "maximum_deterministic_replay_error": 1e-12,
-    "laterality_rule": "positive body-frame downwind-y points left, so the upwind target is right/negative turn; negative downwind-y points right, so the upwind target is left/positive turn",
+    "laterality_rule": "positive body-frame downwind-y points left, so airflow arrives from the right and the upwind target is right/negative turn; negative downwind-y reverses these signs",
     "memory_policy": "odor-blank persistence is not part of the primary v1 qualification because the optional hDeltaK/PFG MaleCNS label hypothesis did not qualify in E001"
   },
   "matched_control_rule": {
@@ -81,5 +87,5 @@
     "maximum_validation_success_rate_drop_vs_own_untrained_default": 0.01,
     "interpretation": "This gate only decides whether task optimization is useful enough to carry forward. It is not the final scientific claim."
   },
-  "final_test_policy": "No final held-out or OOD episode may be evaluated until the training algorithm, parameterization, trained parameter files, E002 checks, and final manifest are frozen."
+  "final_test_policy": "No final held-out or OOD episode may be evaluated until the role-review artifact, training algorithm, parameterization, trained parameter files, trained-E002 checks, and final manifest are frozen."
 }
