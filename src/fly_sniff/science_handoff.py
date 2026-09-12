@@ -93,7 +93,7 @@ def _json_records(frame: pd.DataFrame, *, limit: int | None = None) -> list[dict
 def _annotation_summary(annotations: pd.DataFrame) -> dict[str, Any]:
     searchable = [column for column in SEARCH_COLUMNS if column in annotations.columns]
     summary: dict[str, Any] = {
-        "rows": int(len(annotations)),
+        "rows": len(annotations),
         "columns": list(annotations.columns),
         "searchable_columns": searchable,
         "body_id_unique": bool(annotations.bodyId.astype(int).is_unique),
@@ -127,7 +127,7 @@ def _pattern_audit(
             else pd.Series(dtype=int)
         )
         details[pattern] = {
-            "count": int(len(ids)),
+            "count": len(ids),
             "top_types": [
                 {"type": str(value), "count": int(count)}
                 for value, count in type_counts.items()
@@ -139,13 +139,13 @@ def _pattern_audit(
     overlaps: dict[str, int] = {}
     for i, left in enumerate(patterns):
         for right in patterns[i + 1 :]:
-            overlaps[f"{left} & {right}"] = int(len(per_pattern[left] & per_pattern[right]))
+            overlaps[f"{left} & {right}"] = len(per_pattern[left] & per_pattern[right])
     if len(patterns) > 2:
-        overlaps["all_patterns"] = int(len(set.intersection(*(per_pattern[p] for p in patterns))))
+        overlaps["all_patterns"] = len(set.intersection(*(per_pattern[p] for p in patterns)))
 
     return {
         "patterns": list(patterns),
-        "union_count": int(len(union)),
+        "union_count": len(union),
         "per_pattern": details,
         "overlap_counts": overlaps,
     }
@@ -174,8 +174,8 @@ def _anchor_audit(
         exact = annotations.loc[exact_mask].copy()
         family = annotations.loc[family_mask].copy()
         result[anchor] = {
-            "exact_count": int(len(exact)),
-            "family_count": int(len(family)),
+            "exact_count": len(exact),
+            "family_count": len(family),
             "exact_rows": _json_records(exact.sort_values("bodyId"), limit=max_examples),
             "family_rows": _json_records(family.sort_values("bodyId"), limit=max_examples),
         }
@@ -256,8 +256,8 @@ def _anchor_depths(
         rows["bodyId"] = rows.bodyId.astype(int)
         joined = rows.merge(prov, on="bodyId", how="inner")
         out[anchor] = {
-            "annotation_population_count": int(len(rows)),
-            "retained_in_corridor_count": int(len(joined)),
+            "annotation_population_count": len(rows),
+            "retained_in_corridor_count": len(joined),
             "retained_rows": _json_records(joined.sort_values("bodyId")),
         }
     return out
