@@ -1,166 +1,240 @@
-# R002 — looming / escape
+# R002: MaleCNS looming-to-escape
 
 ## Public question
 
-> **A virtual object is flying at the fruit fly. Can the connectome turn away before impact?**
+> **A virtual object is flying at the fruit fly. Does the real MaleCNS wiring preserve a
+> collision-sensitive escape signal when matched scrambled wiring does not?**
 
-R002 is the first non-olfactory showcase built on the generic connectome runtime. It is
-intended to reproduce a recognizable class of Drosophila looming/escape experiments while
-keeping the world-to-neuron interface explicit and auditable.
+R002 is the first non-olfactory experiment on the generic `fly-sniff` connectome runtime.
+It deliberately tests a native Drosophila visuomotor pathway rather than mapping the
+connectome onto an arbitrary game action.
 
-## Why looming
+The public causal comparison is simple:
 
-Looming is a strong showcase target because the stimulus, neural computation and behavior
-are all visually legible. Drosophila work has identified looming-sensitive visual projection
-neurons including LPLC2 and LC4, with escape pathways involving the Giant Fiber and other
-descending neurons. LPLC2 is associated with angular-size / radial-expansion evidence, while
-LC4 contributes strong expansion-velocity evidence.
+```text
+same looming stimulus + same modeled dynamics
+                  |
+          -------------------
+          |                 |
+     MaleCNS wiring     degree-preserving rewire
+          |                 |
+       DNp01/GF           DNp01/GF
+     escape readout     escape readout
+```
 
-A recent 2026 NeuroGraphBench preprint independently demonstrates an executable
-LPLC2→Giant-Fiber collision-detection abstraction and compares direct-hit and near-miss
-trajectories. `fly-sniff` does **not** copy that model or its code. We use the same broad
-scientific question as a replication target while retaining our own graph runtime, evidence
-receipts and topology controls.
+The result is an **open-loop modeled neural readout**. R002 does not claim that the virtual
+fly sees an object, performs a biological jump, or turns away.
 
-## Adapter contract
+## What is biological and what is modeled
 
-The current synthetic adapter emits four explicit modeled channels:
+Structural authority comes from `male-cns:v1.0`. The bounded R002 graph contains the released
+MaleCNS neurons and synapse counts for LPLC2, LC4 and DNp01/Giant-Fiber populations.
+
+The following components remain explicit modeling assumptions:
+
+- synthetic looming geometry;
+- angular-size and positive-expansion sensory encoding;
+- mapping those feature channels onto LPLC2 and LC4 populations;
+- transmitter-to-fast-receptor sign convention;
+- generic leaky rate dynamics;
+- interpreting modeled DNp01/GF activity as an escape-circuit readout.
+
+That separation is intentional. A connectome supplies anatomy, not measured membrane dynamics
+or an end-to-end behavioral policy.
+
+## Frozen MaleCNS authority
+
+The committed candidate authority is `authority/r002_malecns_v1_candidate.json`.
+Complete population membership comes from the public MaleCNS annotation Feather, not from
+Cell Type Explorer display IDs. The Explorer HTML is pinned separately and used for type-level
+structural summaries.
+
+Resolved populations:
+
+| population | bodies |
+| --- | ---: |
+| `LPLC2_L` | 94 |
+| `LPLC2_R` | 91 |
+| `LC4_L` | 71 |
+| `LC4_R` | 55 |
+| `DNp01_L` / GF | 1 |
+| `DNp01_R` / GF | 1 |
+
+The body-level weights table independently reproduces all four Explorer aggregate synapse
+counts exactly:
+
+| pathway | Explorer | body-level weights |
+| --- | ---: | ---: |
+| `LPLC2_L -> DNp01_L` | 2,642 | 2,642 |
+| `LC4_L -> DNp01_L` | 3,782 | 3,782 |
+| `LPLC2_R -> DNp01_R` | 2,220 | 2,220 |
+| `LC4_R -> DNp01_R` | 2,580 | 2,580 |
+
+The bounded induced graph contains **313 neurons and 20,607 edges**. This is not a whole-brain
+simulation. It is a deliberately small, auditable pathway experiment.
+
+## Sensory adapter
+
+The synthetic adapter emits four named channels:
 
 - `loom_size_left`
 - `loom_size_right`
 - `loom_velocity_left`
 - `loom_velocity_right`
 
-The size channel is normalized angular diameter. The velocity channel is normalized positive
-angular expansion speed. These names describe modeled sensory features, **not yet qualified
-MaleCNS cell identities**.
+The size feature is normalized angular diameter. The velocity feature is normalized positive
+angular expansion speed. Candidate mappings are:
 
-Candidate biological mappings to LPLC2-, LC4-, Giant-Fiber- and other descending-neuron
-populations must be traced and frozen from MaleCNS before a run is allowed to claim that the
-actual MaleCNS looming pathway was used.
+```text
+loom_size_left/right       -> LPLC2_L/R
+loom_velocity_left/right   -> LC4_L/R
+escape_left/right          <- DNp01_L/R (GF)
+```
 
-Output roles are:
+The feature-to-cell mapping is literature motivated but is not itself measured in the
+MaleCNS connectome.
 
-- `steer_left`
-- `steer_right`
-- optional `escape`
+## Stimulus geometry
 
-As with the odor benchmark, output semantics must be attached to reviewed body IDs rather
-than inferred from a convenient sign convention.
-
-## Geometry
-
-A spherical object of radius `r` approaches at constant axial velocity. The projected angular
-diameter is
+A spherical object of radius `r` approaches at constant axial velocity. Its angular diameter
+is
 
 ```text
 theta(t) = 2 atan(r / d(t))
 ```
 
-where `d(t)` is Euclidean distance from the fly. Two matched trajectory classes are used:
+Two paired conditions use the same seeded physical parameters:
 
-1. **direct hit** — zero lateral offset;
-2. **near miss** — fixed non-zero clearance.
+1. `direct-hit`: zero lateral clearance;
+2. `near-miss`: non-zero lateral clearance.
 
-Before evaluation, object radius, initial distance, speed and miss offset receive small
-seeded perturbations. Direct-hit and near-miss trials with the same seed share those physical
-parameters so the comparison is paired.
+Object radius, initial distance, speed and near-miss offset receive small deterministic
+seeded perturbations before each pair.
 
-## Metrics
+## Primary readouts
 
-R002 reports:
+R002 does **not** score turn direction. For the stimulated side it records:
 
-- direct-hit turn-away accuracy;
-- mean signed turn-away margin;
-- optional `escape` readout difference between direct hits and matched near misses;
-- intact minus degree-preserving-rewire accuracy;
-- intact minus degree-preserving-rewire turn margin.
+- peak target-side DNp01/GF activity;
+- peak opposite-side DNp01/GF activity;
+- direct-hit minus matched near-miss target activity;
+- direct-hit target minus opposite activity, called lateralization;
+- the fraction of paired trials where direct-hit target activity exceeds near-miss activity.
 
-Chance directional accuracy is 50%.
+The topology control is an exact directed degree-preserving rewire. In/out degree is preserved,
+roles remain on the same neuron identities, and edge attributes stay attached to their source
+edge record while targets are swapped.
 
-The topology comparison uses the same directed degree-preserving rewire implementation as the
-odor benchmark. The same sensory frames are replayed through intact and rewired graphs.
+## Frozen qualification protocol
 
-## Run it
+`R002-qualification-v1` is encoded in `src/fly_sniff/r002_qualify.py`. The thresholds were
+frozen before inspecting the multi-rewire qualification result.
 
-Emit a deterministic stimulus without any connectome graph:
+A candidate becomes `qualification_status=qualified` only when **all** gates pass:
 
-```bash
-fly-sniff-loom \
-  --emit-stimulus artifacts/loom-left-direct.jsonl \
-  --side left \
-  --trajectory direct-hit
-```
+1. all four cross-source structural synapse totals match exactly;
+2. direct-hit target activity exceeds near-miss activity on at least 95% of paired trials;
+3. mean direct-hit minus near-miss target activity is positive;
+4. mean direct-hit lateralization is positive;
+5. intact topology beats at least four of five fixed degree-preserving rewires on collision
+   separation;
+6. intact topology beats at least four of five fixed rewires on lateralization;
+7. lesioning all modeled LPLC2/LC4 outputs reduces direct-hit DNp01/GF activity below 5% of
+   intact.
 
-Run a candidate graph during circuit development:
-
-```bash
-fly-sniff-loom \
-  --circuit artifacts/r002-candidate \
-  --allow-candidate \
-  --trials 40 \
-  --output artifacts/r002-development.json
-```
-
-Candidate output is development-only. A public MaleCNS claim requires a graph whose manifest
-has `qualification_status: qualified` and whose sensory/readout roles are backed by reviewed
-MaleCNS authority.
-
-## Qualification ladder
-
-### R002.0 — environment
-
-PASS when direct-hit and near-miss geometry, seeded perturbations and replay output are
-deterministic and tested.
-
-### R002.1 — structural authority
-
-Resolve exact MaleCNS v1.0 body IDs for the selected looming-sensitive visual populations and
-descending readouts. Preserve evidence source, dataset version and hashes.
-
-### R002.2 — circuit sanity
-
-Show that lateralized looming input produces reproducible lateralized modeled responses and
-that relevant lesions alter those responses in the expected direction.
-
-### R002.3 — causal topology
-
-Freeze the trial set, dynamics and rewire seed. Compare intact MaleCNS topology against the
-matched degree-preserving rewire.
-
-### R002.4 — behavioral anchor
-
-Only after the structural and topology results are stable should the model be compared with
-published fly response timing/direction or a matched behavioral dataset.
-
-## Public visualization target
-
-The social render should be understandable without a caption:
+Fixed qualification seeds:
 
 ```text
-                INCOMING OBJECT
-                      ↓
-       ┌────────────────────────────┐
-       │ REAL WIRING | SCRAMBLED    │
-       │       🪰     |     🪰       │
-       │        ↘     |      ?       │
-       └────────────────────────────┘
-
-        DIRECT HIT / NEAR MISS
-        neural bars + turn trace
+trial seed: 24017
+rewire seeds: 24018, 24019, 24020, 24021, 24022
 ```
 
-A black expanding disc is enough for the first version. The audience can see the object. The
-controller receives only the declared adapter channels. If a development graph is used, the
-render must say **DEVELOPMENT / NOT A MALECNS RESULT**.
+A scientific miss writes a complete `qualification.json` and remains a successful CI run.
+Negative science is data; broken software is what should turn CI red.
 
-## References guiding the design
+## Reproduce the chain
+
+Build the body-level graph from the public MaleCNS release:
+
+```bash
+fly-sniff-r002-graph \
+  --authority authority/r002_malecns_v1_candidate.json \
+  --download \
+  --output artifacts/r002/graph
+```
+
+Apply the frozen qualifier:
+
+```bash
+fly-sniff-r002-qualify artifacts/r002/graph \
+  --trials 24 \
+  --seed 24017 \
+  --output artifacts/r002/qualification.json \
+  --qualified-circuit artifacts/r002/qualified-graph
+```
+
+A qualified graph can then be independently probed without candidate overrides:
+
+```bash
+fly-sniff-r002-probe artifacts/r002/qualified-graph \
+  --trials 40 \
+  --seed 77777 \
+  --rewire-seed 77778 \
+  --output artifacts/r002/qualified-probe.json
+```
+
+Render the causal comparison:
+
+```bash
+fly-sniff-r002-render artifacts/r002/qualified-graph \
+  --rewire-seed 24018 \
+  --output-dir artifacts/r002/render
+```
+
+The renderer emits a summary PNG, animated GIF, frame-level trace JSON and hashed render
+receipt. Candidate rendering is possible only with `--allow-candidate` and remains visibly
+labelled `CANDIDATE`.
+
+## Claim boundary
+
+If R002 qualifies, the strongest allowed statement is:
+
+> Under the explicit R002 synthetic looming adapter and generic modeled rate dynamics, the
+> bounded MaleCNS LPLC2/LC4-to-DNp01/GF topology produces a collision-sensitive, lateralized
+> escape-circuit readout that survives the frozen qualification controls better than matched
+> degree-preserving rewires.
+
+Do not shorten that into “the connectome sees the object,” “the fly brain jumps,” or “we
+simulated a conscious fly.”
+
+## Public visualization
+
+The first shareable render uses one shared expanding object and two neural panels:
+
+```text
+       SAME LOOMING INPUT
+              |
+    -----------------------
+    |                     |
+MALECNS WIRING       SCRAMBLED WIRING
+DNp01 target         DNp01 target
+DNp01 opposite       DNp01 opposite
+```
+
+The headline is:
+
+> **Same looming input. Same modeled dynamics. Only topology changed.**
+
+That makes the causal manipulation legible without pretending that the animation is a
+recording of a living fly.
+
+## References guiding the hypotheses
 
 - Klapoetke et al., *Ultra-selective looming detection from radial motion opponency*.
-- Ache et al. / related work on LPLC2, LC4 and Giant-Fiber looming escape.
+- Work on LPLC2, LC4 and Giant-Fiber-mediated escape circuitry.
 - Dombrovski et al., *Synaptic gradients transform object location to action*, Nature 2023.
 - Lazar, Shukla & Zhou, *NeuroGraphBench: Interacting with Drosophila Connectomes at Scale
   for Exploring the Functional Logic of Neural Circuits*, bioRxiv 2026.
 
-These references motivate hypotheses and adapter features. They do not substitute for MaleCNS
-v1.0 body-level authority in this repository.
+These references motivate the adapter and role hypotheses. They do not replace the frozen
+MaleCNS v1.0 body-level authority used by this repository.
