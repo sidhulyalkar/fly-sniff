@@ -84,6 +84,13 @@ def audit_corridor(
 
     node_ids = set(nodes.bodyId.astype(int))
     provenance_ids = set(provenance.bodyId.astype(int))
+    if "annotation_present" in nodes.columns:
+        annotation_present = _bool_mask(nodes.annotation_present)
+    else:
+        annotation_present = pd.Series(True, index=nodes.index, dtype=bool)
+    annotated_node_ids = set(nodes.loc[annotation_present, "bodyId"].astype(int))
+    unannotated_node_ids = node_ids - annotated_node_ids
+
     source_mask = _bool_mask(provenance.is_source_seed)
     target_mask = _bool_mask(provenance.is_target_seed)
     retained_source_ids = set(provenance.loc[source_mask, "bodyId"].astype(int))
@@ -191,6 +198,8 @@ def audit_corridor(
             "corridor_edges": len(edges),
             "retained_source_seed_count": len(retained_source_ids),
             "retained_target_seed_count": len(retained_target_ids),
+            "corridor_annotated_nodes": len(annotated_node_ids),
+            "corridor_unannotated_nodes": len(unannotated_node_ids),
         }
         for key, value in observed.items():
             if key in trace_report and int(trace_report[key]) != value:
@@ -216,6 +225,7 @@ def audit_corridor(
 
     passed = all(checks.values())
     max_bounded = float(bounded_length.max()) if bounded_length.notna().any() else None
+    annotation_fraction = len(annotated_node_ids) / len(node_ids) if node_ids else None
 
     return {
         "protocol": "structural-corridor-audit-v1",
@@ -229,6 +239,16 @@ def audit_corridor(
             "input_target_seeds": input_target_count,
             "retained_source_seeds": len(retained_source_ids),
             "retained_target_seeds": len(retained_target_ids),
+        },
+        "annotation_coverage": {
+            "annotated_nodes": len(annotated_node_ids),
+            "unannotated_nodes": len(unannotated_node_ids),
+            "annotated_fraction": float(annotation_fraction) if annotation_fraction is not None else None,
+            "unannotated_body_ids": sorted(int(x) for x in unannotated_node_ids),
+            "warning": (
+                "Missing annotation metadata does not invalidate measured structural connectivity; "
+                "unannotated nodes must not be assigned named neuronal roles without provenance."
+            ),
         },
         "depths": {
             "forward": _finite_int_hist(provenance.forward_depth),
