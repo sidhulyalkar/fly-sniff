@@ -21,7 +21,7 @@ PROTOCOL = "task-optimization-execution-audit-v1"
 def _require_summary_n(report: dict[str, Any], key: str, expected_n: int) -> int:
     summary = report.get(key)
     if not isinstance(summary, dict):
-        raise RuntimeError(f"training report is missing {key} summary")
+        raise TypeError(f"training report is missing {key} summary")
     try:
         observed_n = int(summary["n"])
     except (KeyError, TypeError, ValueError) as exc:
@@ -52,7 +52,7 @@ def reconstruct_optimizer_execution(
 
     history = report.get("history")
     if not isinstance(history, list):
-        raise RuntimeError("training report is missing optimizer generation history")
+        raise TypeError("training report is missing optimizer generation history")
     if len(history) != generations:
         raise RuntimeError(
             f"optimizer history contains {len(history)} generations; expected {generations}"
