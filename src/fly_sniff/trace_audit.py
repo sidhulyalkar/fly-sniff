@@ -151,8 +151,8 @@ def audit_corridor(
     degree.index.name = "bodyId"
     degree["in_degree"] = edge_targets.value_counts().reindex(degree.index, fill_value=0).astype(int)
     degree["out_degree"] = edge_sources.value_counts().reindex(degree.index, fill_value=0).astype(int)
-    weighted_in = edges.groupby(edge_targets).weight.sum() if len(edges) else pd.Series(dtype=float)
-    weighted_out = edges.groupby(edge_sources).weight.sum() if len(edges) else pd.Series(dtype=float)
+    weighted_in = edges.groupby("target")["weight"].sum() if len(edges) else pd.Series(dtype=float)
+    weighted_out = edges.groupby("source")["weight"].sum() if len(edges) else pd.Series(dtype=float)
     degree["weighted_in"] = weighted_in.reindex(degree.index, fill_value=0.0).astype(float)
     degree["weighted_out"] = weighted_out.reindex(degree.index, fill_value=0.0).astype(float)
     degree["total_degree"] = degree.in_degree + degree.out_degree
@@ -193,11 +193,11 @@ def audit_corridor(
             "retained_target_seed_count": len(retained_target_ids),
         }
         for key, value in observed.items():
-            if key in trace_report and int(trace_report[key]) != int(value):
+            if key in trace_report and int(trace_report[key]) != value:
                 report_counts_match = False
                 report_mismatches[key] = {
                     "trace_report": int(trace_report[key]),
-                    "observed": int(value),
+                    "observed": value,
                 }
 
     checks = {
@@ -223,12 +223,12 @@ def audit_corridor(
         "checks": checks,
         "report_mismatches": report_mismatches,
         "counts": {
-            "nodes": int(len(nodes)),
-            "edges": int(len(edges)),
+            "nodes": len(nodes),
+            "edges": len(edges),
             "input_source_seeds": input_source_count,
             "input_target_seeds": input_target_count,
-            "retained_source_seeds": int(len(retained_source_ids)),
-            "retained_target_seeds": int(len(retained_target_ids)),
+            "retained_source_seeds": len(retained_source_ids),
+            "retained_target_seeds": len(retained_target_ids),
         },
         "depths": {
             "forward": _finite_int_hist(provenance.forward_depth),
