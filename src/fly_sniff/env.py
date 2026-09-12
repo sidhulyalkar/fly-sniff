@@ -84,18 +84,22 @@ class FlySniffEnv:
         raw = max(0.0, cfg.concentration_gain * float(concentration))
         sat = raw / (cfg.concentration_half_sat + raw + 1e-12)
 
-        # Adaptation follows a first-order low-pass state with an exact discrete
-        # update under a piecewise-constant receptor drive during one simulator dt.
-        alpha = self._adaptation_alpha()
         attr = "left_adapt" if side == "left" else "right_adapt"
         adapt = float(getattr(self.agent, attr))
-        adapt = adapt + alpha * (sat - adapt)
-        setattr(self.agent, attr, adapt)
+
+        # Output at time t depends on the current drive and the adaptation state
+        # carried into the sample. This avoids using a future-updated state in
+        # the same observation.
+        response = 0.72 * sat + 0.28 * max(sat - adapt, 0.0)
+
+        # Then advance adaptation for the next sample. The exact zero-order-hold
+        # update solves da/dt=(s-a)/tau for a piecewise-constant drive over dt.
+        alpha = self._adaptation_alpha()
+        next_adapt = adapt + alpha * (sat - adapt)
+        setattr(self.agent, attr, next_adapt)
 
         # This is an explicit phenomenological benchmark transduction, not a
-        # receptor-kinetics claim: tonic saturated response plus a positive
-        # onset-sensitive component relative to the adaptation state.
-        response = 0.72 * sat + 0.28 * max(sat - adapt, 0.0)
+        # receptor-kinetics or ORN firing-rate claim.
         return float(np.clip(response, 0.0, 1.0))
 
     def _current_observation_key(self) -> tuple[int, float, float, float, float]:
