@@ -11,3 +11,16 @@ def test_manifest_is_deterministic_and_self_identifying():
     assert digest == canonical_sha256(unsigned)
     assert len(a["heldout_seeds"]) == 5
     assert len(a["ood_seeds"]) == 3
+
+
+def test_seed_split_does_not_allocate_population(monkeypatch):
+    import numpy as np
+
+    from fly_sniff.freeze import make_seed_split
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("full population allocation")
+    monkeypatch.setattr(np, "arange", forbidden)
+    first = make_seed_split(7, 1000, 400)
+    assert first == make_seed_split(7, 1000, 400)
+    assert len(set(first[0] + first[1])) == 1400

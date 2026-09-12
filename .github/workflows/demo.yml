@@ -44,14 +44,14 @@ jobs:
       - name: Record authoritative social episode
         run: >-
           fly-sniff-record --output artifacts/showcase/who-farted-run.json
-          --seed 13013 --sim-seconds 45 --plume-points 220
+          --seed 13013 --sim-seconds 45 --plume-points 600
       - name: Build recorded 4:5 preview
         run: >-
-          fly-sniff-replay-showcase artifacts/showcase/who-farted-run.json
+          fly-sniff-cinematic artifacts/showcase/who-farted-run.json
           --output artifacts/showcase/who-farted-4x5.gif --seconds 6 --fps 10
       - name: Build recorded share-ready 4:5 MP4
         run: >-
-          fly-sniff-replay-showcase artifacts/showcase/who-farted-run.json
+          fly-sniff-cinematic artifacts/showcase/who-farted-run.json
           --output artifacts/showcase/who-farted-4x5.mp4 --seconds 15 --fps 30
       - name: Show manifest
         run: cat artifacts/demo/demo-manifest.json

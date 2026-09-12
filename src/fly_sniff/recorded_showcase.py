@@ -7,7 +7,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
-from matplotlib.patches import Polygon, Rectangle
+from matplotlib.patches import Ellipse, Rectangle
 
 from .party_social import (
     BG,
@@ -21,6 +21,7 @@ from .party_social import (
     _draw_person,
 )
 from .recording import load_recording
+from .scientific_view import draw_density
 from .showcase import SHOWCASE_DPI, SHOWCASE_HEIGHT, SHOWCASE_WIDTH
 
 
@@ -32,7 +33,10 @@ def _agent(frame: dict[str, Any], label: str) -> dict[str, Any]:
 
 
 def _validate_social_contract(payload: dict[str, Any]) -> None:
-    if "NOT A MALECNS RESULT" not in payload.get("claim_boundary", ""):
+    if payload.get("claim_boundary") not in {
+        "DEVELOPMENT PROXY • NOT A MALECNS RESULT",
+        "CANDIDATE MODELED ACTIVITY • NOT A QUALIFIED MALECNS RESULT",
+    }:
         raise ValueError(
             "development recording is missing the public claim boundary"
         )
@@ -57,19 +61,18 @@ def _draw_fly_marker(ax, state: dict[str, Any], color: str) -> None:
     heading = float(state["heading"])
     forward = np.array([np.cos(heading), np.sin(heading)])
     side = np.array([-forward[1], forward[0]])
-    tip = np.array([x, y]) + 0.28 * forward
-    back_left = np.array([x, y]) - 0.18 * forward + 0.17 * side
-    back_right = np.array([x, y]) - 0.18 * forward - 0.17 * side
-    ax.add_patch(
-        Polygon(
-            [tip, back_left, back_right],
-            closed=True,
-            facecolor=color,
-            edgecolor=TEXT,
-            linewidth=1.5,
-            zorder=10,
-        )
-    )
+    angle = float(np.degrees(heading))
+    for sign in (-1, 1):
+        center = np.array([x, y]) - .08 * forward + sign * .14 * side
+        ax.add_patch(Ellipse(center, .4, .17, angle=angle + sign * 24,
+                             facecolor="#E2E8F0", alpha=.7, edgecolor=color, zorder=10))
+    ax.add_patch(Ellipse((x, y), .43, .16, angle=angle,
+                         facecolor=color, edgecolor=TEXT, linewidth=1.2, zorder=11))
+    head = np.array([x, y]) + .18 * forward
+    ax.add_patch(Ellipse(head, .14, .16, angle=angle, facecolor=TEXT, zorder=12))
+    for sign in (-1, 1):
+        antenna = head + .16 * forward + sign * .09 * side
+        ax.plot([head[0], antenna[0]], [head[1], antenna[1]], color=color, lw=1.3, zorder=12)
 
 
 def _precompute_histories(payload: dict[str, Any]) -> dict[str, np.ndarray]:
@@ -111,6 +114,16 @@ def _badge_style(alpha: float = 0.9) -> dict[str, Any]:
     }
 
 
+def first_controller_label(payload):
+    return str(payload["controllers"][0]["label"])
+
+
+def reveal_text(first, second, *, reveal):
+    if first["found"] or second["found"]:
+        return "SOURCE REACHED"
+    return "SOURCE REVEAL • NOT FOUND" if reveal else "FOLLOW THE SMELL"
+
+
 def _draw_room(
     ax,
     payload: dict[str, Any],
@@ -148,17 +161,9 @@ def _draw_room(
             culprit=reveal and index == CULPRIT_INDEX,
         )
 
-    plume = np.asarray(current["plume"], dtype=float)
-    if plume.size:
-        ax.scatter(
-            plume[:, 0],
-            plume[:, 1],
-            s=np.clip(54 * plume[:, 2], 7, 72),
-            alpha=0.40,
-            c=PLUME,
-            edgecolors="none",
-            zorder=2,
-        )
+    density_label = draw_density(ax, payload, current)
+    ax.text(0.5, 0.015, density_label, transform=ax.transAxes, ha="center",
+            color=MUTED, fontsize=7, bbox=_badge_style())
 
     states: list[dict[str, Any]] = []
     for controller in payload["controllers"][:2]:
@@ -169,7 +174,7 @@ def _draw_room(
             history[:, 0],
             history[:, 1],
             color=color,
-            linewidth=5.0,
+            linewidth=2.7,
             alpha=0.96,
             zorder=6,
         )
@@ -188,7 +193,7 @@ def _draw_room(
             ax.text(
                 states[0]["x"] - 0.05,
                 states[0]["y"] + 0.62,
-                "BOTH START HERE",
+                "BOTH START HERE" if frame_index == 0 else "PATHS OVERLAP",
                 ha="center",
                 color=TEXT,
                 fontsize=8.8,
@@ -205,7 +210,7 @@ def _draw_room(
     ax.text(
         0.025,
         0.965,
-        "SNIFFING PROXY",
+        first_controller_label(payload),
         transform=ax.transAxes,
         va="top",
         fontsize=11.5,
@@ -216,7 +221,7 @@ def _draw_room(
     ax.text(
         0.975,
         0.965,
-        "RANDOM",
+        str(payload["controllers"][1]["label"]),
         transform=ax.transAxes,
         ha="right",
         va="top",
@@ -256,6 +261,7 @@ def _draw_bar(
     y: float,
     label: str,
     value: float,
+    color: str = PLUME,
 ) -> None:
     ax.text(
         0.03,
@@ -279,7 +285,7 @@ def _draw_bar(
             (0.03, y - 0.015),
             0.38 * float(np.clip(value, 0.0, 1.0)),
             0.065,
-            facecolor=PLUME,
+            facecolor=color,
             edgecolor="none",
         )
     )
@@ -316,8 +322,8 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
         fontweight="bold",
     )
 
-    _draw_bar(ax, y=0.64, label="LEFT ANTENNA", value=left)
-    _draw_bar(ax, y=0.43, label="RIGHT ANTENNA", value=right)
+    _draw_bar(ax, y=0.64, label="LEFT ANTENNA", value=left, color="#67E8F9")
+    _draw_bar(ax, y=0.43, label="RIGHT ANTENNA", value=right, color="#C4B5FD")
     ax.text(
         0.03,
         0.20,
@@ -335,30 +341,28 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
     ax.text(
         0.55,
         0.80,
-        "AIRFLOW AT THE FLY",
+        "BODY AIRFLOW: → FORWARD / ↑ LEFT",
         color=MUTED,
         fontsize=9.5,
         fontweight="bold",
     )
-    ax.arrow(
-        0.72,
-        0.63,
-        0.12 * ux,
-        0.12 * uy,
-        width=0.006,
-        head_width=0.035,
-        color="#93C5FD",
-        length_includes_head=True,
-    )
+    compass = ax.inset_axes([0.65, 0.56, 0.20, 0.20])
+    compass.set(xlim=(-1.2, 1.2), ylim=(-1.2, 1.2), aspect="equal")
+    compass.axis("off")
+    compass.arrow(0, 0, ux, uy, width=.03, head_width=.22, color="#93C5FD",
+                  length_includes_head=True)
     ax.text(
         0.55,
         0.48,
-        f"wind = ({wx:+.2f}, {wy:+.2f})",
+        f"forward {wx:+.2f} • left {wy:+.2f} m/s",
         color=TEXT,
         fontsize=9.5,
     )
 
-    if turn > 0.05:
+    valid = state.get("decision_valid", not state.get("done", False))
+    if not valid:
+        turn_text = "STOPPED" if state.get("done") else "END OF RECORDING"
+    elif turn > 0.05:
         turn_text = f"TURN LEFT  {turn:+.2f}"
     elif turn < -0.05:
         turn_text = f"TURN RIGHT  {turn:+.2f}"
@@ -373,7 +377,7 @@ def _draw_sensor_hud(ax, state: dict[str, Any]) -> None:
         fontweight="bold",
     )
 
-    if "mode_surge" in diag:
+    if valid and "mode_surge" in diag:
         if float(diag["mode_surge"]) > 0.5:
             mode = "SMELL DETECTED → GO UPWIND"
         else:
@@ -472,7 +476,7 @@ def render_recorded_showcase(
             fontweight="bold",
         )
         subtitle = (
-            "BUSTED • THESE ARE THE ACTUAL RECORDED PATHS"
+            reveal_text(first, second, reveal=reveal)
             if reveal
             else "YOU CAN SEE THE GREEN SMELL • THE FLY CAN'T"
         )
@@ -514,7 +518,7 @@ def render_recorded_showcase(
             footer_ax.text(
                 0.5,
                 0.68,
-                f"BUSTED: {culprit}",
+                f"{reveal_text(first, second, reveal=reveal)}: {culprit}",
                 ha="center",
                 va="center",
                 fontsize=18,

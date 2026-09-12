@@ -27,6 +27,13 @@ def diagnose(
     python_ok = sys.version_info >= (3, 11)
     token_present = bool(env.get("NEUPRINT_TOKEN"))
     return {
+        "installation": {
+            "python_executable": sys.executable,
+            "package_source": str(Path(__file__).resolve().parent),
+            "commands": {name: shutil.which(name) for name in (
+                "fly-sniff-record", "fly-sniff-staged-trace", "fly-sniff-cinematic")},
+            "repair": "From the intended checkout: python -m pip install -e '.[dev]'",
+        },
         "python": {
             "version": ".".join(str(x) for x in sys.version_info[:3]),
             "ok": python_ok,
@@ -51,6 +58,11 @@ def _print_human(report: dict[str, Any]) -> None:
     yes = "READY"
     no = "MISSING"
     print(f"Python {report['python']['version']} ({yes if report['python']['ok'] else no}; requires >=3.11)")
+    print(f"Python executable: {report['installation']['python_executable']}")
+    print(f"Package source: {report['installation']['package_source']}")
+    for name, path in report["installation"]["commands"].items():
+        print(f"{name}: {path or no}")
+    print(report["installation"]["repair"])
     print(f"ffmpeg: {report['ffmpeg']['path'] or no}")
     print(f"NEUPRINT_TOKEN: {yes if report['neuprint_token']['present'] else no}")
     print(

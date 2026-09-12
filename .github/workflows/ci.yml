@@ -14,7 +14,16 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e '.[dev]'
+      - name: Install built wheel and test dependencies
+        run: |
+          python -m pip wheel . --no-deps --wheel-dir /tmp/fly-sniff-wheel
+          python -m pip install /tmp/fly-sniff-wheel/*.whl 'pytest>=8' 'ruff==0.16.7'
+      - name: Smoke installed commands outside checkout
+        working-directory: /tmp
+        run: |
+          fly-sniff-record --help
+          fly-sniff-staged-trace --help
+          fly-sniff-cinematic --help
       - name: Ruff
         id: ruff
         continue-on-error: true
