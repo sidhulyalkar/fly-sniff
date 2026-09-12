@@ -49,6 +49,14 @@ def _probe_scientific_python() -> dict[str, Any]:
     }
 
 
+def _resolve_console_script(name: str, executable_dir: Path) -> str | None:
+    """Resolve a project script, preferring the active interpreter's environment."""
+    sibling = executable_dir / name
+    if sibling.exists() and os.access(sibling, os.X_OK):
+        return str(sibling)
+    return shutil.which(name)
+
+
 def diagnose(
     *,
     root: str | Path = ".",
@@ -69,7 +77,7 @@ def diagnose(
     scripts: dict[str, Any] = {}
     scripts_same_environment = True
     for name in REQUIRED_SCRIPTS:
-        resolved = shutil.which(name)
+        resolved = _resolve_console_script(name, executable_dir)
         same_environment = bool(
             resolved and Path(resolved).resolve().parent == executable_dir
         )
