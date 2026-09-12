@@ -7,7 +7,7 @@ cd "$ROOT"
 PY="${PY:-$ROOT/.venv/bin/python}"
 AUDIT="${AUDIT:-results/route/literature-route-audit-v1.json}"
 BUNDLE="${BUNDLE:-data/cache/steering-scaffold-v1}"
-REPORT="${REPORT:-results/e002/steering-scaffold-v1.json}"
+REPORT="${REPORT:-results/e002/steering-scaffold-v2.json}"
 
 if [[ ! -x "$PY" ]]; then
   echo "Missing repo Python: $PY" >&2
@@ -56,9 +56,11 @@ import json
 from pathlib import Path
 r = json.loads(Path("$REPORT").read_text())
 print("\nSteering scaffold probe summary")
+print("protocol:", r["protocol"])
 print("passed:", r["passed"])
 print("left_turn:", r["probe"]["left_turn"])
 print("right_turn:", r["probe"]["right_turn"])
 print("pfl3_cut_peak_turn:", r["probe"]["pfl3_cut_peak_turn"])
+print("bundle manifest sha256:", r["input_bundle"]["files"]["manifest.json"]["sha256"])
 print("report:", "$REPORT")
 PY
