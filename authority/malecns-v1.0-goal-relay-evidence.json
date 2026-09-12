@@ -1,0 +1,87 @@
+{
+  "authority_kind": "body-id-resolved-goal-relay-discovery-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "discovery-evidence-not-functional-qualification",
+  "source_audit": {
+    "protocol": "malecns-goal-relay-audit-v1",
+    "audit_sha256": "12c43b0f497d97e72f0fa16fe5f293ed9d4bf9828286f66422a75ebd6a4f8208",
+    "git_sha": "e1145427dadab92d6fab0709e843ad383c4acfee",
+    "git_dirty_paths": [],
+    "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "config_sha256": "deed2894b220f03fca615a01d7581d260451eab1dda03126803bc83236c975c0",
+    "fixed_thresholds": [1, 3, 5, 10]
+  },
+  "selection_rule": {
+    "primary_relay": "hDeltaG",
+    "secondary_comparator": "hDeltaM",
+    "basis": "Selection is frozen from the preregistered structural threshold sweep before any downstream behavioral optimization. hDeltaG is the only tested 2022 local relay with nonzero hDeltaC->relay->PFL3 support at every fixed threshold through 10; hDeltaM is the strongest comparator at threshold 5 but has zero two-hop paths at threshold 10.",
+    "forbidden_use": "Do not change relay membership because a navigation benchmark, lesion, rewire, or training run performs poorly."
+  },
+  "population_body_ids": {
+    "hDeltaC": [14975, 17728, 20231, 20951, 23231, 23630, 25808, 32122, 32432, 33410, 39385, 39970, 43161, 58447, 69954, 80130, 109866, 518704, 518779, 521644],
+    "hDeltaG": [19798, 20565, 28258, 42440, 48642, 49952, 57625, 515960],
+    "hDeltaM": [17874, 22302, 22683, 22923, 27195, 30329, 77090, 515963],
+    "PFL3": [15210, 17000, 17286, 17290, 18327, 18803, 18851, 19009, 23159, 26038, 26488, 29836, 35322, 79549, 108478, 513032, 513266, 518378, 519346, 519351, 520811, 523032, 530071, 567101],
+    "PFL2": [11557, 11673, 13031, 13490, 14729, 19715, 27492, 511842, 513034, 518375, 520573, 522853]
+  },
+  "primary_hDeltaG_support": {
+    "hDeltaC_to_hDeltaG": {
+      "edge_pairs": 42,
+      "weight_sum": 133.0,
+      "edge_pairs_at_3": 18,
+      "edge_pairs_at_5": 11,
+      "edge_pairs_at_10": 1
+    },
+    "hDeltaG_to_PFL3": {
+      "edge_pairs": 48,
+      "weight_sum": 582.0,
+      "edge_pairs_at_3": 42,
+      "edge_pairs_at_5": 34,
+      "edge_pairs_at_10": 26
+    },
+    "hDeltaC_via_hDeltaG_to_PFL3": {
+      "paths": 255,
+      "paths_at_3": 94,
+      "paths_at_5": 45,
+      "paths_at_10": 2,
+      "coverage_at_5": {
+        "hDeltaC": "11/20",
+        "hDeltaG": "7/8",
+        "PFL3": "23/24"
+      },
+      "exact_paths_at_10": [
+        {"hDeltaC": 14975, "hDeltaG": 48642, "PFL3": 15210, "weights": [10.0, 20.0]},
+        {"hDeltaC": 14975, "hDeltaG": 48642, "PFL3": 79549, "weights": [10.0, 10.0]}
+      ]
+    },
+    "hDeltaC_via_hDeltaG_to_PFL2": {
+      "paths": 141,
+      "paths_at_3": 45,
+      "paths_at_5": 14,
+      "paths_at_10": 1
+    }
+  },
+  "secondary_hDeltaM_support": {
+    "hDeltaC_to_hDeltaM": {"edge_pairs": 27, "weight_sum": 54.0, "edge_pairs_at_5": 4, "edge_pairs_at_10": 0},
+    "hDeltaM_to_PFL3": {"edge_pairs": 58, "weight_sum": 2428.0, "edge_pairs_at_5": 51, "edge_pairs_at_10": 48},
+    "hDeltaC_via_hDeltaM_to_PFL3": {"paths": 197, "paths_at_3": 38, "paths_at_5": 26, "paths_at_10": 0},
+    "interpretation": "Strong PFL-facing output but weaker hDeltaC-facing input than hDeltaG. Retained as a frozen comparator, not merged into the primary route."
+  },
+  "other_preregistered_relays": {
+    "hDeltaA": "Very strong PFL3/PFL2-facing connectivity but hDeltaC input is only two weight-1 pairs; no two-hop path survives threshold 3.",
+    "hDeltaH": "Moderate two-hop support at thresholds 1 and 3, but zero hDeltaC->hDeltaH->PFL3 paths survive threshold 5."
+  },
+  "positive_control": {
+    "FC2A_to_PFL3": {"edge_pairs": 126, "weight_sum": 2512.0, "edge_pairs_at_10": 82, "target_coverage_at_10": "24/24"},
+    "FC2B_to_PFL3": {"edge_pairs": 183, "weight_sum": 2478.0, "edge_pairs_at_10": 104, "target_coverage_at_10": "24/24"},
+    "FC2C_to_PFL3": {"edge_pairs": 267, "weight_sum": 2700.0, "edge_pairs_at_10": 131, "target_coverage_at_10": "24/24"},
+    "interpretation": "Independent goal-interface positive control only. It is not evidence for the hDeltaC relay hypothesis."
+  },
+  "persistent_goal_lane": {
+    "hDeltaK_count": 31,
+    "PFG_count": 0,
+    "interpretation": "The exact PFG type-name selector returned no MaleCNS annotation rows. The hDeltaK<->PFG hypothesis is unresolved by nomenclature in this audit and must not be called structurally absent. Alias/morphology mapping is required before testing it."
+  },
+  "claim_boundary": "This authority freezes a discovery-stage relay selection from structural MaleCNS evidence. It does not establish physiological transmission, synaptic sign, goal coding, necessity, sufficiency, or odor-navigation performance. The primary hDeltaG relay may advance to an independently frozen sign/topography/perturbation assay; relay identity must not be re-selected using behavioral performance."
+}
