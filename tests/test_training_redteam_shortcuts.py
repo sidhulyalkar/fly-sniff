@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from fly_sniff import training_redteam as redteam
-from fly_sniff.env import Observation
+from fly_sniff.env import FlySniffEnv, Observation
 from fly_sniff.graph import GraphBundle
 from fly_sniff.training import FINAL_TEST_MAX_SEED, default_parameters, make_training_seed_split
 
@@ -74,6 +74,50 @@ def test_sensory_masks_change_only_explicit_controller_channels():
     assert wind_off.heading == pytest.approx(observation.heading)
 
 
+def test_wall_contact_prediction_detects_pre_reflection_crossing_without_controller_input():
+    env = FlySniffEnv(seed=101)
+    env.agent.x = float(env.arena.width - 1e-6)
+    env.agent.y = float(0.5 * env.arena.height)
+    env.agent.heading = 0.0
+    x_contact, y_contact = redteam.predict_wall_contact(
+        env,
+        turn_command=0.0,
+        speed_scale=1.0,
+    )
+    assert x_contact is True
+    assert y_contact is False
+    assert "wall_distance" not in Observation.__dataclass_fields__
+    assert "wall_contact" not in Observation.__dataclass_fields__
+
+
+def test_wall_summary_separates_success_with_and_without_reflection():
+    rows = [
+        {
+            "success": True,
+            "spl": 0.8,
+            "path_length": 2.0,
+            "final_distance": 0.1,
+            "wall_contact_steps": 0,
+            "wall_contact_fraction_steps": 0.0,
+            "first_wall_contact_step": None,
+        },
+        {
+            "success": False,
+            "spl": 0.0,
+            "path_length": 3.0,
+            "final_distance": 2.0,
+            "wall_contact_steps": 4,
+            "wall_contact_fraction_steps": 0.2,
+            "first_wall_contact_step": 5,
+        },
+    ]
+    summary = redteam._summarize(rows)
+    assert summary["episodes_with_wall_contact_rate"] == pytest.approx(0.5)
+    assert summary["success_rate_without_wall_contact"] == pytest.approx(1.0)
+    assert summary["success_rate_with_wall_contact"] == pytest.approx(0.0)
+    assert summary["successful_episodes_with_wall_contact_rate"] == pytest.approx(0.0)
+
+
 def test_shortcut_battery_is_diagnostic_only_and_contains_geometry_attacks(monkeypatch):
     config = _config()
     bundle = _bundle()
@@ -96,12 +140,19 @@ def test_shortcut_battery_is_diagnostic_only_and_contains_geometry_attacks(monke
         wind_scale,
     ):
         success = bool(odor_scale > 0.0 and wind_scale > 0.0)
+        wall_contacts = 2 if wind_scale == 0.0 else 0
         return {
             "seed": int(seed),
             "success": success,
             "spl": 0.5 if success else 0.0,
             "path_length": 1.0,
             "final_distance": 1.0,
+            "steps": 10,
+            "wall_contact_steps": wall_contacts,
+            "x_wall_contact_steps": wall_contacts,
+            "y_wall_contact_steps": 0,
+            "wall_contact_fraction_steps": wall_contacts / 10.0,
+            "first_wall_contact_step": 3 if wall_contacts else None,
         }
 
     monkeypatch.setattr(redteam, "_run_diagnostic_episode", fake_episode)
@@ -131,3 +182,7 @@ def test_shortcut_battery_is_diagnostic_only_and_contains_geometry_attacks(monke
     assert mirrored["plume"]["wind_speed"] < 0.0
     assert mirrored["arena"]["source_x"] > mirrored["arena"]["start_x"]
     assert report["comparisons"]["normal_minus_odor_clamped_success_rate"] == 1.0
+    assert report["wall_telemetry"]["status"] == "diagnostic_only_not_controller_input"
+    assert report["scenarios"]["wind_clamped"]["summary"][
+        "episodes_with_wall_contact_rate"
+    ] == pytest.approx(1.0)
