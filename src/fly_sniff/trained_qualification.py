@@ -244,6 +244,16 @@ def _verify_budget_receipt(
     return expected
 
 
+def _verify_history_receipt(report: dict[str, Any]) -> str:
+    history = report.get("history")
+    if not isinstance(history, list):
+        raise ValueError("training report is missing optimizer history")
+    history_sha256 = canonical_sha256(history)
+    if report.get("optimizer_history_sha256") != history_sha256:
+        raise ValueError("training report optimizer history hash mismatch")
+    return history_sha256
+
+
 def _verify_runtime_receipt(report: dict[str, Any]) -> tuple[str, str]:
     receipt = report.get("runtime_environment")
     if not isinstance(receipt, dict):
@@ -311,6 +321,7 @@ def parameters_from_training_report(
         train_count=len(train),
         validation_count=len(validation),
     )
+    history_sha256 = _verify_history_receipt(report)
     runtime_sha256, numerical_sha256 = _verify_runtime_receipt(report)
     _verify_development_gate(report, config)
 
@@ -331,6 +342,7 @@ def parameters_from_training_report(
         "validation_seed_sha256": canonical_sha256(validation),
         "trained_parameter_sha256": parameter_sha,
         "optimizer_budget_sha256": canonical_sha256(budget),
+        "optimizer_history_sha256": history_sha256,
         "runtime_environment_sha256": runtime_sha256,
         "numerical_runtime_sha256": numerical_sha256,
     }
@@ -455,6 +467,7 @@ def qualify_trained_candidate(
         "graph_sha256": bundle.replay_fingerprint(),
         "training_config_sha256": canonical_sha256(config),
         "training_audit_receipt_sha256": training_report["audit_receipt_sha256"],
+        "optimizer_history_sha256": training_report["optimizer_history_sha256"],
         "runtime_environment_sha256": training_report["runtime_environment_sha256"],
         "numerical_runtime_sha256": training_report["numerical_runtime_sha256"],
         "trained_parameter_sha256": canonical_sha256(parameters.to_dict()),
@@ -474,10 +487,11 @@ def qualify_trained_candidate(
         "memory_policy": frozen["memory_policy"],
         "warning": (
             "Passing trained E002 supports internal consistency of the explicit modeled dynamics, "
-            "the supplied training receipts, reconstructed represented optimizer execution, and "
-            "an exact numerical-runtime match to training. It does not prove no external final-test "
-            "peeking, measured physiology, peripheral sensory transduction, or final navigation "
-            "superiority over matched trained topology controls."
+            "the supplied training receipts, cryptographically bound optimizer history, "
+            "reconstructed represented optimizer execution, and an exact numerical-runtime match "
+            "to training. It does not prove no external final-test peeking, measured physiology, "
+            "peripheral sensory transduction, or final navigation superiority over matched trained "
+            "topology controls."
         ),
     }
 
