@@ -14,14 +14,7 @@ from .runtime import ConnectomeRuntime
 
 @dataclass(frozen=True)
 class LoomConfig:
-    """Physically grounded looming geometry for R002.
-
-    The object moves along the viewing axis at constant speed. ``miss_offset``
-    gives the lateral clearance of a near-miss trajectory. The sensory adapter
-    exposes angular size and positive angular expansion speed separately so a
-    later MaleCNS mapping can distinguish LPLC2-like size evidence from LC4-like
-    expansion-speed evidence.
-    """
+    """Physically grounded looming geometry for R002."""
 
     steps: int = 96
     dt: float = 0.02
@@ -70,9 +63,11 @@ class LoomTrialResult:
     seed: int
     side: str
     trajectory: str
-    mean_turn: float
-    away_correct: bool
-    peak_escape: float | None
+    mean_turn: float | None
+    away_correct: bool | None
+    peak_escape: float
+    escape_auc: float
+    escape_latency_s: float | None
     peak_activity: float
     peak_size_drive: float
     peak_velocity_drive: float
@@ -95,8 +90,6 @@ def generate_loom_frames(
     *,
     config: LoomConfig | None = None,
 ) -> list[LoomFrame]:
-    """Generate a deterministic direct-hit or near-miss looming stimulus."""
-
     if side not in {"left", "right"}:
         raise ValueError("side must be 'left' or 'right'")
     cfg = config or LoomConfig()
@@ -117,9 +110,7 @@ def generate_loom_frames(
         angular_velocity = max((angular_size - previous_size) / cfg.dt, 0.0)
         previous_size = angular_size
         size_drive = float(np.clip(angular_size / cfg.size_scale_rad, 0.0, 1.0))
-        velocity_drive = float(
-            np.clip(angular_velocity / cfg.velocity_scale_rad_s, 0.0, 1.0)
-        )
+        velocity_drive = float(np.clip(angular_velocity / cfg.velocity_scale_rad_s, 0.0, 1.0))
         inputs = {
             "loom_size_left": size_drive if side == "left" else 0.0,
             "loom_size_right": size_drive if side == "right" else 0.0,
@@ -169,47 +160,66 @@ def run_loom_trial(
     seed: int,
     config: LoomConfig | None = None,
     require_qualified: bool = True,
+    disabled_inputs: set[str] | None = None,
 ) -> LoomTrialResult:
     cfg = _jitter_config(config or LoomConfig(), seed)
     frames = generate_loom_frames(side, trajectory, config=cfg)
     runtime = ConnectomeRuntime(bundle, require_qualified=require_qualified)
     runtime.reset()
+    disabled_inputs = disabled_inputs or set()
 
+    has_steering = "steer_left" in bundle.roles and "steer_right" in bundle.roles
     turns: list[float] = []
     escapes: list[float] = []
     activity: list[float] = []
     size_drive: list[float] = []
     velocity_drive: list[float] = []
-    has_escape = "escape" in bundle.roles
 
     for frame in frames:
-        readouts = ("steer_left", "steer_right", "escape") if has_escape else (
-            "steer_left",
-            "steer_right",
-        )
-        snapshot = runtime.step(frame.inputs, readouts=readouts)
-        left = snapshot.readouts.get("steer_left", 0.0)
-        right = snapshot.readouts.get("steer_right", 0.0)
-        turns.append(float(np.tanh(2.4 * (right - left))))
-        if has_escape:
-            escapes.append(snapshot.readouts["escape"])
+        inputs = {
+            key: (0.0 if key in disabled_inputs else value)
+            for key, value in frame.inputs.items()
+        }
+        readouts = ["escape"]
+        if has_steering:
+            readouts.extend(["steer_left", "steer_right"])
+        snapshot = runtime.step(inputs, readouts=readouts)
+        if has_steering:
+            left = snapshot.readouts.get("steer_left", 0.0)
+            right = snapshot.readouts.get("steer_right", 0.0)
+            turns.append(float(np.tanh(2.4 * (right - left))))
+        escapes.append(float(snapshot.readouts["escape"]))
         activity.append(snapshot.activity_max)
-        size_drive.append(max(frame.inputs["loom_size_left"], frame.inputs["loom_size_right"]))
-        velocity_drive.append(
-            max(frame.inputs["loom_velocity_left"], frame.inputs["loom_velocity_right"])
-        )
+        size_drive.append(max(inputs["loom_size_left"], inputs["loom_size_right"]))
+        velocity_drive.append(max(inputs["loom_velocity_left"], inputs["loom_velocity_right"]))
 
     response_start = cfg.onset_steps + max(4, (cfg.steps - cfg.onset_steps) // 2)
-    mean_turn = float(np.mean(turns[response_start:]))
-    expected_sign = -1.0 if side == "left" else 1.0
-    away_correct = bool(expected_sign * mean_turn > 0.0)
+    mean_turn: float | None = None
+    away_correct: bool | None = None
+    if has_steering:
+        mean_turn = float(np.mean(turns[response_start:]))
+        expected_sign = -1.0 if side == "left" else 1.0
+        away_correct = bool(expected_sign * mean_turn > 0.0)
+
+    baseline = float(np.mean(escapes[: cfg.onset_steps])) if cfg.onset_steps else 0.0
+    peak_escape = float(max(escapes))
+    # A deterministic response threshold based on the trial's dynamic range, not a biological firing threshold.
+    response_threshold = baseline + 0.25 * max(peak_escape - baseline, 0.0)
+    latency = None
+    for index in range(cfg.onset_steps, len(escapes)):
+        if escapes[index] > response_threshold and peak_escape > baseline:
+            latency = float((index - cfg.onset_steps) * cfg.dt)
+            break
+
     return LoomTrialResult(
         seed=seed,
         side=side,
         trajectory=trajectory,
         mean_turn=mean_turn,
         away_correct=away_correct,
-        peak_escape=float(max(escapes)) if escapes else None,
+        peak_escape=peak_escape,
+        escape_auc=float(np.trapezoid(escapes, dx=cfg.dt)),
+        escape_latency_s=latency,
         peak_activity=float(max(activity)),
         peak_size_drive=float(max(size_drive)),
         peak_velocity_drive=float(max(velocity_drive)),
@@ -223,6 +233,7 @@ def benchmark_loom(
     seed: int = 24017,
     config: LoomConfig | None = None,
     require_qualified: bool = True,
+    disabled_inputs: set[str] | None = None,
 ) -> dict:
     if trials < 4:
         raise ValueError("trials must be >= 4")
@@ -240,6 +251,7 @@ def benchmark_loom(
                 seed=trial_seed,
                 config=base,
                 require_qualified=require_qualified,
+                disabled_inputs=disabled_inputs,
             )
         )
         near.append(
@@ -250,40 +262,99 @@ def benchmark_loom(
                 seed=trial_seed,
                 config=base,
                 require_qualified=require_qualified,
+                disabled_inputs=disabled_inputs,
             )
         )
 
-    away_accuracy = float(np.mean([row.away_correct for row in direct]))
-    signed_margin = float(
-        np.mean(
-            [(-1.0 if row.side == "left" else 1.0) * row.mean_turn for row in direct]
-        )
-    )
-    escape_separation: float | None = None
-    if all(row.peak_escape is not None for row in direct + near):
-        escape_separation = float(
+    steering_available = all(row.away_correct is not None for row in direct)
+    away_accuracy: float | None = None
+    signed_margin: float | None = None
+    if steering_available:
+        away_accuracy = float(np.mean([bool(row.away_correct) for row in direct]))
+        signed_margin = float(
             np.mean(
                 [
-                    float(hit.peak_escape) - float(miss.peak_escape)
-                    for hit, miss in zip(direct, near, strict=True)
+                    (-1.0 if row.side == "left" else 1.0) * float(row.mean_turn)
+                    for row in direct
                 ]
             )
         )
 
+    peak_separation = float(
+        np.mean([hit.peak_escape - miss.peak_escape for hit, miss in zip(direct, near, strict=True)])
+    )
+    auc_separation = float(
+        np.mean([hit.escape_auc - miss.escape_auc for hit, miss in zip(direct, near, strict=True)])
+    )
+    hit_latencies = [row.escape_latency_s for row in direct if row.escape_latency_s is not None]
+
     return {
-        "protocol": "R002-loom-escape-v1",
+        "protocol": "R002-loom-escape-v2",
         "trials_per_trajectory": trials,
+        "primary_endpoint": "escape_direct_minus_near_miss",
+        "escape_direct_minus_near_miss": peak_separation,
+        "escape_auc_direct_minus_near_miss": auc_separation,
+        "median_direct_hit_latency_s": (
+            float(np.median(hit_latencies)) if hit_latencies else None
+        ),
+        "directional_steering_evaluated": steering_available,
         "away_accuracy_direct_hit": away_accuracy,
         "mean_signed_away_margin": signed_margin,
-        "chance_accuracy": 0.5,
-        "escape_direct_minus_near_miss": escape_separation,
+        "disabled_inputs": sorted(disabled_inputs or set()),
         "claim_status": (
-            "qualified-malecns"
+            "qualified-malecns-modeled-dynamics"
             if bundle.manifest and bundle.manifest.get("qualification_status") == "qualified"
             else "candidate-malecns-development"
         ),
         "direct_hit": [asdict(row) for row in direct],
         "near_miss": [asdict(row) for row in near],
+    }
+
+
+def compare_with_controls(
+    bundle: GraphBundle,
+    *,
+    trials: int,
+    seed: int,
+    rewire_seed: int,
+    allow_candidate: bool,
+) -> dict:
+    require_qualified = not allow_candidate
+    intact = benchmark_loom(bundle, trials=trials, seed=seed, require_qualified=require_qualified)
+    rewired_bundle = degree_preserving_rewire(bundle, seed=rewire_seed)
+    rewired = benchmark_loom(
+        rewired_bundle,
+        trials=trials,
+        seed=seed,
+        require_qualified=require_qualified,
+    )
+    size_lesion = benchmark_loom(
+        bundle,
+        trials=trials,
+        seed=seed,
+        require_qualified=require_qualified,
+        disabled_inputs={"loom_size_left", "loom_size_right"},
+    )
+    velocity_lesion = benchmark_loom(
+        bundle,
+        trials=trials,
+        seed=seed,
+        require_qualified=require_qualified,
+        disabled_inputs={"loom_velocity_left", "loom_velocity_right"},
+    )
+    endpoint = "escape_direct_minus_near_miss"
+    return {
+        "protocol": "R002-loom-escape-controls-v2",
+        "primary_endpoint": endpoint,
+        "rewire_seed": rewire_seed,
+        "intact": intact,
+        "degree_preserving_rewire": rewired,
+        "size_channel_lesion": size_lesion,
+        "velocity_channel_lesion": velocity_lesion,
+        "delta_intact_minus_rewire": intact[endpoint] - rewired[endpoint],
+        "delta_intact_minus_size_lesion": intact[endpoint] - size_lesion[endpoint],
+        "delta_intact_minus_velocity_lesion": intact[endpoint] - velocity_lesion[endpoint],
+        "directional_steering_is_primary_claim": False,
     }
 
 
@@ -295,32 +366,14 @@ def compare_with_rewire(
     rewire_seed: int,
     allow_candidate: bool,
 ) -> dict:
-    require_qualified = not allow_candidate
-    intact = benchmark_loom(
+    """Backward-compatible alias for the stronger R002 control pack."""
+    return compare_with_controls(
         bundle,
         trials=trials,
         seed=seed,
-        require_qualified=require_qualified,
+        rewire_seed=rewire_seed,
+        allow_candidate=allow_candidate,
     )
-    rewired_bundle = degree_preserving_rewire(bundle, seed=rewire_seed)
-    rewired = benchmark_loom(
-        rewired_bundle,
-        trials=trials,
-        seed=seed,
-        require_qualified=require_qualified,
-    )
-    return {
-        "protocol": "R002-loom-escape-topology-pair-v1",
-        "rewire_seed": rewire_seed,
-        "intact": intact,
-        "degree_preserving_rewire": rewired,
-        "delta_away_accuracy": (
-            intact["away_accuracy_direct_hit"] - rewired["away_accuracy_direct_hit"]
-        ),
-        "delta_signed_away_margin": (
-            intact["mean_signed_away_margin"] - rewired["mean_signed_away_margin"]
-        ),
-    }
 
 
 def main() -> None:
@@ -332,11 +385,7 @@ def main() -> None:
     parser.add_argument("--rewire-seed", type=int, default=24018)
     parser.add_argument("--emit-stimulus", help="write one JSONL stimulus instead of evaluating")
     parser.add_argument("--side", choices=["left", "right"], default="left")
-    parser.add_argument(
-        "--trajectory",
-        choices=["direct-hit", "near-miss"],
-        default="direct-hit",
-    )
+    parser.add_argument("--trajectory", choices=["direct-hit", "near-miss"], default="direct-hit")
     parser.add_argument("--output", help="optional JSON report path")
     args = parser.parse_args()
 
@@ -355,7 +404,7 @@ def main() -> None:
             "loom evaluation requires a qualified graph; pass --allow-candidate only for "
             "development runs that are not eligible for MaleCNS claims"
         )
-    report = compare_with_rewire(
+    report = compare_with_controls(
         bundle,
         trials=args.trials,
         seed=args.seed,
