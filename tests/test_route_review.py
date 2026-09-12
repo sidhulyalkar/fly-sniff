@@ -5,7 +5,6 @@ import pandas as pd
 
 from fly_sniff.route_review import build_review, infer_instance_side
 
-
 PRIMARY = [
     "fb5ab_to_hDeltaC",
     "wind_to_hDeltaC",
