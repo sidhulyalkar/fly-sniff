@@ -24,6 +24,7 @@ from .training import (
     canonical_sha256,
     load_training_config,
 )
+from .training_budget_redteam import audit_matched_optimizer_execution
 
 TRAINED_FINAL_SCHEMA = "fly-sniff-trained-final-v1"
 TRAINED_FINAL_PROTOCOL = "trained-matched-task-optimization-final-v1"
@@ -91,6 +92,9 @@ def validate_matched_training_artifact(
     if not isinstance(rewire_reports, dict):
         raise TypeError("matched training report is missing rewire training evidence")
 
+    execution_audit = audit_matched_optimizer_execution(matched_report, config)
+    execution_audit_sha256 = canonical_sha256(execution_audit)
+
     intact_parameters = parameters_from_training_report(intact_report, bundle, config)
     verified_rewires: list[dict[str, Any]] = []
     nested_reports: list[dict[str, Any]] = [intact_report]
@@ -125,6 +129,8 @@ def validate_matched_training_artifact(
     budget_sha256 = _require_identical_optimizer_budgets(nested_reports)
     if matched_report.get("optimizer_budget_sha256") != budget_sha256:
         raise ValueError("matched report top-level optimizer budget hash is inconsistent")
+    if execution_audit["shared_reconstructed_budget_sha256"] != budget_sha256:
+        raise ValueError("reconstructed execution budget disagrees with matched budget receipt")
 
     return {
         "intact": {
@@ -139,6 +145,7 @@ def validate_matched_training_artifact(
             "report": lesion_report,
         },
         "optimizer_budget_sha256": budget_sha256,
+        "optimizer_execution_audit_sha256": execution_audit_sha256,
     }
 
 
@@ -180,6 +187,9 @@ def build_trained_final_manifest(
     payload["trained_e002_sha256"] = canonical_sha256(trained_e002)
     payload["training_audit_receipt_sha256"] = intact_report["audit_receipt_sha256"]
     payload["optimizer_budget_sha256"] = verified["optimizer_budget_sha256"]
+    payload["optimizer_execution_audit_sha256"] = verified[
+        "optimizer_execution_audit_sha256"
+    ]
     payload["model_contract"] = {
         "controller": TaskOptimizedMaleCNSController.name,
         "comparison": (
@@ -197,9 +207,10 @@ def build_trained_final_manifest(
     }
     payload["final_test_policy"] = (
         "This manifest is generated only after the reviewed circuit, frozen task-optimization "
-        "config, complete matched-training report, and passing intact trained-E002 artifact are "
-        "supplied and hash-bound. Any subsequent model/config/role/parameter change invalidates "
-        "this manifest and requires a new protocol version rather than another v1 seed draw."
+        "config, complete matched-training report, passing intact trained-E002 artifact, and "
+        "reconstructed optimizer-execution audit are supplied and hash-bound. Any subsequent "
+        "model/config/role/parameter change invalidates this manifest and requires a new protocol "
+        "version rather than another v1 seed draw."
     )
     payload["manifest_sha256"] = manifest_digest(payload)
     return payload
@@ -226,6 +237,8 @@ def verify_trained_final_manifest(manifest: dict[str, Any]) -> None:
         raise ValueError("trained final held-out episode count differs from frozen v1 protocol")
     if len(manifest.get("ood_seeds", [])) != TRAINED_FINAL_OOD_EPISODES:
         raise ValueError("trained final OOD episode count differs from frozen v1 protocol")
+    if not manifest.get("optimizer_execution_audit_sha256"):
+        raise ValueError("trained final manifest is missing the optimizer execution audit hash")
 
 
 def _controller_factory(
@@ -341,6 +354,10 @@ def main() -> None:
         raise ValueError("trained E002 report does not match the sealed trained-final artifact")
 
     verified = validate_matched_training_artifact(bundle, config, matched_report)
+    if verified["optimizer_execution_audit_sha256"] != manifest[
+        "optimizer_execution_audit_sha256"
+    ]:
+        raise ValueError("optimizer execution audit no longer matches the sealed final manifest")
     _verify_e002(
         trained_e002,
         bundle=bundle,
@@ -387,6 +404,9 @@ def main() -> None:
         "controller": TaskOptimizedMaleCNSController.name,
         "matched_training_report_sha256": manifest["matched_training_report_sha256"],
         "trained_e002_sha256": manifest["trained_e002_sha256"],
+        "optimizer_execution_audit_sha256": manifest[
+            "optimizer_execution_audit_sha256"
+        ],
         "intact_parameter_sha256": model_contract["intact_parameter_sha256"],
         "rewire_parameter_sha256_by_seed": model_contract[
             "rewire_parameter_sha256_by_seed"
@@ -394,7 +414,8 @@ def main() -> None:
         "lesion_parameter_sha256": model_contract["lesion_parameter_sha256"],
         "interpretation": (
             "Every neural topology is evaluated using the separately optimized parameter set "
-            "hash-bound for that exact graph. The classical controller remains untrained."
+            "hash-bound for that exact graph, after reconstructing the represented optimizer "
+            "execution from persisted history. The classical controller remains untrained."
         ),
     }
 
@@ -411,6 +432,9 @@ def main() -> None:
             "circuit_replay_sha256": bundle.replay_fingerprint(),
             "matched_training_report_sha256": canonical_sha256(matched_report),
             "trained_e002_sha256": canonical_sha256(trained_e002),
+            "optimizer_execution_audit_sha256": verified[
+                "optimizer_execution_audit_sha256"
+            ],
             "gold_report": report,
         },
     )
