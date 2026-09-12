@@ -19,7 +19,7 @@ from .evaluate import (
 )
 from .freeze import current_git_ref
 from .graph import GraphBundle, MaleCNSRateController
-from .rewire import degree_preserving_rewire
+from .rewire import degree_preserving_rewire, lesion_incoming_to_roles
 
 
 def _file_digest(paths: list[Path]) -> str:
@@ -67,6 +67,8 @@ def _gold_report(id_frame: pd.DataFrame, ood_frame: pd.DataFrame, manifest: dict
     ood_summary = summarize(ood_frame).set_index("label")
     paired_spl = paired_spl_report(id_frame, "malecns", "rewire")
     paired_success = paired_success_report(id_frame, "malecns", "rewire")
+    lesion_spl = paired_spl_report(id_frame, "malecns", "lesion")
+    lesion_success = paired_success_report(id_frame, "malecns", "lesion")
     gold = manifest["gold"]
     sr = float(id_summary.loc["malecns", "success_rate"])
     ood_sr = float(ood_summary.loc["malecns", "success_rate"])
@@ -83,12 +85,22 @@ def _gold_report(id_frame: pd.DataFrame, ood_frame: pd.DataFrame, manifest: dict
         "ood_success_rate": ood_sr,
         "malecns_vs_rewire_spl": paired_spl,
         "malecns_vs_rewire_success": paired_success,
+        "malecns_vs_lesion_spl": lesion_spl,
+        "malecns_vs_lesion_success": lesion_success,
         "id_summary": id_summary.reset_index().to_dict(orient="records"),
         "ood_summary": ood_summary.reset_index().to_dict(orient="records"),
+        "control_contract": {
+            "rewire": manifest["rewire"],
+            "lesion": manifest["lesion"],
+            "paired_environment": (
+                "malecns, rewire, lesion, and classical controllers are evaluated on the same "
+                "seed lists and plume configuration within each cohort"
+            ),
+        },
         "statistical_note": (
-            "Gold gating remains preregistered on absolute held-out/OOD success and paired SPL. "
-            "The paired success report is additional inference: bootstrap CI plus exact McNemar "
-            "discordant-pair test, not a post-hoc replacement gate."
+            "Gold gating remains preregistered on absolute held-out/OOD success and paired SPL "
+            "against the degree-preserving rewire. The matched lesion and paired success reports "
+            "are additional prespecified dependency/control evidence, not post-hoc replacement gates."
         ),
     }
 
@@ -124,18 +136,25 @@ def main() -> None:
     )
     rewired.validate(require_sign=True, require_qualified=True)
 
+    lesion_cfg = manifest["lesion"]
+    if lesion_cfg.get("kind") != "remove-incoming-edges-to-roles":
+        raise ValueError(f"unsupported sealed lesion kind: {lesion_cfg.get('kind')!r}")
+    lesioned = lesion_incoming_to_roles(biological, lesion_cfg["roles"])
+    lesioned.validate(require_sign=True, require_qualified=True)
+
     cfg = manifest["config"]
     arena = ArenaConfig(**cfg["arena"])
     id_plume = PlumeConfig(**cfg["plume"])
     sensors = SensorConfig(**cfg["sensor"])
     ood_plume = PlumeConfig(**manifest["ood_plume"])
 
-    # The neural model and environment share one sealed simulation clock. If a
-    # future manifest changes arena.dt, the modeled neural relaxation keeps the
-    # same physical tau rather than silently changing with call frequency.
+    # All graph controls and the classical baseline see the identical environment
+    # seed on each paired episode. The neural model and environment share one
+    # sealed simulation clock.
     factories = {
         "malecns": lambda: MaleCNSRateController(biological, model_dt_s=arena.dt),
         "rewire": lambda: MaleCNSRateController(rewired, model_dt_s=arena.dt),
+        "lesion": lambda: MaleCNSRateController(lesioned, model_dt_s=arena.dt),
         "classical": CastSurgeController,
     }
     id_frame = evaluate(
@@ -164,6 +183,8 @@ def main() -> None:
         {
             "code_ref": verified_code_ref,
             "circuit_sha256": observed_circuit_sha,
+            "rewire_manifest": rewired.manifest,
+            "lesion_manifest": lesioned.manifest,
             "gold_report": report,
         },
     )
