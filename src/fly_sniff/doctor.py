@@ -49,6 +49,19 @@ def _probe_scientific_python() -> dict[str, Any]:
     }
 
 
+def _interpreter_bin_dir(executable: str | Path) -> Path:
+    """Return the interpreter's lexical bin directory without following symlinks.
+
+    Virtualenv Python executables are commonly symlinks to a base interpreter. Resolving
+    that symlink would incorrectly move us out of `.venv/bin` and make sibling console
+    scripts look missing even though they belong to the active environment.
+    """
+    path = Path(executable).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return path.absolute().parent
+
+
 def _resolve_console_script(name: str, executable_dir: Path) -> str | None:
     """Resolve a project script, preferring the active interpreter's environment."""
     sibling = executable_dir / name
@@ -73,14 +86,15 @@ def diagnose(
     virtual_env = sys.prefix != sys.base_prefix
     science = _probe_scientific_python()
 
-    executable_dir = Path(sys.executable).resolve().parent
+    executable_dir = _interpreter_bin_dir(sys.executable)
     scripts: dict[str, Any] = {}
     scripts_same_environment = True
     for name in REQUIRED_SCRIPTS:
         resolved = _resolve_console_script(name, executable_dir)
-        same_environment = bool(
-            resolved and Path(resolved).resolve().parent == executable_dir
+        resolved_parent = (
+            _interpreter_bin_dir(resolved) if resolved is not None else None
         )
+        same_environment = bool(resolved_parent == executable_dir)
         scripts[name] = {
             "path": resolved,
             "present": bool(resolved),
