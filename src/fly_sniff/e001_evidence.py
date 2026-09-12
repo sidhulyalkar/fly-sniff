@@ -173,7 +173,7 @@ def _stage_nodes(staged_root: Path, staged_report: dict[str, Any]) -> dict[int, 
         if "bodyId" not in frame.columns:
             continue
         for row in frame.itertuples(index=False):
-            body_id = int(getattr(row, "bodyId"))
+            body_id = int(row.bodyId)
             record = index.setdefault(body_id, {"body_id": body_id, "stages": []})
             if name and name not in record["stages"]:
                 record["stages"].append(name)
