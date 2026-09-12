@@ -210,7 +210,7 @@ def regenerate_and_audit_v1(
         )
         stored = report_rewires.get(str(seed))
         if not isinstance(stored, dict):
-            raise ValueError(f"matched report is missing rewire result for seed {seed}")
+            raise TypeError(f"matched report is missing rewire result for seed {seed}")
         if stored.get("graph_sha256") != rewired.replay_fingerprint():
             raise ValueError(f"rewire seed {seed} does not reproduce its stored graph fingerprint")
         rewires.append((seed, rewired))
