@@ -34,13 +34,37 @@ def infer_instance_side(
     text = str(instance or "")
     left = bool(re.search(left_pattern, text))
     right = bool(re.search(right_pattern, text))
-    if left and right:
+    if left == right:
         return None
-    if left:
+    return "L" if left else "R"
+
+
+def _normalize_side(value: Any, side_cfg: dict[str, Any]) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    text = str(value).strip()
+    if text in {str(x) for x in side_cfg.get("left_values", ["L"])}:
         return "L"
-    if right:
+    if text in {str(x) for x in side_cfg.get("right_values", ["R"])}:
         return "R"
     return None
+
+
+def infer_side_evidence(row: Any, side_cfg: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Resolve hemisphere from frozen authority order and report its source."""
+    priority = side_cfg.get("priority", ["instance"])
+    for source in priority:
+        if source == "instance":
+            side = infer_instance_side(
+                str(getattr(row, "instance", "") or ""),
+                left_pattern=str(side_cfg["left_pattern"]),
+                right_pattern=str(side_cfg["right_pattern"]),
+            )
+        else:
+            side = _normalize_side(getattr(row, source, None), side_cfg)
+        if side is not None:
+            return side, str(source)
+    return None, None
 
 
 def _retained_seed_ids(stage_dir: Path, seed_role: str) -> set[int]:
@@ -61,14 +85,29 @@ def _seed_table(stage_dir: Path, seed_role: str) -> pd.DataFrame:
     return table
 
 
+def _annotated_seed_table(stage_dir: Path, seed_role: str) -> pd.DataFrame:
+    """Join compact seed CSVs to retained MaleCNS annotation fields from nodes.parquet."""
+    seeds = _seed_table(stage_dir, seed_role)
+    nodes = pd.read_parquet(stage_dir / "nodes.parquet")
+    if "bodyId" not in nodes.columns:
+        raise ValueError(f"{stage_dir.name} nodes.parquet is missing bodyId")
+    annotation_columns = [
+        column
+        for column in ("bodyId", "somaSide", "rootSide")
+        if column in nodes.columns
+    ]
+    annotations = nodes[annotation_columns].copy()
+    annotations["bodyId"] = annotations.bodyId.astype(int)
+    annotations = annotations.drop_duplicates("bodyId")
+    return seeds.merge(annotations, on="bodyId", how="left", validate="one_to_one")
+
+
 def derive_role_ids(
     root: str | Path,
     policy: dict[str, Any],
 ) -> tuple[dict[str, list[int]], dict[str, Any]]:
     root = Path(root)
     side_cfg = policy["side_inference"]
-    left_pattern = str(side_cfg["left_pattern"])
-    right_pattern = str(side_cfg["right_pattern"])
     roles: dict[str, list[int]] = {}
     role_evidence: dict[str, Any] = {}
 
@@ -76,7 +115,7 @@ def derive_role_ids(
         stage_dir = root / str(rule["stage"])
         seed_role = str(rule["seed_role"])
         retained = _retained_seed_ids(stage_dir, seed_role)
-        seeds = _seed_table(stage_dir, seed_role)
+        seeds = _annotated_seed_table(stage_dir, seed_role)
         if "type" not in seeds.columns or "instance" not in seeds.columns:
             raise ValueError(
                 f"{stage_dir.name} {seed_role} seed table requires type and instance columns"
@@ -92,12 +131,7 @@ def derive_role_ids(
             neuron_type = str(getattr(row, "type", "") or "")
             if not type_regex.search(neuron_type):
                 continue
-            instance = str(getattr(row, "instance", "") or "")
-            side = infer_instance_side(
-                instance,
-                left_pattern=left_pattern,
-                right_pattern=right_pattern,
-            )
+            side, side_source = infer_side_evidence(row, side_cfg)
             if side != required_side:
                 continue
             selected.append(body_id)
@@ -105,8 +139,15 @@ def derive_role_ids(
                 {
                     "body_id": body_id,
                     "type": neuron_type,
-                    "instance": instance,
+                    "instance": str(getattr(row, "instance", "") or ""),
+                    "soma_side": None
+                    if pd.isna(getattr(row, "somaSide", None))
+                    else str(getattr(row, "somaSide", "")),
+                    "root_side": None
+                    if pd.isna(getattr(row, "rootSide", None))
+                    else str(getattr(row, "rootSide", "")),
                     "inferred_side": side,
+                    "side_evidence_source": side_source,
                     "stage": stage_dir.name,
                     "seed_role": seed_role,
                 }
@@ -126,6 +167,9 @@ def derive_role_ids(
             "selection_rule": rule,
             "body_ids": selected,
             "evidence": evidence_rows,
+            "side_evidence_source_counts": dict(
+                Counter(row["side_evidence_source"] for row in evidence_rows)
+            ),
         }
 
     handoff_report = json.loads((root / "handoff_audit.json").read_text())
@@ -199,56 +243,56 @@ def _stage_summary(root: Path, stage: dict[str, Any]) -> dict[str, Any]:
         .astype(str)
         .value_counts()
         .to_dict(),
+        "node_annotation_columns": sorted(str(x) for x in nodes.columns),
     }
 
 
 def _wind_resolution_report(root: Path, policy: dict[str, Any]) -> dict[str, Any]:
     stage_dir = root / "wind_to_hDeltaC"
-    seeds = _seed_table(stage_dir, "source")
+    seeds = _annotated_seed_table(stage_dir, "source")
     retained = _retained_seed_ids(stage_dir, "source")
     seeds = seeds.loc[seeds.bodyId.isin(retained)].copy()
     side_cfg = policy["side_inference"]
-    left_pattern = str(side_cfg["left_pattern"])
-    right_pattern = str(side_cfg["right_pattern"])
 
-    rows: list[dict[str, Any]] = []
-    counts = Counter()
+    unresolved: list[dict[str, Any]] = []
+    side_counts = Counter()
+    source_counts = Counter()
     type_side_counts: dict[str, Counter[str]] = {}
     for row in seeds.itertuples(index=False):
         neuron_type = str(getattr(row, "type", "") or "")
-        instance = str(getattr(row, "instance", "") or "")
-        side = infer_instance_side(
-            instance,
-            left_pattern=left_pattern,
-            right_pattern=right_pattern,
-        )
+        side, source = infer_side_evidence(row, side_cfg)
         label = side or "unresolved"
-        counts[label] += 1
+        side_counts[label] += 1
+        source_counts[source or "unresolved"] += 1
         type_side_counts.setdefault(neuron_type, Counter())[label] += 1
         if side is None:
-            rows.append(
+            unresolved.append(
                 {
                     "body_id": int(row.bodyId),
                     "type": neuron_type,
-                    "instance": instance,
+                    "instance": str(getattr(row, "instance", "") or ""),
+                    "soma_side": None
+                    if pd.isna(getattr(row, "somaSide", None))
+                    else str(getattr(row, "somaSide", "")),
+                    "root_side": None
+                    if pd.isna(getattr(row, "rootSide", None))
+                    else str(getattr(row, "rootSide", "")),
                 }
             )
     return {
         "retained_pfn_count": len(seeds),
-        "side_counts": dict(counts),
+        "side_counts": dict(side_counts),
+        "side_evidence_source_counts": dict(source_counts),
         "type_side_counts": {
             key: dict(value) for key, value in sorted(type_side_counts.items())
         },
-        "side_unresolved_count": len(rows),
-        "side_unresolved": rows,
+        "side_unresolved_count": len(unresolved),
+        "side_unresolved": unresolved,
         "training_policy": policy.get("wind_unresolved_policy", {}),
     }
 
 
-def build_review(
-    staged_root: str | Path,
-    policy: dict[str, Any],
-) -> dict[str, Any]:
+def build_review(staged_root: str | Path, policy: dict[str, Any]) -> dict[str, Any]:
     root = Path(staged_root)
     staged_report = json.loads((root / "staged_trace_report.json").read_text())
     if staged_report.get("protocol") != policy.get("input_protocol"):
@@ -278,9 +322,6 @@ def build_review(
         for stage in staged_report.get("stages", [])
         if stage.get("required_for_primary_hypothesis")
     ]
-    stage_summaries = [_stage_summary(root, stage) for stage in primary_stages]
-    wind_resolution = _wind_resolution_report(root, policy)
-
     role_draft = {
         name: roles[name]
         for name in (
@@ -308,14 +349,16 @@ def build_review(
         "all_disjoint_checks_pass": all(disjoint_checks.values()),
         "role_draft": role_draft,
         "role_evidence": role_evidence,
-        "wind_resolution": wind_resolution,
-        "primary_stage_summaries": stage_summaries,
+        "wind_resolution": _wind_resolution_report(root, policy),
+        "primary_stage_summaries": [
+            _stage_summary(root, stage) for stage in primary_stages
+        ],
         "required_human_review": [
-            "confirm the PFNa/PFNm side-to-preferred-airflow mapping for this MaleCNS release",
+            "confirm MaleCNS somaSide/rootSide semantics for each derived PFN basis role",
             "review dominant and unknown intermediate cell types in every primary stage",
             "construct the candidate graph from an explicitly frozen node/edge inclusion policy",
             "attach conservative presynaptic transmitter signs and inspect signed-edge coverage",
-            "verify DNa02 left/right steering semantics against the direct-recording convention",
+            "verify DNa02 left/right steering semantics against direct bilateral recordings",
         ],
         "claim_boundary": policy["claim_boundary"],
     }
