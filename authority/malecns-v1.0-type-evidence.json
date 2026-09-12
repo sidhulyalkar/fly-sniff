@@ -1,7 +1,7 @@
 {
   "authority_kind": "type-level-evidence",
   "dataset": "male-cns:v1.0",
-  "verified_on": "2026-09-10",
+  "verified_on": "2026-09-12",
   "qualification_status": "evidence-only-not-a-body-id-manifest",
   "anchors": [
     {
@@ -22,6 +22,15 @@
       "note": "This is the Cell Type Explorer aggregate type-level connectivity field. It is not a substitute for exact body-ID edge extraction."
     },
     {
+      "type": "hDeltaC",
+      "neuron_count": 20,
+      "side_counts": {"left": 9, "right": 11},
+      "predicted_neurotransmitter": "acetylcholine",
+      "predicted_neurotransmitter_confidence": 0.843,
+      "source": "https://reiserlab.github.io/celltype-explorer-drosophila-male-cns/types/hDeltaC.html",
+      "note": "MaleCNS type-level connectivity includes FB5AB, PFNa/PFNp/PFNm-family input and sparse PFL3 output. This is structural evidence only; hDeltaC-specific odor-gated physiology is confounded by the 2024 VT062617 addendum."
+    },
+    {
       "type": "hDeltaH",
       "neuron_count": 8,
       "side_counts": {"left": 4, "right": 4},
@@ -33,15 +42,25 @@
   ],
   "literature_constraints": [
     {
-      "claim": "hDeltaC receives wind-sensitive PFN and odor-pathway input and can specify an odor-gated goal direction in the fan-shaped body.",
+      "claim": "Earlier connectomics show direct FB5AB and PFNa input to hDeltaC, supporting hDeltaC as a structural convergence candidate for the preregistered search.",
       "source": "https://doi.org/10.1038/s41467-022-32247-7",
-      "scope": "published functional/connectomic evidence, primarily preceding MaleCNS v1.0"
+      "scope": "cross-dataset structural prior only; not exact MaleCNS body-ID evidence"
     },
     {
-      "claim": "A small fan-shaped-body local-neuron population integrates odor evidence over several seconds and maintains a goal signal through odor blanks during turbulent plume navigation.",
+      "claim": "The VT062617 line used for the original hDeltaC sensory and perturbation experiments also or predominantly labels hDeltaK, so those functional results cannot be assigned specifically to hDeltaC.",
+      "source": "https://doi.org/10.1038/s41467-024-46225-8",
+      "scope": "negative functional constraint on hDeltaC wording"
+    },
+    {
+      "claim": "Ventral PFNs are airflow-direction tuned, with approximately 45-degree ipsilateral preference determined by the hemisphere containing the cell body.",
+      "source": "https://doi.org/10.7554/eLife.61510",
+      "scope": "functional laterality prior; does not prove identical tuning for every MaleCNS PFN subtype/body ID"
+    },
+    {
+      "claim": "hDeltaK-dominated fan-shaped-body activity integrates odor evidence over seconds and can persist through odor blanks during turbulent plume navigation.",
       "source": "https://doi.org/10.1038/s41467-026-75945-2",
-      "scope": "published functional dynamics; not automatically mapped to exact MaleCNS body IDs"
+      "scope": "separate published functional dynamics hypothesis; not automatically mapped to exact MaleCNS body IDs and not a rescue for hDeltaC"
     }
   ],
-  "forbidden_inference": "These type-level and literature anchors must not be promoted into a qualified MaleCNS graph without exact v1.0 body IDs, edges, role review, signs, and hashes."
+  "forbidden_inference": "These type-level and literature anchors must not be promoted into a qualified MaleCNS graph without exact v1.0 body IDs, edges, role review, signs, and hashes. In particular, MaleCNS hDeltaC anatomy must not be presented as proof that hDeltaC itself has the odor-gated physiology originally reported from VT062617."
 }
