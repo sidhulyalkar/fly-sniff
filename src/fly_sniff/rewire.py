@@ -21,6 +21,8 @@ def degree_preserving_rewire(
     are rejected. This is a topology control, not a perfect null for every graph statistic.
     """
     bundle.validate(require_sign="sign" in bundle.edges.columns)
+    if swaps_per_edge < 1:
+        raise ValueError("swaps_per_edge must be >= 1")
     rng = np.random.default_rng(seed)
     edges = bundle.edges.copy().reset_index(drop=True)
     occupied = set(zip(edges.source.astype(int), edges.target.astype(int), strict=True))
@@ -53,8 +55,10 @@ def degree_preserving_rewire(
         manifest["rewire"] = {
             "seed": int(seed),
             "swaps_per_edge": int(swaps_per_edge),
+            "target_swaps": int(target_swaps),
             "accepted_swaps": int(accepted),
             "attempted_swaps": int(attempts),
+            "mixing_complete": bool(accepted == target_swaps),
             "exact_in_out_degree_preserved": True,
         }
     return GraphBundle(
