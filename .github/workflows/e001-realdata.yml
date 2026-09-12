@@ -41,8 +41,10 @@ jobs:
             data/raw/body-annotations-male-cns-v1.0-minconf-0.5.feather \
             data/raw/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
             configs/staged_route_v1.json \
+            configs/role_review_v1.json \
             authority/olfactory-navigation-literature-v1.json \
             > results/e001-realdata/input-sha256.txt
+          git rev-parse HEAD > results/e001-realdata/git-sha.txt
 
       - name: Run preregistered E001 structural route
         id: e001
@@ -55,12 +57,34 @@ jobs:
             --config configs/staged_route_v1.json \
             --output data/cache/staged-route-v1 \
             --strict \
-            > results/e001-realdata/stdout.json \
-            2> results/e001-realdata/stderr.log
+            > results/e001-realdata/staged-trace.stdout.json \
+            2> results/e001-realdata/staged-trace.stderr.log
           code=$?
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           echo "$code" > results/e001-realdata/exit-code.txt
+
+      - name: Derive exact body-ID role review
+        if: steps.e001.outputs.exit_code == '0'
+        run: |
+          fly-sniff-review-route \
+            data/cache/staged-route-v1 \
+            --policy configs/role_review_v1.json \
+            --output data/cache/role-review-v1 \
+            > results/e001-realdata/role-review.stdout.json \
+            2> results/e001-realdata/role-review.stderr.log
+
+      - name: Build claim-boundary evidence pack
+        if: steps.e001.outputs.exit_code == '0'
+        run: |
+          fly-sniff-e001-evidence \
+            data/cache/staged-route-v1 \
+            data/cache/role-review-v1 \
+            --policy configs/role_review_v1.json \
+            --authority authority/olfactory-navigation-literature-v1.json \
+            --output results/e001-realdata/evidence-pack \
+            > results/e001-realdata/evidence-pack.stdout.json \
+            2> results/e001-realdata/evidence-pack.stderr.log
 
       - name: Write scientific summary
         if: always()
@@ -72,9 +96,12 @@ jobs:
           from pathlib import Path
 
           report_path = Path("data/cache/staged-route-v1/staged_trace_report.json")
+          evidence_path = Path("results/e001-realdata/evidence-pack/e001_evidence.json")
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          lines = ["# MaleCNS E001 structural route", ""]
-          lines.append(f"CLI exit code: `{Path('results/e001-realdata/exit-code.txt').read_text().strip() if Path('results/e001-realdata/exit-code.txt').exists() else 'not produced'}`")
+          exit_path = Path("results/e001-realdata/exit-code.txt")
+          exit_code = exit_path.read_text().strip() if exit_path.exists() else "not produced"
+          lines = ["# MaleCNS E001 exact-body-ID evidence lane", ""]
+          lines.append(f"Structural CLI exit code: `{exit_code}`")
           lines.append("")
           if report_path.exists():
               report = json.loads(report_path.read_text())
@@ -96,15 +123,31 @@ jobs:
                       f"- **{handoff.get('name')}**: {'PASS' if handoff.get('passed') else 'FAIL'}; "
                       f"shared IDs = `{handoff.get('shared_body_ids', [])}`"
                   )
-              lines.extend([
-                  "",
-                  "> Structural evidence only. A PASS does not establish physiological dynamics, odor tuning, synaptic sign, or navigation performance.",
-              ])
           else:
               lines.extend([
                   "No staged trace report was produced. This is an engineering/execution failure, not a biological negative result.",
                   "Inspect the uploaded stderr/stdout artifacts before interpreting the run.",
               ])
+
+          if evidence_path.exists():
+              pack = json.loads(evidence_path.read_text())
+              gate = pack["ship_gate"]
+              lines.extend([
+                  "",
+                  "## Claim gate",
+                  "",
+                  f"Claim level: **{pack['claim_level']}**",
+                  f"Structural evidence pack ready: **{gate['structural_evidence_pack_ready']}**",
+                  f"Training promotion ready: **{gate['training_promotion_ready']}**",
+                  f"Public functional result ready: **{gate['public_functional_result_ready']}**",
+                  "",
+                  "> " + gate["max_public_wording"],
+              ])
+
+          lines.extend([
+              "",
+              "> E001 is structural evidence only. A PASS does not establish physiological dynamics, odor tuning, synaptic sign, navigation performance, or superiority to rewired controls.",
+          ])
           text = "\n".join(lines) + "\n"
           print(text)
           if summary_path:
@@ -116,10 +159,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e001-malecns-v1.0-route-audit
+          name: e001-malecns-v1.0-exact-body-id-evidence
           path: |
             results/e001-realdata
             data/cache/staged-route-v1
+            data/cache/role-review-v1
           if-no-files-found: warn
           retention-days: 30
 
