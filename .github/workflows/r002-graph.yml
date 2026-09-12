@@ -6,9 +6,11 @@ on:
     paths:
       - "src/fly_sniff/r002_graph.py"
       - "src/fly_sniff/r002_probe.py"
+      - "src/fly_sniff/r002_qualify.py"
       - "src/fly_sniff/looming.py"
       - "tests/test_r002_graph.py"
       - "tests/test_r002_probe.py"
+      - "tests/test_r002_qualify.py"
       - "authority/r002_malecns_v1_candidate.json"
       - ".github/workflows/r002-graph.yml"
       - "pyproject.toml"
@@ -35,7 +37,7 @@ jobs:
             --authority authority/r002_malecns_v1_candidate.json \
             --download \
             --output artifacts/r002/graph
-      - name: Show validation summary
+      - name: Show structural validation summary
         run: |
           python - <<'PY'
           import json
@@ -53,33 +55,41 @@ jobs:
           print('qualification:', manifest['qualification_status'])
           print('readout:', manifest['behavioral_readout_status'])
           PY
-      - name: Probe modeled DNp01 escape readout
+      - name: Apply frozen R002 qualification protocol
         run: |
-          fly-sniff-r002-probe artifacts/r002/graph \
-            --allow-candidate \
-            --trials 40 \
+          fly-sniff-r002-qualify artifacts/r002/graph \
+            --trials 24 \
             --seed 24017 \
-            --rewire-seed 24018 \
-            --output artifacts/r002/probe.json
-      - name: Show escape probe summary
+            --output artifacts/r002/qualification.json \
+            --qualified-circuit artifacts/r002/qualified-graph
+      - name: Show qualification decision
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          report = json.loads(Path('artifacts/r002/probe.json').read_text())
-          intact = report['intact']
-          rewired = report['degree_preserving_rewire']
-          print('intact direct>near:', intact['direct_stronger_than_near_rate'])
-          print('intact direct-near:', intact['mean_direct_minus_near_target'])
-          print('intact lateralization:', intact['mean_direct_lateralization'])
-          print('rewired direct-near:', rewired['mean_direct_minus_near_target'])
-          print('rewired lateralization:', rewired['mean_direct_lateralization'])
-          print('delta direct-near:', report['delta_direct_minus_near_target'])
-          print('delta lateralization:', report['delta_lateralization'])
+          report = json.loads(Path('artifacts/r002/qualification.json').read_text())
+          print('R002 qualified:', report['pass'])
+          for name, passed in report['gates'].items():
+              print(f'{name}: {passed}')
+          for name, value in report['summary'].items():
+              print(f'{name}: {value}')
+          qualified = Path('artifacts/r002/qualified-graph/manifest.json')
+          print('qualified graph emitted:', qualified.exists())
           PY
+      - name: Verify qualified artifact can execute
+        run: |
+          if [ -f artifacts/r002/qualified-graph/manifest.json ]; then
+            fly-sniff-r002-probe artifacts/r002/qualified-graph \
+              --trials 40 \
+              --seed 77777 \
+              --rewire-seed 77778 \
+              --output artifacts/r002/qualified-probe.json
+          else
+            echo "Scientific qualification did not pass; preserving candidate result without failing CI."
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: r002-malecns-graph
+          name: r002-malecns-evidence
           path: artifacts/r002
           if-no-files-found: error
