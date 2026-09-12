@@ -56,7 +56,7 @@
       "name": "pfl3_to_dna02",
       "hypothesis_class": "primary_navigation",
       "required_for_primary_hypothesis": true,
-      "source": ["^PFL3(?:\\b|_)",],
+      "source": ["^PFL3(?:\\b|_)"],
       "target": ["^DNa02(?:\\b|_)"],
       "max_hops": 2,
       "min_weight": 5,
