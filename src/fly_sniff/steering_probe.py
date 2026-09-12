@@ -47,7 +47,7 @@ def _without_edge_families(bundle: GraphBundle, families: set[str]) -> GraphBund
 
 
 def _cut_pfl3_output(bundle: GraphBundle) -> GraphBundle:
-    drive_ids = set(int(x) for x in bundle.roles.get("turn_drive_left", []))
+    drive_ids = {int(x) for x in bundle.roles.get("turn_drive_left", [])}
     drive_ids.update(int(x) for x in bundle.roles.get("turn_drive_right", []))
     edges = bundle.edges.loc[~bundle.edges.source.astype(int).isin(drive_ids)].copy()
     manifest = dict(bundle.manifest or {})
