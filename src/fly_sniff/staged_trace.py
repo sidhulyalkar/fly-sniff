@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,39 @@ from typing import Any
 import pandas as pd
 
 from .trace import body_ids_matching, trace_corridor
+from .trace_audit import audit_corridor
+
+
+SEED_COLUMNS = ("bodyId", "type", "instance", "class", "subclass", "side")
+
+
+def _sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_provenance(path: str | Path) -> dict[str, Any]:
+    source = Path(path)
+    return {
+        "name": source.name,
+        "size_bytes": source.stat().st_size,
+        "sha256": _sha256_file(source),
+    }
+
+
+def _seed_table(annotations: pd.DataFrame, body_ids: set[int]) -> pd.DataFrame:
+    columns = [column for column in SEED_COLUMNS if column in annotations.columns]
+    if "bodyId" not in columns:
+        raise ValueError("annotations require bodyId")
+    if not body_ids:
+        return annotations.loc[annotations.index[:0], columns].copy()
+    body_id_numeric = pd.to_numeric(annotations.bodyId, errors="coerce")
+    table = annotations.loc[body_id_numeric.isin(body_ids), columns].copy()
+    table["bodyId"] = table.bodyId.astype(int)
+    return table.drop_duplicates("bodyId").sort_values("bodyId").reset_index(drop=True)
 
 
 def _stage_report(
@@ -15,6 +49,8 @@ def _stage_report(
     stage: dict[str, Any],
     source_count: int,
     target_count: int,
+    retained_source_count: int,
+    retained_target_count: int,
     node_count: int,
     edge_count: int,
 ) -> dict[str, Any]:
@@ -29,16 +65,30 @@ def _stage_report(
     return {
         "name": stage["name"],
         "status": status,
+        "hypothesis_class": stage.get("hypothesis_class", "primary_navigation"),
+        "required_for_primary_hypothesis": bool(
+            stage.get("required_for_primary_hypothesis", True)
+        ),
         "source_regex": stage["source"],
         "target_regex": stage["target"],
         "source_seed_count": source_count,
         "target_seed_count": target_count,
+        "input_source_seed_count": source_count,
+        "input_target_seed_count": target_count,
+        "retained_source_seed_count": retained_source_count,
+        "retained_target_seed_count": retained_target_count,
+        "source_seed_artifact": "source_seeds.csv",
+        "target_seed_artifact": "target_seeds.csv",
         "corridor_nodes": node_count,
         "corridor_edges": edge_count,
         "max_hops": stage["max_hops"],
         "min_weight": stage["min_weight"],
         "fanout": stage["fanout"],
         "rationale": stage.get("rationale", ""),
+        "evidence_scope": stage.get(
+            "evidence_scope",
+            "structural discovery only; functional identity is not established",
+        ),
     }
 
 
@@ -47,6 +97,8 @@ def run_staged_trace(
     weights: pd.DataFrame,
     config: dict[str, Any],
     output: str | Path,
+    *,
+    input_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run independent structural corridor searches for an interpretable route audit.
 
@@ -54,6 +106,10 @@ def run_staged_trace(
     therefore does not prevent downstream structural questions from being
     inspected, and no stage is promoted from structural discovery to functional
     evidence by this utility.
+
+    Exact regex-matched seed identities are persisted for every stage. Candidate
+    corridors are immediately checked with the structural-corridor audit so a
+    strict E001 run cannot pass merely because files were produced.
     """
     stages = config.get("stages", [])
     if not stages:
@@ -63,6 +119,12 @@ def run_staged_trace(
         raise ValueError("stage names must be unique")
     if any(not name or Path(name).name != name or name in {".", ".."} for name in names):
         raise ValueError("stage names must be simple directory names")
+    required_stage_count = sum(
+        bool(stage.get("required_for_primary_hypothesis", True)) for stage in stages
+    )
+    if required_stage_count == 0:
+        raise ValueError("staged trace requires at least one primary required stage")
+
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     reports: list[dict[str, Any]] = []
@@ -75,6 +137,11 @@ def run_staged_trace(
         stage_dir.mkdir(parents=True, exist_ok=True)
         source_ids = body_ids_matching(annotations, stage["source"])
         target_ids = body_ids_matching(annotations, stage["target"])
+
+        source_seeds = _seed_table(annotations, source_ids)
+        target_seeds = _seed_table(annotations, target_ids)
+        source_seeds.to_csv(stage_dir / "source_seeds.csv", index=False)
+        target_seeds.to_csv(stage_dir / "target_seeds.csv", index=False)
 
         if source_ids and target_ids:
             nodes, edges, provenance = trace_corridor(
@@ -109,13 +176,38 @@ def run_staged_trace(
         edges.to_parquet(stage_dir / "edges.parquet", index=False)
         provenance.to_csv(stage_dir / "path_provenance.csv", index=False)
 
+        if provenance.empty:
+            retained_source_count = 0
+            retained_target_count = 0
+        else:
+            retained_source_count = int(provenance.is_source_seed.astype(bool).sum())
+            retained_target_count = int(provenance.is_target_seed.astype(bool).sum())
+
         report = _stage_report(
             stage=stage,
             source_count=len(source_ids),
             target_count=len(target_ids),
+            retained_source_count=retained_source_count,
+            retained_target_count=retained_target_count,
             node_count=len(nodes),
             edge_count=len(edges),
         )
+
+        audit: dict[str, Any] | None = None
+        if report["status"] == "candidate_corridor":
+            audit = audit_corridor(nodes, edges, provenance, report)
+            (stage_dir / "structural_audit.json").write_text(
+                json.dumps(audit, indent=2, sort_keys=True) + "\n"
+            )
+        else:
+            (stage_dir / "structural_audit.json").unlink(missing_ok=True)
+        report["structural_audit_artifact"] = (
+            "structural_audit.json" if audit is not None else None
+        )
+        report["structural_audit_passed"] = (
+            bool(audit["passed"]) if audit is not None else None
+        )
+
         (stage_dir / "trace_report.json").write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n"
         )
@@ -126,8 +218,10 @@ def run_staged_trace(
             aggregate_edges.append(edges)
 
     # Clear only aggregate products from a previous run when no corridors remain.
-    for filename, tables in (("all_stage_nodes.parquet", aggregate_nodes),
-                             ("all_stage_edges.parquet", aggregate_edges)):
+    for filename, tables in (
+        ("all_stage_nodes.parquet", aggregate_nodes),
+        ("all_stage_edges.parquet", aggregate_edges),
+    ):
         if not tables:
             (output / filename).unlink(missing_ok=True)
     if aggregate_nodes:
@@ -144,16 +238,37 @@ def run_staged_trace(
     candidate_count = sum(
         report["status"] == "candidate_corridor" for report in reports
     )
+    required_reports = [
+        report for report in reports if report["required_for_primary_hypothesis"]
+    ]
+    required_candidate_count = sum(
+        report["status"] == "candidate_corridor" for report in required_reports
+    )
+    required_audit_pass_count = sum(
+        report["status"] == "candidate_corridor"
+        and report["structural_audit_passed"] is True
+        for report in required_reports
+    )
+    primary_ready = required_audit_pass_count == len(required_reports)
+
     summary = {
+        "protocol": "staged-structural-discovery-v2",
         "dataset": config.get("dataset", "unspecified"),
+        "dataset_release": config.get("dataset_release"),
         "purpose": config.get("purpose", "structural discovery"),
+        "literature_authority": config.get("literature_authority"),
+        "input_provenance": input_provenance,
         "stage_count": len(reports),
         "candidate_stage_count": candidate_count,
         "all_stages_have_candidate_corridors": candidate_count == len(reports),
+        "required_stage_count": len(required_reports),
+        "required_candidate_stage_count": required_candidate_count,
+        "required_stage_audit_pass_count": required_audit_pass_count,
+        "all_required_stages_have_audited_candidate_corridors": primary_ready,
         "stages": reports,
         "warning": (
-            "Structural discovery only. A candidate corridor is not evidence of "
-            "functional influence or a qualified MaleCNS controller."
+            "Structural discovery only. A candidate corridor and a passing structural audit are "
+            "not evidence of physiological influence or a qualified MaleCNS controller."
         ),
     }
     (output / "staged_trace_report.json").write_text(
@@ -177,16 +292,33 @@ def main() -> None:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="exit non-zero unless every configured stage yields a candidate corridor",
+        help=(
+            "exit non-zero unless every primary required stage yields a candidate corridor "
+            "that passes the structural audit"
+        ),
     )
     args = parser.parse_args()
 
-    annotations = pd.read_feather(args.annotations)
-    weights = pd.read_feather(args.weights)
-    config = json.loads(Path(args.config).read_text())
-    summary = run_staged_trace(annotations, weights, config, args.output)
+    annotations_path = Path(args.annotations)
+    weights_path = Path(args.weights)
+    config_path = Path(args.config)
+    annotations = pd.read_feather(annotations_path)
+    weights = pd.read_feather(weights_path)
+    config = json.loads(config_path.read_text())
+    input_provenance = {
+        "annotations": _file_provenance(annotations_path),
+        "weights": _file_provenance(weights_path),
+        "config": _file_provenance(config_path),
+    }
+    summary = run_staged_trace(
+        annotations,
+        weights,
+        config,
+        args.output,
+        input_provenance=input_provenance,
+    )
     print(json.dumps(summary, indent=2))
-    if args.strict and not summary["all_stages_have_candidate_corridors"]:
+    if args.strict and not summary["all_required_stages_have_audited_candidate_corridors"]:
         raise SystemExit(2)
 
 
