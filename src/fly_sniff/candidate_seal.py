@@ -71,7 +71,7 @@ def _required_stage_union(
     for stage_name in required:
         stage = stage_reports.get(stage_name)
         if not isinstance(stage, dict):
-            raise ValueError(f"candidate seal is missing required E001 stage {stage_name!r}")
+            raise TypeError(f"candidate seal is missing required E001 stage {stage_name!r}")
         if stage.get("required_for_primary_hypothesis") is not True:
             raise ValueError(f"stage {stage_name!r} is no longer a required primary stage")
         if stage.get("structural_audit_passed") is not True:
@@ -349,9 +349,10 @@ def verify_candidate_manifest(
         path = bundle_dir / name
         if not path.exists() or sha256_file(path) != receipt["sha256"]:
             raise ValueError(f"sealed GraphBundle file changed: {name}")
-    if task_config_path is not None:
-        if sha256_file(task_config_path) != manifest.get("task_config_sha256"):
-            raise ValueError("task optimization config differs from candidate seal")
+    if task_config_path is not None and sha256_file(task_config_path) != manifest.get(
+        "task_config_sha256"
+    ):
+        raise ValueError("task optimization config differs from candidate seal")
     return manifest
 
 
