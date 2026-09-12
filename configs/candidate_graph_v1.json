@@ -1,0 +1,59 @@
+{
+  "protocol": "sealed-candidate-graph-v1",
+  "dataset": "male-cns:v1.0",
+  "claim_boundary": "The candidate graph is a fixed modeling artifact derived before navigation performance is inspected. Sealing does not convert structural connectivity or transmitter predictions into measured physiology.",
+  "membership_mode": "exact_sealed_bundle_artifact",
+  "required_primary_stages": [
+    "odor_value_to_fb5ab",
+    "fb5ab_to_hDeltaC",
+    "wind_to_hDeltaC",
+    "hDeltaC_to_pfl3",
+    "pfl3_to_dna02"
+  ],
+  "excluded_stage_classes": ["odor_blank_memory"],
+  "edge_identity": ["source", "target"],
+  "edge_duplicate_policy": "collapse repeated stage appearances to one biological edge while preserving stages_seen; fail if structural weight differs between appearances",
+  "bundle_edge_requirement": "every sealed bundle edge must be present with the same structural weight in the unique union of required E001 primary-stage corridor edges",
+  "bundle_node_requirement": "every sealed bundle node must occur in at least one required E001 primary-stage node artifact",
+  "intermediate_inclusion_rule": "The exact intermediate node and edge membership is the supplied pre-performance sealed GraphBundle itself. The manifest binds the full sorted node-ID set, canonical edge-identity hash, and file hashes. No stage-wide union expansion, post-hoc type whitelist, performance-driven pruning, or optional-memory-stage rescue is permitted after this seal.",
+  "role_source": "exact role_draft body IDs from the hash-bound E001 role_review.json",
+  "required_model_roles": [
+    "odor_context_left",
+    "odor_context_right",
+    "wind_basis_left",
+    "wind_basis_right",
+    "steer_left",
+    "steer_right"
+  ],
+  "allowed_additional_roles": ["integration_hdelta_c", "pfl3_output"],
+  "sign_authority": {
+    "resolution_order": ["exact_body_id", "type_level", "unknown"],
+    "unknown_transmitter": null,
+    "unknown_confidence": null,
+    "unknown_sign": 0,
+    "edge_sign_rule": "presynaptic source-body sign only; type-level predictions are modeling evidence, not measured receptor-specific physiology",
+    "minimum_signed_edge_fraction_for_training": 0.60
+  },
+  "sensory_drive_normalization": {
+    "method": "role_total_l1",
+    "roles": [
+      "odor_context_left",
+      "odor_context_right",
+      "wind_basis_left",
+      "wind_basis_right"
+    ],
+    "definition": "A role-level modeled sensory value is divided equally across the exact present body IDs in that role so the sum of absolute direct drive assigned to the role equals the absolute role value.",
+    "reason": "Population size must not create a left/right drive advantage. The exact sealed PFN body IDs remain unchanged.",
+    "forbidden": "per-neuron full-amplitude injection into task-optimized sensory roles"
+  },
+  "performance_freeze": {
+    "allow_node_membership_change_after_seal": false,
+    "allow_edge_membership_change_after_seal": false,
+    "allow_edge_weight_change_after_seal": false,
+    "allow_role_membership_change_after_seal": false,
+    "allow_sign_change_after_seal": false,
+    "allow_normalization_change_after_seal": false,
+    "allow_authority_change_after_seal": false,
+    "rule": "Any change requires a new protocol version and a new final seed draw."
+  }
+}
