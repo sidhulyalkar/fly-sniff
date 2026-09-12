@@ -29,6 +29,7 @@ class ProbeResult:
     right_turn: float
     separation: float
     opposite_sign: bool
+    laterality_correct: bool
     lesioned_peak_turn: float
     deterministic_error: float
     blank_retention: float
@@ -96,10 +97,11 @@ def probe_candidate(
     """Run model-level E002 probes without claiming physiological validation.
 
     Core E002 asks whether modeled dynamics over the extracted topology produce
-    bilateral discrimination, deterministic behavior, and steering-output
-    dependence. Blank persistence is reported as a *separate memory hypothesis*
-    because recent work implicates persistent local-FB circuitry that need not be
-    identical to the hDeltaC/PFL3 steering pathway.
+    bilateral discrimination, correct left/right steering semantics,
+    deterministic behavior, and steering-output dependence. Blank persistence is
+    reported as a *separate memory hypothesis* because recent work implicates
+    persistent local-FB circuitry that need not be identical to the hDeltaC/PFL3
+    steering pathway.
     """
     bundle.validate(require_sign=True, require_qualified=False)
     left_seq = [_observation(1.0, 0.0)] * pulse_steps
@@ -108,6 +110,7 @@ def probe_candidate(
     right_turns, _ = _rollout_turn(bundle, right_seq, seed=seed)
     left_turn = float(np.mean(left_turns[-max(4, pulse_steps // 4) :]))
     right_turn = float(np.mean(right_turns[-max(4, pulse_steps // 4) :]))
+    laterality_correct = bool(left_turn > 0.0 and right_turn < 0.0)
 
     replay, _ = _rollout_turn(bundle, left_seq, seed=seed)
     deterministic_error = float(np.max(np.abs(left_turns - replay))) if len(replay) else 0.0
@@ -128,6 +131,7 @@ def probe_candidate(
         right_turn=right_turn,
         separation=abs(right_turn - left_turn),
         opposite_sign=bool(left_turn * right_turn < 0.0),
+        laterality_correct=laterality_correct,
         lesioned_peak_turn=lesioned_peak,
         deterministic_error=deterministic_error,
         blank_retention=retention,
@@ -168,6 +172,12 @@ def qualify_candidate(
         Gate("structural_reachability_right", steer_right_reached, int(steer_right_reached), "sensory/wind seeds structurally reach steer_right"),
         Gate("bilateral_turn_separation", probe.separation >= min_turn_separation, probe.separation, f">= {min_turn_separation:.3f}"),
         Gate("bilateral_turn_opposition", probe.opposite_sign, int(probe.opposite_sign), "mirrored odor perturbations produce opposite steering signs"),
+        Gate(
+            "bilateral_turn_laterality",
+            probe.laterality_correct,
+            int(probe.laterality_correct),
+            "left-only odor produces positive/left turn and right-only odor negative/right turn",
+        ),
         Gate("steering_lesion", probe.lesioned_peak_turn <= max_lesioned_turn, probe.lesioned_peak_turn, f"<= {max_lesioned_turn:.3f} after bilateral steering-input lesion"),
         Gate("determinism", probe.deterministic_error <= 1e-12, probe.deterministic_error, "exact-seed replay max error <= 1e-12"),
     ]
@@ -180,7 +190,7 @@ def qualify_candidate(
     core_passed = all(gate.passed for gate in core_gates)
     all_gates = core_gates + [memory_gate]
     return {
-        "protocol": "E002-circuit-sanity-v0",
+        "protocol": "E002-circuit-sanity-v1",
         "dataset": (bundle.manifest or {}).get("dataset", "unknown"),
         "passed": core_passed,
         "core_passed": core_passed,
@@ -191,6 +201,11 @@ def qualify_candidate(
         "passed_gate_count": sum(g.passed for g in all_gates),
         "gates": [asdict(g) for g in all_gates],
         "probe": asdict(probe),
+        "coordinate_convention": {
+            "positive_turn": "left/counterclockwise",
+            "negative_turn": "right/clockwise",
+            "role_semantics": "steer_left and steer_right are ipsilateral steering roles",
+        },
         "warning": (
             "E002 core passing qualifies modeled propagation sanity only. The blank-bridge result is a "
             "separate memory hypothesis and is not required for steering qualification. Neither result "
