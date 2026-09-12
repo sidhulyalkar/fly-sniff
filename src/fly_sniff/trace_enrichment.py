@@ -49,8 +49,8 @@ def enrichment_for_column(
     universe[column] = universe[column].fillna("<NA>").astype(str)
     retained = universe[universe.bodyId.isin(retained_ids)].copy()
 
-    population_size = int(len(universe))
-    sample_size = int(len(retained))
+    population_size = len(universe)
+    sample_size = len(retained)
     if sample_size == 0 or population_size == 0:
         return {
             "column": column,
@@ -109,7 +109,7 @@ def enrichment_for_column(
         "available": True,
         "population_size": population_size,
         "corridor_size": sample_size,
-        "tested_labels": int(len(rows)),
+        "tested_labels": len(rows),
         "rows": rows[: max(0, int(top_n))],
         "interpretation": (
             "One-sided hypergeometric over-representation relative to all annotated body IDs; "
@@ -131,7 +131,7 @@ def audit_enrichment(
     retained_ids = set(nodes.bodyId.astype(int))
     return {
         "protocol": "structural-corridor-enrichment-v1",
-        "retained_node_count": int(len(retained_ids)),
+        "retained_node_count": len(retained_ids),
         "columns": {
             column: enrichment_for_column(
                 annotations,
