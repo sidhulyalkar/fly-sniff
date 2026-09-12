@@ -17,8 +17,12 @@
     "basis_angles_degrees": {"wind_basis_left": 45.0, "wind_basis_right": -45.0},
     "airflow_arrival_definition": "arrival_x=-wind_x_body; arrival_y=-wind_y_body",
     "basis_drive_definition": "signed dot product of airflow-arrival vector with unit vectors at +45 and -45 degrees; opposite-direction airflow may therefore produce negative modeled drive",
-    "role_population_policy": "For v1, wind basis roles are restricted to retained E001 PFNa/PFNm source neurons with explicit L/R instance identity. Retained PFNp and other side-unresolved PFN candidates remain structural evidence but are excluded from sensory drive roles until their laterality is independently resolved.",
-    "rationale": "Currier et al. 2020 found ventral P-FNs in each hemisphere tuned around 45 degrees ipsilateral, forming two orthogonal airflow bases. Matheson et al. 2022 found PFNa/PFNp/PFNm carry wind direction while odor-sensitive FB tangential inputs including FB5AB lack significant odor-direction tuning and hDeltaC combines these streams.",
+    "drive_normalization": "role_total_l1",
+    "role_membership_source": "sealed_candidate_manifest_exact_ids",
+    "population_size_must_not_change_total_drive": true,
+    "role_population_policy": "Use the exact pre-performance body IDs sealed in the candidate manifest. The current E001 role review includes somaSide-resolved PFNa, PFNm, and PFNp subtype candidates. No subtype or body ID may be added, removed, or reassigned because of navigation performance.",
+    "normalization_definition": "Each role-level odor or wind value is divided equally across the exact present body IDs in that sensory role, so the sum of absolute direct drive assigned to the role equals the absolute role value regardless of population size.",
+    "rationale": "Currier et al. found ventral P-FNs in each hemisphere tuned around 45 degrees ipsilateral, forming two orthogonal airflow bases. The E001 review freezes exact MaleCNS side-resolved PFN candidates using somaSide as the primary laterality authority. The role-total normalization prevents the 120-left versus 127-right retained population count from itself creating a directional bias.",
     "claim_boundary": "This remains a modeled sensory interface until the peripheral olfactory and mechanosensory bridges are separately body-ID-qualified."
   },
   "objective": {
@@ -42,6 +46,7 @@
     "adding, deleting, or redirecting edges",
     "changing body IDs or role membership during optimization",
     "changing transmitter-derived edge signs",
+    "changing sensory drive normalization",
     "individually fitting edge weights",
     "independently fitting left and right odor or PFN-basis gains",
     "injecting instantaneous left-right odor difference as a directional FB cue in v1",
@@ -78,7 +83,7 @@
   "matched_control_rule": {
     "required": true,
     "topologies": ["intact", "eight independently seeded degree-preserving rewires", "prespecified steering-input lesion"],
-    "training_budget": "identical seed split, parameter bounds, population size, generation count, objective, and optimizer seed for every topology",
+    "training_budget": "identical seed split, parameter bounds, population size, generation count, objective, optimizer seed, sensory-role normalization, and numerical runtime for every topology",
     "primary_development_comparison": "intact validation performance versus mean performance of separately trained rewired topologies",
     "warning": "A trained intact model must never be compared against untrained rewires as evidence that topology helps."
   },
@@ -87,5 +92,5 @@
     "maximum_validation_success_rate_drop_vs_own_untrained_default": 0.01,
     "interpretation": "This gate only decides whether task optimization is useful enough to carry forward. It is not the final scientific claim."
   },
-  "final_test_policy": "No final held-out or OOD episode may be evaluated until the role-review artifact, training algorithm, parameterization, trained parameter files, trained-E002 checks, and final manifest are frozen."
+  "final_test_policy": "No final held-out or OOD episode may be evaluated until the sealed candidate manifest, role-review artifact, sign-authority report, training algorithm, parameterization, trained parameter files, trained-E002 checks, and final manifest are frozen and hash-bound."
 }
