@@ -9,6 +9,12 @@
     "validation_episodes": 96,
     "final_test_rule": "Training/development seeds are >2.1e9; final held-out/OOD seeds are generated only from 1..1,999,999,999. The namespaces are disjoint by construction."
   },
+  "connectome_sensory_interface": {
+    "odor_mode": "mean_bilateral_nondirectional",
+    "direction_source": "body_frame_wind",
+    "rationale": "Matheson et al. 2022 found odor-sensitive FB tangential inputs including FB5AB without significant odor-direction tuning, while PFNa/PFNp/PFNm carry wind direction into hDeltaC. Physical bilateral antenna values remain recorded but their instantaneous difference is not injected as a directional connectome cue.",
+    "claim_boundary": "This remains a modeled sensory interface until a peripheral olfactory bridge is separately body-ID-qualified."
+  },
   "objective": {
     "version": "navigation-objective-v1",
     "success_weight": 0.50,
@@ -21,7 +27,7 @@
     "tau_s": {"default": 0.2519514411044401, "min": 0.05, "max": 2.0, "meaning": "global modeled neural relaxation time constant"},
     "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0, "meaning": "global nonlinearity gain"},
     "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5, "meaning": "global scale on recurrent connectome drive"},
-    "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied bilateral gain on modeled odor-role drive"},
+    "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied bilateral gain on modeled nondirectional odor-presence drive"},
     "wind_forward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on positive body-forward airflow drive"},
     "wind_backward_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "gain on negative body-forward airflow drive"},
     "wind_cross_gain": {"default": 1.0, "min": 0.25, "max": 4.0, "meaning": "tied left/right crosswind drive gain"},
@@ -33,6 +39,7 @@
     "changing body IDs or role membership during optimization",
     "changing transmitter-derived edge signs",
     "individually fitting edge weights",
+    "injecting instantaneous left-right odor difference as a directional FB cue in v1",
     "using source coordinates, distance, plume ground truth, or final-test outcomes as controller inputs"
   ],
   "optimizer": {
