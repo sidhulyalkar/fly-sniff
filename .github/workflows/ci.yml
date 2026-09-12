@@ -25,6 +25,7 @@ jobs:
           fly-sniff-staged-trace --help
           fly-sniff-cinematic --help
           fly-sniff-train-dynamics --help
+          fly-sniff-qualify-trained --help
       - name: Ruff
         id: ruff
         continue-on-error: true
