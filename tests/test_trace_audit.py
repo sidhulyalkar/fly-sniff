@@ -55,9 +55,58 @@ def test_structural_audit_passes_closed_consistent_corridor():
         "retained_source_seeds": 1,
         "retained_target_seeds": 1,
     }
+    assert report["annotation_coverage"]["annotated_nodes"] == 4
+    assert report["annotation_coverage"]["unannotated_nodes"] == 0
     assert report["depths"]["bounded_path_length"] == {"3": 4}
     assert report["edge_geometry"]["shortest_layer_step_fraction"] == 1.0
     assert len(report["top_structural_hubs"]) == 2
+
+
+def test_structural_audit_allows_closed_unannotated_structural_node():
+    nodes = pd.DataFrame(
+        {
+            "bodyId": [1, 2, 3],
+            "annotation_present": [True, False, True],
+            "type": ["ORN", None, "DNa02"],
+        }
+    )
+    edges = pd.DataFrame(
+        {
+            "source": [1, 2],
+            "target": [2, 3],
+            "weight": [8.0, 9.0],
+        }
+    )
+    provenance = pd.DataFrame(
+        {
+            "bodyId": [1, 2, 3],
+            "forward_depth": [0, 1, 2],
+            "reverse_depth": [2, 1, 0],
+            "is_source_seed": [True, False, False],
+            "is_target_seed": [False, False, True],
+        }
+    )
+    trace_report = {
+        "input_source_seed_count": 1,
+        "input_target_seed_count": 1,
+        "retained_source_seed_count": 1,
+        "retained_target_seed_count": 1,
+        "corridor_nodes": 3,
+        "corridor_annotated_nodes": 2,
+        "corridor_unannotated_nodes": 1,
+        "corridor_edges": 2,
+        "min_weight": 5.0,
+        "max_hops": 2,
+    }
+
+    report = audit_corridor(nodes, edges, provenance, trace_report)
+
+    assert report["passed"]
+    assert report["checks"]["node_provenance_id_match"]
+    assert report["checks"]["edge_endpoint_closure"]
+    assert report["annotation_coverage"]["annotated_nodes"] == 2
+    assert report["annotation_coverage"]["unannotated_nodes"] == 1
+    assert report["annotation_coverage"]["unannotated_body_ids"] == [2]
 
 
 def test_structural_audit_parses_csv_style_boolean_strings():
