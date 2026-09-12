@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import platform
 import re
 import subprocess
@@ -47,8 +48,12 @@ def _git_output(*args: str) -> str | None:
 
 
 def _json_value(value: Any) -> Any:
-    if value is None or isinstance(value, (str, int, float, bool)):
+    if value is None:
+        return None
+    if isinstance(value, (str, bool, int)):
         return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
     if isinstance(value, dict):
         return {str(key): _json_value(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
