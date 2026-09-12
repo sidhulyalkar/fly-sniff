@@ -202,11 +202,20 @@ def main() -> None:
     nodes.to_parquet(out / "nodes.parquet", index=False)
     edges.to_parquet(out / "edges.parquet", index=False)
     provenance.to_csv(out / "path_provenance.csv", index=False)
+
+    retained_source_seeds = int(provenance.is_source_seed.sum())
+    retained_target_seeds = int(provenance.is_target_seed.sum())
     report = {
         "source_regex": args.source,
         "target_regex": args.target,
+        # Compatibility keys: these are the regex-matched input populations.
         "source_seed_count": len(source_ids),
         "target_seed_count": len(target_ids),
+        "input_source_seed_count": len(source_ids),
+        "input_target_seed_count": len(target_ids),
+        # These are the seed neurons that actually survive the bounded corridor.
+        "retained_source_seed_count": retained_source_seeds,
+        "retained_target_seed_count": retained_target_seeds,
         "corridor_nodes": len(nodes),
         "corridor_edges": len(edges),
         "max_hops": args.max_hops,
