@@ -45,7 +45,7 @@ def _config():
             "initial_sigma_fraction_of_log_range": 0.2,
             "minimum_log_sigma": 0.03,
             "optimizer_seed": 23,
-            "common_random_numbers": true
+            "common_random_numbers": True,
         },
         "development_gate": {
             "minimum_validation_objective_delta_vs_own_untrained_default": 0.02,
@@ -121,7 +121,10 @@ def _training_report(bundle, config, *, development_passed=True):
         train_seed_count=len(train),
         validation_seed_count=len(validation),
     )
-    baseline_validation = {"objective": 0.50, "success_rate": 0.50}
+    baseline_validation = {
+        "objective": 0.50,
+        "success_rate": 0.50,
+    }
     trained_validation = {
         "objective": 0.52 if development_passed else 0.49,
         "success_rate": 0.50,
