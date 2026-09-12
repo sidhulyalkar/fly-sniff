@@ -67,6 +67,30 @@ def mask_observation(
     )
 
 
+def predict_wall_contact(
+    env: FlySniffEnv,
+    *,
+    turn_command: float,
+    speed_scale: float,
+) -> tuple[bool, bool]:
+    """Predict whether the commanded physical step crosses an x or y boundary.
+
+    This exactly mirrors the kinematic part of ``FlySniffEnv.step`` up to, but not
+    including, wall reflection. It is used only for post-hoc diagnostic telemetry;
+    no wall distance/contact signal is exposed to the controller.
+    """
+    arena = env.arena
+    agent = env.agent
+    turn = float(np.clip(turn_command, -1.0, 1.0)) * arena.max_turn_rate
+    heading = float((agent.heading + turn * arena.dt + np.pi) % (2 * np.pi) - np.pi)
+    speed = arena.speed * float(np.clip(speed_scale, 0.0, 1.5))
+    proposed_x = float(agent.x + np.cos(heading) * speed * arena.dt)
+    proposed_y = float(agent.y + np.sin(heading) * speed * arena.dt)
+    x_contact = bool(proposed_x < 0.0 or proposed_x > arena.width)
+    y_contact = bool(proposed_y < 0.0 or proposed_y > arena.height)
+    return x_contact, y_contact
+
+
 def _run_diagnostic_episode(
     bundle: GraphBundle,
     parameters,
@@ -77,7 +101,7 @@ def _run_diagnostic_episode(
     sensors: SensorConfig,
     odor_scale: float,
     wind_scale: float,
-) -> dict[str, float | int | bool]:
+) -> dict[str, Any]:
     env = FlySniffEnv(seed=seed, arena=arena, plume=plume, sensors=sensors)
     controller = TaskOptimizedMaleCNSController(
         bundle,
@@ -94,32 +118,96 @@ def _run_diagnostic_episode(
         wind_scale=wind_scale,
     )
     done = False
+    wall_contact_steps = 0
+    x_wall_contact_steps = 0
+    y_wall_contact_steps = 0
+    first_wall_contact_step: int | None = None
     while not done:
         action = controller.act(observation)
+        x_contact, y_contact = predict_wall_contact(
+            env,
+            turn_command=action.turn,
+            speed_scale=action.speed,
+        )
+        if x_contact or y_contact:
+            wall_contact_steps += 1
+            if first_wall_contact_step is None:
+                first_wall_contact_step = int(env.agent.steps + 1)
+        x_wall_contact_steps += int(x_contact)
+        y_wall_contact_steps += int(y_contact)
         raw_observation, done = env.step(action.turn, action.speed)
         observation = mask_observation(
             raw_observation,
             odor_scale=odor_scale,
             wind_scale=wind_scale,
         )
+    steps = int(env.agent.steps)
     return {
         "seed": int(seed),
         "success": bool(env.agent.found),
         "spl": float(spl(env.agent.found, shortest, env.agent.path_length)),
         "path_length": float(env.agent.path_length),
         "final_distance": float(env.distance_to_source),
+        "steps": steps,
+        "wall_contact_steps": int(wall_contact_steps),
+        "x_wall_contact_steps": int(x_wall_contact_steps),
+        "y_wall_contact_steps": int(y_wall_contact_steps),
+        "wall_contact_fraction_steps": float(wall_contact_steps / max(steps, 1)),
+        "first_wall_contact_step": first_wall_contact_step,
     }
 
 
-def _summarize(rows: list[dict[str, float | int | bool]]) -> dict[str, float | int]:
+def _conditional_success_rate(
+    rows: list[dict[str, Any]],
+    *,
+    has_wall_contact: bool,
+) -> float | None:
+    selected = [row for row in rows if bool(row["wall_contact_steps"] > 0) is has_wall_contact]
+    if not selected:
+        return None
+    return float(np.mean([bool(row["success"]) for row in selected]))
+
+
+def _summarize(rows: list[dict[str, Any]]) -> dict[str, float | int | None]:
     if not rows:
         raise ValueError("shortcut diagnostic requires at least one episode")
+    contact_rows = [row for row in rows if int(row["wall_contact_steps"]) > 0]
+    successful_rows = [row for row in rows if bool(row["success"])]
+    successful_with_wall = [
+        row for row in successful_rows if int(row["wall_contact_steps"]) > 0
+    ]
+    first_contacts = [
+        int(row["first_wall_contact_step"])
+        for row in contact_rows
+        if row["first_wall_contact_step"] is not None
+    ]
     return {
         "n": len(rows),
         "success_rate": float(np.mean([bool(row["success"]) for row in rows])),
         "mean_spl": float(np.mean([float(row["spl"]) for row in rows])),
         "mean_path_length": float(np.mean([float(row["path_length"]) for row in rows])),
         "mean_final_distance": float(np.mean([float(row["final_distance"]) for row in rows])),
+        "episodes_with_wall_contact_rate": float(len(contact_rows) / len(rows)),
+        "mean_wall_contact_steps": float(
+            np.mean([int(row["wall_contact_steps"]) for row in rows])
+        ),
+        "mean_wall_contact_fraction_steps": float(
+            np.mean([float(row["wall_contact_fraction_steps"]) for row in rows])
+        ),
+        "mean_first_wall_contact_step_if_any": (
+            float(np.mean(first_contacts)) if first_contacts else None
+        ),
+        "success_rate_without_wall_contact": _conditional_success_rate(
+            rows,
+            has_wall_contact=False,
+        ),
+        "success_rate_with_wall_contact": _conditional_success_rate(
+            rows,
+            has_wall_contact=True,
+        ),
+        "successful_episodes_with_wall_contact_rate": (
+            float(len(successful_with_wall) / len(successful_rows)) if successful_rows else None
+        ),
     }
 
 
@@ -214,6 +302,18 @@ def run_shortcut_redteam(
         "normal_minus_both_clamped_mean_spl": float(
             normal["mean_spl"] - both_clamped["mean_spl"]
         ),
+        "normal_minus_odor_clamped_wall_contact_rate": float(
+            normal["episodes_with_wall_contact_rate"]
+            - odor_clamped["episodes_with_wall_contact_rate"]
+        ),
+        "normal_minus_both_clamped_wall_contact_rate": float(
+            normal["episodes_with_wall_contact_rate"]
+            - both_clamped["episodes_with_wall_contact_rate"]
+        ),
+        "normal_minus_both_clamped_mean_wall_contact_fraction_steps": float(
+            normal["mean_wall_contact_fraction_steps"]
+            - both_clamped["mean_wall_contact_fraction_steps"]
+        ),
     }
 
     return {
@@ -227,15 +327,23 @@ def run_shortcut_redteam(
         "diagnostic_seed_sha256": canonical_sha256(seeds),
         "scenarios": scenario_reports,
         "comparisons": comparisons,
+        "wall_telemetry": {
+            "status": "diagnostic_only_not_controller_input",
+            "method": (
+                "For each action, predict whether the commanded physical step crosses an arena "
+                "boundary before FlySniffEnv applies reflection. No wall distance/contact signal "
+                "is provided to the controller."
+            ),
+        },
         "selection_policy": (
             "These outcomes must not alter v1 parameters, role membership, training thresholds, "
             "or final-test policy. They diagnose shortcut dependence only."
         ),
         "claim_boundary": (
-            "A large intact score alone does not establish odor-source navigation if odor-clamped "
-            "or geometry-counterfactual runs retain comparable performance. Conversely, these "
-            "diagnostics are not preregistered pass/fail gates and must not be thresholded after "
-            "observing the result."
+            "A large intact score alone does not establish odor-source navigation if odor-clamped, "
+            "geometry-counterfactual, or wall-reflection-dependent runs retain comparable "
+            "performance. Conversely, these diagnostics are not preregistered pass/fail gates "
+            "and must not be thresholded after observing the result."
         ),
     }
 
