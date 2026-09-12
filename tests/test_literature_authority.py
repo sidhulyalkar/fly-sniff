@@ -46,6 +46,29 @@ def test_pfn_laterality_keeps_soma_side_as_primary_authority() -> None:
     assert "fallback" in rationale
 
 
+def test_pfl3_steering_side_is_not_equated_with_generic_anatomical_side() -> None:
+    authority = _load_json("authority/olfactory-navigation-literature-v1.json")
+    by_key = {entry["key"]: entry for entry in authority["evidence"]}
+    westeinde = by_key["westeinde_2024_goal_to_steering"]
+
+    claims = " ".join(westeinde["claims_used_as_constraints"]).lower()
+    boundary = westeinde["boundary"].lower()
+    assert "lateral accessory lobe" in claims
+    assert "opposite" in claims
+    assert "do not infer pfl3 steering laterality" in boundary
+
+
+def test_indirect_local_fb_route_is_prior_not_posthoc_whitelist() -> None:
+    authority = _load_json("authority/olfactory-navigation-literature-v1.json")
+    by_key = {entry["key"]: entry for entry in authority["evidence"]}
+    hulse = by_key["hulse_2021_central_complex_connectome"]
+
+    claims = " ".join(hulse["claims_used_as_search_priors"]).lower()
+    boundary = hulse["boundary"].lower()
+    assert "two- and three-step pathways" in claims
+    assert "does not authorize requiring" in boundary
+
+
 def test_model_inputs_remain_explicitly_distinct_from_measured_activity() -> None:
     role_policy = _load_json("configs/role_review_v1.json")
     odor_rationale = role_policy["roles"]["odor_context_left"]["rationale"].lower()
