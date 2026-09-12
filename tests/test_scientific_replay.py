@@ -153,3 +153,11 @@ def test_scene_integrity_rejects_modified_geometry(tmp_path):
     path.write_text(json.dumps(scene))
     with pytest.raises(ValueError, match="SHA-256"):
         load_neural_scene(path)
+
+
+@pytest.mark.parametrize("sign", [0.5, 1.5, -1.5])
+def test_fractional_edge_signs_cannot_silently_change_model(sign):
+    graph = candidate_bundle()
+    graph.edges["sign"] = float(sign)
+    with pytest.raises(ValueError, match="sign must be"):
+        graph.validate(require_sign=True)

@@ -89,7 +89,8 @@ class GraphBundle:
                 raise ValueError(
                     "edge sign contains null values; unresolved signs must be explicit 0 values"
                 )
-            signs = set(pd.Series(self.edges.sign).astype(int).unique())
+            # Validate before any cast: 0.5 must not silently become unresolved 0.
+            signs = set(pd.to_numeric(self.edges.sign, errors="coerce").unique())
             if not signs.issubset({-1, 0, 1}):
                 raise ValueError(f"sign must be in -1/0/+1; observed {sorted(signs)}")
 
