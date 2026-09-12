@@ -2,7 +2,6 @@ from types import SimpleNamespace
 
 from fly_sniff.route_review import infer_side_evidence
 
-
 SIDE_CONFIG = {
     "priority": ["somaSide", "rootSide", "instance"],
     "left_values": ["L", "left", "Left"],
