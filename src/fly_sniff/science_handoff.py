@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -44,11 +45,43 @@ def _git_output(*args: str) -> str | None:
         return None
 
 
+def _json_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    if hasattr(value, "tolist"):
+        try:
+            return _json_value(value.tolist())
+        except (TypeError, ValueError):
+            pass
+    if hasattr(value, "item"):
+        try:
+            return _json_value(value.item())
+        except (TypeError, ValueError):
+            pass
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except (TypeError, ValueError):
+            pass
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(value)
+
+
 def _json_records(frame: pd.DataFrame, *, limit: int | None = None) -> list[dict[str, Any]]:
     if limit is not None:
         frame = frame.head(max(0, int(limit)))
-    normalized = frame.astype(object).where(pd.notna(frame), None)
-    return normalized.to_dict(orient="records")
+    return [
+        {str(key): _json_value(value) for key, value in record.items()}
+        for record in frame.to_dict(orient="records")
+    ]
 
 
 def _annotation_summary(annotations: pd.DataFrame) -> dict[str, Any]:
@@ -119,21 +152,21 @@ def _anchor_audit(
     max_examples: int,
 ) -> dict[str, Any]:
     searchable = [column for column in SEARCH_COLUMNS if column in annotations.columns]
-    useful_columns = ["bodyId", *searchable]
     result: dict[str, Any] = {}
 
     for anchor in anchors:
         exact_mask = pd.Series(False, index=annotations.index)
         family_mask = pd.Series(False, index=annotations.index)
         anchor_lower = anchor.lower()
+        family_pattern = rf"^{re.escape(anchor_lower)}(?:$|[_-])"
         for column in searchable:
             values = annotations[column].fillna("").astype(str).str.strip()
             lower = values.str.lower()
             exact_mask |= lower.eq(anchor_lower)
-            family_mask |= lower.str.match(rf"^{anchor_lower}(?:$|[_-])", case=False)
+            family_mask |= lower.str.match(family_pattern, case=False)
 
-        exact = annotations.loc[exact_mask, useful_columns].copy()
-        family = annotations.loc[family_mask, useful_columns].copy()
+        exact = annotations.loc[exact_mask].copy()
+        family = annotations.loc[family_mask].copy()
         result[anchor] = {
             "exact_count": int(len(exact)),
             "family_count": int(len(family)),
@@ -203,17 +236,17 @@ def _anchor_depths(
     anchors: tuple[str, ...],
 ) -> dict[str, Any]:
     searchable = [column for column in SEARCH_COLUMNS if column in annotations.columns]
-    useful = ["bodyId", *searchable]
     prov = provenance.copy()
     prov["bodyId"] = prov.bodyId.astype(int)
     out: dict[str, Any] = {}
     for anchor in anchors:
         mask = pd.Series(False, index=annotations.index)
         anchor_lower = anchor.lower()
+        family_pattern = rf"^{re.escape(anchor_lower)}(?:$|[_-])"
         for column in searchable:
             values = annotations[column].fillna("").astype(str).str.strip().str.lower()
-            mask |= values.str.match(rf"^{anchor_lower}(?:$|[_-])", case=False)
-        rows = annotations.loc[mask, useful].copy()
+            mask |= values.str.match(family_pattern, case=False)
+        rows = annotations.loc[mask].copy()
         rows["bodyId"] = rows.bodyId.astype(int)
         joined = rows.merge(prov, on="bodyId", how="inner")
         out[anchor] = {
