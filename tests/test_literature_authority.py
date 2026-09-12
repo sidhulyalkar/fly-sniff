@@ -21,12 +21,14 @@ def test_hdelta_c_addendum_is_part_of_literature_authority() -> None:
 def test_hdelta_c_is_not_promoted_to_proven_functional_integrator() -> None:
     literature = _load_json("authority/olfactory-navigation-literature-v1.json")
     type_evidence = _load_json("authority/malecns-v1.0-type-evidence.json")
+    staged_route = _load_json("configs/staged_route_v1.json")
 
-    serialized = json.dumps([literature, type_evidence]).lower()
+    serialized = json.dumps([literature, type_evidence, staged_route]).lower()
     disallowed_phrases = [
         "hdelta c activity is consistent with odor-gated wind-direction integration",
         "hdeltac activity is consistent with odor-gated wind-direction integration",
         "hdeltac can specify an odor-gated goal direction",
+        "candidate odor-gated wind representation",
         "hdeltac itself computes odor-gated wind direction",
     ]
     for phrase in disallowed_phrases:
@@ -56,3 +58,16 @@ def test_model_inputs_remain_explicitly_distinct_from_measured_activity() -> Non
     assert "not measured" in odor_rationale
     assert "structural" in hdelta_rationale
     assert "physiological" in hdelta_rationale
+
+
+def test_scientific_docs_acknowledge_hdelta_c_functional_confound() -> None:
+    required_docs = [
+        "docs/E001_E002_PROTOCOL.md",
+        "docs/TASK_OPTIMIZATION_V1.md",
+    ]
+    for relative_path in required_docs:
+        text = (ROOT / relative_path).read_text().lower()
+        assert "2024" in text
+        assert "hdelta" in text
+        assert "h∆" in text or "hdelta" in text
+        assert "confound" in text or "cannot be assigned specifically" in text
