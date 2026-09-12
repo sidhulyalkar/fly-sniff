@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
-from fly_sniff.steering_scaffold import build_steering_scaffold
+from fly_sniff.steering_scaffold import build_steering_scaffold, sha256_file
 
 
 def _audit() -> dict:
@@ -80,6 +83,14 @@ def test_builds_candidate_scaffold_with_explicit_signs_and_provenance() -> None:
         "sha256": "sign-sha",
     }
     bundle.validate(require_sign=True, require_qualified=False)
+
+
+def test_repository_sign_authority_matches_sealed_hash() -> None:
+    config_path = Path("configs/steering_scaffold_candidate_v1.json")
+    config = json.loads(config_path.read_text())
+    authority = Path(config["sign_authority"])
+    assert authority.exists()
+    assert sha256_file(authority) == config["sign_authority_sha256"]
 
 
 def test_rejects_audit_hash_drift() -> None:
