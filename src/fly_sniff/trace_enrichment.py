@@ -57,6 +57,7 @@ def enrichment_for_column(
             "available": True,
             "population_size": population_size,
             "corridor_size": sample_size,
+            "annotated_corridor_size": sample_size,
             "rows": [],
         }
 
@@ -108,12 +109,16 @@ def enrichment_for_column(
         "column": column,
         "available": True,
         "population_size": population_size,
+        # Compatibility key: enrichment can only sample IDs represented in the
+        # annotation universe, so this is the annotated corridor size.
         "corridor_size": sample_size,
+        "annotated_corridor_size": sample_size,
         "tested_labels": len(rows),
         "rows": rows[: max(0, int(top_n))],
         "interpretation": (
             "One-sided hypergeometric over-representation relative to all annotated body IDs; "
-            "FDR is Benjamini-Hochberg within this annotation column. Enrichment is descriptive "
+            "the statistical sample contains annotated corridor nodes only. FDR is "
+            "Benjamini-Hochberg within this annotation column. Enrichment is descriptive "
             "structural evidence, not functional evidence."
         ),
     }
@@ -128,14 +133,27 @@ def audit_enrichment(
 ) -> dict[str, Any]:
     if "bodyId" not in nodes.columns:
         raise ValueError("trace nodes require bodyId")
+    if "bodyId" not in annotations.columns:
+        raise ValueError("annotations require bodyId")
+
     retained_ids = set(nodes.bodyId.astype(int))
+    annotation_ids = set(annotations.bodyId.astype(int))
+    annotated_retained_ids = retained_ids & annotation_ids
+    unannotated_retained_ids = retained_ids - annotation_ids
+
     return {
         "protocol": "structural-corridor-enrichment-v1",
+        # Compatibility key retains its original structural meaning.
         "retained_node_count": len(retained_ids),
+        "structural_retained_node_count": len(retained_ids),
+        "annotated_retained_node_count": len(annotated_retained_ids),
+        "unannotated_retained_node_count": len(unannotated_retained_ids),
+        "unannotated_body_ids": sorted(int(x) for x in unannotated_retained_ids),
+        "statistical_sample": "annotated corridor nodes only",
         "columns": {
             column: enrichment_for_column(
                 annotations,
-                retained_ids,
+                annotated_retained_ids,
                 column,
                 top_n=top_n,
             )
