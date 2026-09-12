@@ -67,10 +67,21 @@ def _config() -> dict:
                 "required_for_primary_hypothesis": False,
             },
         ],
+        "handoffs": [
+            {
+                "name": "hDeltaC_convergence",
+                "members": [
+                    {"stage": "odor_goal", "role": "target"},
+                    {"stage": "wind_goal", "role": "target"},
+                ],
+                "min_shared_body_ids": 1,
+                "required_for_primary_hypothesis": True,
+            }
+        ],
     }
 
 
-def test_staged_trace_seals_seeds_audits_and_keeps_optional_stages_independent(tmp_path):
+def test_staged_trace_seals_seeds_audits_handoffs_and_optional_stages(tmp_path):
     provenance = {
         "annotations": {"name": "annotations.feather", "sha256": "a" * 64},
         "weights": {"name": "weights.feather", "sha256": "b" * 64},
@@ -93,20 +104,26 @@ def test_staged_trace_seals_seeds_audits_and_keeps_optional_stages_independent(t
     assert by_name["missing_memory_seed"]["structural_audit_passed"] is None
     assert by_name["missing_memory_seed"]["required_for_primary_hypothesis"] is False
 
-    assert summary["protocol"] == "staged-structural-discovery-v2"
+    assert summary["protocol"] == "staged-structural-discovery-v3"
     assert summary["candidate_stage_count"] == 2
     assert not summary["all_stages_have_candidate_corridors"]
     assert summary["required_stage_count"] == 2
     assert summary["required_candidate_stage_count"] == 2
     assert summary["required_stage_audit_pass_count"] == 2
     assert summary["all_required_stages_have_audited_candidate_corridors"]
+    assert summary["required_handoff_count"] == 1
+    assert summary["required_handoff_pass_count"] == 1
+    assert summary["all_required_handoffs_pass"]
+    assert summary["primary_structural_hypothesis_passed"]
     assert summary["input_provenance"] == provenance
+    assert summary["handoffs"][0]["shared_body_ids"] == [3]
 
     odor_dir = tmp_path / "odor_goal"
     assert (odor_dir / "nodes.parquet").exists()
     assert (odor_dir / "source_seeds.csv").exists()
     assert (odor_dir / "target_seeds.csv").exists()
     assert (odor_dir / "structural_audit.json").exists()
+    assert (tmp_path / "handoff_audit.json").exists()
     assert (tmp_path / "staged_trace_report.json").exists()
 
     source_seeds = pd.read_csv(odor_dir / "source_seeds.csv")
