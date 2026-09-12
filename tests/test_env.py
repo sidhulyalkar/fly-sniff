@@ -31,6 +31,11 @@ def test_observe_is_idempotent_at_fixed_physical_state():
 
 def test_sensor_adaptation_advances_once_per_simulator_step():
     env = FlySniffEnv(seed=17)
+
+    def constant_concentration(x: float, y: float) -> float:
+        return 1.0
+
+    env.plume.concentration = constant_concentration
     env.observe()
     before = (env.agent.left_adapt, env.agent.right_adapt)
 
@@ -41,7 +46,8 @@ def test_sensor_adaptation_advances_once_per_simulator_step():
 
     assert next_obs == repeated
     assert after_repeat == after_step
-    assert after_step != before
+    assert after_step[0] > before[0]
+    assert after_step[1] > before[1]
 
 
 def test_adaptation_discretization_is_exact_first_order_hold():
