@@ -53,6 +53,23 @@ def test_hdelta_c_is_not_promoted_to_proven_functional_integrator() -> None:
     assert "confound" in serialized
 
 
+def test_v1_sensory_scope_records_odor_motion_omission() -> None:
+    authority = _load_json("authority/olfactory-navigation-literature-v1.json")
+    by_key = {entry["key"]: entry for entry in authority["evidence"]}
+    odor_motion = by_key["kadakia_2022_odor_motion"]
+
+    claims = " ".join(odor_motion["claims_used_as_constraints"]).lower()
+    boundary = odor_motion["boundary"].lower()
+    assert "temporal correlations" in claims
+    assert "two antennae" in claims
+    assert "complete sensory model" in boundary
+
+    task_doc = (ROOT / "docs/TASK_OPTIMIZATION_V1.md").read_text().lower()
+    assert "odor-motion" in task_doc
+    assert "intentionally" in task_doc
+    assert "complete sensory algorithm" in task_doc
+
+
 def test_pfn_laterality_keeps_soma_side_as_primary_authority() -> None:
     role_policy = _load_json("configs/role_review_v1.json")
     assert role_policy["side_inference"]["priority"][0] == "somaSide"
