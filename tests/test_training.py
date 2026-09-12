@@ -31,7 +31,9 @@ def _config(tmp_path):
         },
         "connectome_sensory_interface": {
             "odor_mode": "mean_bilateral_nondirectional",
-            "direction_source": "body_frame_wind",
+            "odor_roles": ["odor_context_left", "odor_context_right"],
+            "direction_source": "signed_pfn_basis_from_body_frame_airflow_arrival",
+            "wind_roles": ["wind_basis_left", "wind_basis_right"],
         },
         "objective": {
             "version": "navigation-objective-v1",
@@ -45,9 +47,7 @@ def _config(tmp_path):
             "activation_gain": {"default": 1.6, "min": 0.5, "max": 4.0},
             "recurrent_gain": {"default": 1.0, "min": 0.25, "max": 2.5},
             "odor_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_forward_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_backward_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
-            "wind_cross_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
+            "wind_basis_gain": {"default": 1.0, "min": 0.25, "max": 4.0},
             "turn_gain": {"default": 2.4, "min": 0.5, "max": 6.0},
         },
         "optimizer": {
@@ -73,7 +73,7 @@ def _config(tmp_path):
 
 
 def _bundle(*, qualified=False):
-    nodes = pd.DataFrame({"bodyId": [1, 2]})
+    nodes = pd.DataFrame({"bodyId": [1, 2, 3, 4, 5, 6]})
     edges = pd.DataFrame(
         {
             "source": pd.Series(dtype=int),
@@ -83,10 +83,12 @@ def _bundle(*, qualified=False):
         }
     )
     roles = {
-        "odor_left": [1],
-        "odor_right": [2],
-        "steer_left": [1],
-        "steer_right": [2],
+        "odor_context_left": [1],
+        "odor_context_right": [2],
+        "wind_basis_left": [3],
+        "wind_basis_right": [4],
+        "steer_left": [5],
+        "steer_right": [6],
     }
     status = "qualified" if qualified else "candidate"
     return GraphBundle(
@@ -103,22 +105,20 @@ def _params(**overrides):
         "activation_gain": 1.6,
         "recurrent_gain": 1.0,
         "odor_gain": 1.0,
-        "wind_forward_gain": 1.0,
-        "wind_backward_gain": 1.0,
-        "wind_cross_gain": 1.0,
+        "wind_basis_gain": 1.0,
         "turn_gain": 2.4,
     }
     values.update(overrides)
     return DynamicsParameters.from_mapping(values)
 
 
-def _observation(left=1.0, right=0.0, *, wind_y=0.0):
+def _observation(left=1.0, right=0.0, *, wind_x=0.0, wind_y=0.0):
     return Observation(
         left_odor=left,
         right_odor=right,
         mean_odor=0.5 * (left + right),
         odor_delta=right - left,
-        wind_x_body=0.0,
+        wind_x_body=wind_x,
         wind_y_body=wind_y,
         heading=0.0,
     )
@@ -132,9 +132,12 @@ def test_training_seed_namespace_is_disjoint_from_final_test(tmp_path):
     assert (train, validation) == make_training_seed_split(config)
 
 
-def test_parameter_contract_rejects_out_of_bounds_values(tmp_path):
+def test_parameter_contract_is_six_global_values_and_rejects_bounds(tmp_path):
     config = _config(tmp_path)
-    validate_parameters(default_parameters(config), config)
+    parameters = default_parameters(config)
+    assert set(parameters.to_dict()) == set(training.PARAMETER_NAMES)
+    assert len(parameters.to_dict()) == 6
+    validate_parameters(parameters, config)
     with pytest.raises(ValueError, match="odor_gain"):
         validate_parameters(_params(odor_gain=9.0), config)
 
@@ -157,10 +160,10 @@ def test_connectome_odor_drive_is_nondirectional_and_graph_stays_fixed():
     )
     left_only.reset(1)
     right_only.reset(1)
-    left_turn = left_only.act(_observation(left=1.0, right=0.0)).turn
-    right_turn = right_only.act(_observation(left=0.0, right=1.0)).turn
+    left_only.act(_observation(left=1.0, right=0.0))
+    right_only.act(_observation(left=0.0, right=1.0))
 
-    assert left_turn == pytest.approx(right_turn)
+    assert left_only.activity.tolist() == pytest.approx(right_only.activity.tolist())
     snapshot = left_only.input_snapshot()
     assert snapshot is not None
     assert snapshot["odor_interface"] == "mean_bilateral_nondirectional"
@@ -172,6 +175,30 @@ def test_connectome_odor_drive_is_nondirectional_and_graph_stays_fixed():
     pd.testing.assert_frame_equal(bundle.nodes, before_nodes)
     pd.testing.assert_frame_equal(bundle.edges, before_edges)
     assert bundle.roles == before_roles
+
+
+def test_pfn_basis_uses_airflow_arrival_and_signed_orthogonal_projections():
+    # Downwind vector points left, so airflow arrives from the right.
+    obs = _observation(left=0.0, right=0.0, wind_x=0.0, wind_y=0.7)
+    left_basis, right_basis = TaskOptimizedMaleCNSController.pfn_basis_raw_drive(obs)
+    expected = 0.7 / (2.0**0.5)
+    assert left_basis == pytest.approx(-expected)
+    assert right_basis == pytest.approx(expected)
+
+    # Airflow arriving from directly in front excites both +/-45 bases equally.
+    frontal_arrival = _observation(left=0.0, right=0.0, wind_x=-0.7, wind_y=0.0)
+    left_basis, right_basis = TaskOptimizedMaleCNSController.pfn_basis_raw_drive(
+        frontal_arrival
+    )
+    assert left_basis == pytest.approx(expected)
+    assert right_basis == pytest.approx(expected)
+
+
+def test_controller_refuses_missing_bilateral_role_contract():
+    bundle = _bundle()
+    bundle.roles.pop("wind_basis_right")
+    with pytest.raises(ValueError, match="wind_basis_right"):
+        TaskOptimizedMaleCNSController(bundle, _params(), require_qualified=False)
 
 
 def test_candidate_training_requires_explicit_override(tmp_path):
@@ -240,4 +267,13 @@ def test_config_rejects_directional_odor_shortcut(tmp_path):
     path = tmp_path / "bad-odor.json"
     path.write_text(json.dumps(config))
     with pytest.raises(ValueError, match="nondirectional"):
+        load_training_config(path)
+
+
+def test_config_rejects_cardinal_wind_shortcut(tmp_path):
+    config = _config(tmp_path)
+    config["connectome_sensory_interface"]["direction_source"] = "body_frame_wind"
+    path = tmp_path / "bad-wind.json"
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match="PFN airflow-basis"):
         load_training_config(path)
