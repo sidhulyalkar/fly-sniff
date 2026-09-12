@@ -53,6 +53,18 @@ def test_recording_is_elapsed_time_aligned_and_hash_verified(tmp_path):
     _validate_social_contract(loaded["recording"])
 
 
+def test_recording_seals_model_contract_and_configs():
+    bundle = build_recording(seed=13, sim_seconds=0.10, plume_points=8)
+    payload = bundle["recording"]
+
+    assert payload["model_contract"]["mathematical_model"] == "docs/MATHEMATICAL_MODEL.md"
+    assert payload["model_contract"]["plume_model"] == "stochastic-puff-2d-v1"
+    assert payload["model_contract"]["sensor_model"] == "bilateral-phenomenological-v1"
+    assert payload["config"]["arena"]["dt"] == pytest.approx(payload["dt"])
+    assert payload["config"]["plume"]["wind_speed"] > 0.0
+    assert payload["config"]["sensor"]["adaptation_tau"] > 0.0
+
+
 def test_recording_rejects_tampering(tmp_path):
     bundle = build_recording(seed=12, sim_seconds=0.10, plume_points=8)
     path = write_recording(tmp_path / "episode.json", bundle)
