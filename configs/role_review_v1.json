@@ -2,6 +2,10 @@
   "protocol": "e001-role-review-v1",
   "dataset": "male-cns:v1.0",
   "input_protocol": "staged-structural-discovery-v3",
+  "literature_authority": {
+    "path": "authority/olfactory-navigation-literature-v1.json",
+    "git_blob_sha1": "d8fd5bfdc5951feb4581ad1c24cdb7d06aab522b"
+  },
   "claim_boundary": "This policy derives a candidate model-role map from the preregistered E001 evidence. It does not qualify dynamics or assert that the modeled sensory drive equals measured activity in these neurons. hDeltaC is treated as a structural convergence candidate only; the original VT062617 functional attribution is confounded by hDeltaK labeling.",
   "side_inference": {
     "priority": ["somaSide", "rootSide", "instance"],
@@ -73,7 +77,7 @@
     "pfl3_output": {
       "handoff": "pfl3_body_id_continuity",
       "source": "shared_body_ids",
-      "rationale": "Exact PFL3 body IDs continuous across the hDeltaC-to-PFL3 and PFL3-to-DNa02 stages. Continuity is structural and does not establish the modeled transfer function."
+      "rationale": "Exact PFL3 body IDs continuous across the hDeltaC-to-PFL3 and PFL3-to-DNa02 stages. Continuity is structural and does not establish the modeled transfer function or steering-output side. PFL3 steering laterality requires LAL projection evidence or qualified perturbation/readout behavior."
     }
   },
   "wind_unresolved_policy": {

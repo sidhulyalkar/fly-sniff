@@ -12,7 +12,7 @@
       "hDeltaC_to_pfl3",
       "pfl3_to_dna02"
     ],
-    "interpretation": "The hDeltaC stage is a structural convergence hypothesis. It must not be described as a functionally proven odor-gated wind integrator because the original VT062617 physiology and perturbation experiments are confounded by hDeltaK labeling."
+    "interpretation": "The hDeltaC stage is a structural convergence hypothesis. It must not be described as a functionally proven odor-gated wind integrator because the original VT062617 physiology and perturbation experiments are confounded by hDeltaK labeling. The v1 sensory interface deliberately tests a restricted odor-context-plus-airflow hypothesis rather than a complete model of Drosophila plume navigation."
   },
   "evidence": [
     {
@@ -22,7 +22,8 @@
       "url": "https://doi.org/10.1038/s41467-022-32247-7",
       "claims_used_as_search_priors": [
         "FB5AB is a fan-shaped-body tangential input linked by earlier connectomics and functional experiments to olfactory navigation circuitry.",
-        "Earlier connectomics show direct FB5AB and wind-sensitive PFN input onto hDeltaC, motivating hDeltaC as a structural convergence candidate."
+        "Earlier connectomics show direct FB5AB and wind-sensitive PFN input onto hDeltaC, motivating hDeltaC as a structural convergence candidate.",
+        "The published model routes local-FB activity toward PFL outputs through downstream local FB populations rather than requiring a single direct hDeltaC-to-PFL3 synapse."
       ],
       "candidate_labels_for_release_specific_search": [
         "FB5AB",
@@ -35,7 +36,7 @@
         "PFNm",
         "hDeltaC"
       ],
-      "boundary": "Functional and connectomic evidence from earlier datasets/animals constrains what to search for. The hDeltaC-specific functional interpretation in the original article is superseded by the 2024 addendum and must not be transferred to MaleCNS body IDs."
+      "boundary": "Functional and connectomic evidence from earlier datasets/animals constrains what to search for. The hDeltaC-specific functional interpretation in the original article is superseded by the 2024 addendum and must not be transferred to MaleCNS body IDs. Previously described downstream local-FB types are expectations to compare against, not a whitelist or reason to retune the frozen route search."
     },
     {
       "key": "matheson_2024_hdelta_addendum",
@@ -61,6 +62,45 @@
       ],
       "candidate_labels_for_release_specific_search": ["PFNa", "PFNm", "PFNp"],
       "boundary": "These recordings motivate a side-resolved airflow basis. They do not establish identical tuning for every MaleCNS PFN subtype or body ID, and soma hemisphere is stronger laterality evidence than root-side or instance fallbacks."
+    },
+    {
+      "key": "kadakia_2022_odor_motion",
+      "citation": "Kadakia et al. Odour motion sensing enhances navigation of complex plumes. Nature 611, 754-761 (2022).",
+      "doi": "10.1038/s41586-022-05423-4",
+      "url": "https://doi.org/10.1038/s41586-022-05423-4",
+      "claims_used_as_constraints": [
+        "Walking Drosophila can use odor-motion direction as an additional directional cue during plume navigation.",
+        "Odor-motion direction can be extracted from temporal correlations between signals at the two antennae.",
+        "Odor-motion information can improve navigation and is not reducible to airflow direction alone."
+      ],
+      "candidate_labels_for_release_specific_search": [],
+      "boundary": "Task-optimization v1 intentionally collapses bilateral odor into nondirectional odor context and therefore omits a known biological directional cue. This is acceptable for the restricted topology hypothesis, but v1 must not be described as a complete sensory model of Drosophila plume navigation."
+    },
+    {
+      "key": "hulse_2021_central_complex_connectome",
+      "citation": "Hulse et al. A connectome of the Drosophila central complex reveals network motifs suitable for flexible navigation and context-dependent action selection. eLife 10:e66039 (2021).",
+      "doi": "10.7554/eLife.66039",
+      "url": "https://doi.org/10.7554/eLife.66039",
+      "claims_used_as_search_priors": [
+        "Direct PFN-to-CX-output connections are relatively sparse, while many stronger two- and three-step pathways pass through hDelta and vDelta local neurons.",
+        "PFL3 is anatomically positioned to produce lateralized steering output and reaches descending-neuron networks through both direct and indirect LAL pathways.",
+        "PFL3 neurons can project to the LAL contralateral to their bridge-side innervation, so a generic anatomical side field is not automatically equivalent to steering-output side."
+      ],
+      "candidate_labels_for_release_specific_search": ["hDelta", "vDelta", "PFL3", "DNa02"],
+      "boundary": "This prior supports allowing explicit intermediates and treating PFL3 laterality carefully. It does not authorize requiring named hDelta/vDelta intermediates or copying hemibrain paths into MaleCNS."
+    },
+    {
+      "key": "westeinde_2024_goal_to_steering",
+      "citation": "Westeinde et al. Transforming a head direction signal into a goal-oriented steering command. Nature 626, 819-826 (2024).",
+      "doi": "10.1038/s41586-024-07039-2",
+      "url": "https://doi.org/10.1038/s41586-024-07039-2",
+      "claims_used_as_constraints": [
+        "PFL3 left/right functional populations are defined by the side of the lateral accessory lobe to which the neuron projects.",
+        "PFL3 LAL side is typically, but not always, opposite the side of bridge innervation.",
+        "PFL3 population asymmetry is predictive of rotational steering and provides a functional steering-side convention."
+      ],
+      "candidate_labels_for_release_specific_search": ["PFL3"],
+      "boundary": "Do not infer PFL3 steering laterality from soma, root, or bridge side alone. Any MaleCNS left/right PFL3 steering interpretation must be supported by projection anatomy or by a qualified perturbation/readout test."
     },
     {
       "key": "rayshubskiy_2025_steering_control",
@@ -94,6 +134,9 @@
     "hDeltaC may be described as a structural convergence candidate, but not as experimentally proven to compute odor-gated wind direction or source direction.",
     "The optional hDeltaK/PFG memory hypothesis cannot compensate for a missing primary odor/wind-to-steering corridor.",
     "PFNa, PFNm, and PFNp role membership does not imply that all selected MaleCNS subtypes have identical airflow tuning or transmitter confidence.",
+    "The v1 mean-bilateral-odor interface must not be presented as the complete Drosophila sensory algorithm because it intentionally omits antenna-to-antenna odor-motion correlations.",
+    "Previously described hDelta/vDelta intermediates must not be made mandatory after inspecting the MaleCNS route; unexpected intermediates are results to review rather than reasons to retune the preregistered search.",
+    "PFL3 steering side must not be inferred from soma, root, or bridge side alone because PFL3 functional left/right is defined by LAL projection and can be contralateral to bridge innervation.",
     "Predicted neurotransmitter identity is not equivalent to measured postsynaptic effect or edge-specific sign.",
     "No literature prior may be converted into a qualified MaleCNS role without exact v1.0 body IDs, side labels, edge extraction, sign provenance, source-file hashes, and human review."
   ]
