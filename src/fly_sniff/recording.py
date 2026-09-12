@@ -65,6 +65,7 @@ def _agent_payload(
 ) -> dict[str, Any]:
     agent = live.env.agent
     neural_activity = live.controller.activity_snapshot(limit=256)
+    model_input = live.controller.input_snapshot() if action is not None and not live.done else None
     payload: dict[str, Any] = {
         "label": live.label,
         "controller": live.controller.name,
@@ -77,12 +78,15 @@ def _agent_payload(
         "done": bool(live.done),
         "decision_valid": action is not None and not live.done,
         "observation": _obs_payload(live.obs),
+        "sensor_trace": asdict(live.env.sensor_trace()),
         "action": action or {"turn": 0.0, "speed": 0.0},
         "diagnostics": {
             key: float(value)
             for key, value in live.controller.diagnostics().items()
         },
     }
+    if model_input is not None:
+        payload["model_input"] = model_input
     if neural_activity is not None:
         payload["neural_activity"] = neural_activity
     return payload
@@ -150,9 +154,14 @@ def build_recording(
     if candidate_graph is not None:
         # Explicit exploratory lane, never a qualified result even for a sealed graph.
         candidate_graph.validate(require_sign=True)
+
         def factory():
-            return MaleCNSRateController(candidate_graph, require_qualified=False,
-                                         model_dt_s=ArenaConfig().dt)
+            return MaleCNSRateController(
+                candidate_graph,
+                require_qualified=False,
+                model_dt_s=ArenaConfig().dt,
+            )
+
         agents.insert(0, _make_agent("CANDIDATE MODEL", factory, seed, "#38BDF8"))
         # Candidate versus the requested baseline, normally random.
         if len(agents) != 2:
@@ -200,7 +209,9 @@ def build_recording(
                     }
                 )
 
-        # Store the exact observation -> command pair at the state that generated it.
+        # Store the exact observation -> modeled input -> neural state -> command
+        # at the state that generated the decision. Reading the sensor trace is
+        # idempotent and therefore cannot advance adaptation or simulation time.
         _assert_shared_plume(agents, plume_points)
         frames[-1]["agents"] = [
             _agent_payload(live, action=action)
@@ -227,7 +238,8 @@ def build_recording(
         "schema_version": SCHEMA_VERSION,
         "claim_boundary": (
             "CANDIDATE MODELED ACTIVITY • NOT A QUALIFIED MALECNS RESULT"
-            if candidate_graph is not None else "DEVELOPMENT PROXY • NOT A MALECNS RESULT"
+            if candidate_graph is not None
+            else "DEVELOPMENT PROXY • NOT A MALECNS RESULT"
         ),
         "graph_sha256": candidate_graph.replay_fingerprint() if candidate_graph else None,
         "graph_manifest": candidate_graph.manifest if candidate_graph else None,
@@ -235,14 +247,37 @@ def build_recording(
         "dt": float(arena.dt),
         "implementation_files_sha256": {
             filename: hashlib.sha256(Path(__file__).with_name(filename).read_bytes()).hexdigest()
-            for filename in ("config.py", "controllers.py", "env.py", "graph.py", "plume.py", "recording.py", "party_social.py")
+            for filename in (
+                "config.py",
+                "controllers.py",
+                "env.py",
+                "graph.py",
+                "plume.py",
+                "recording.py",
+                "party_social.py",
+            )
         },
         "model_contract": {
             "mathematical_model": MATHEMATICAL_MODEL_CONTRACT,
             "plume_model": PLUME_MODEL_ID,
             "sensor_model": SENSOR_MODEL_ID,
+            "causal_replay_chain": [
+                "recorded plume state",
+                "physical left/right antenna sample coordinates",
+                "raw simulated concentrations",
+                "phenomenological saturation/adaptation",
+                "observation",
+                "explicit modeled graph-role drive when using the neural controller",
+                "modeled rate state",
+                "steering command",
+            ],
+            "sensory_interface_boundary": (
+                "Antenna sampling and transduction are exact simulator state. Mapping those values "
+                "into graph roles is an explicit modeled interface unless the graph manifest "
+                "separately qualifies a peripheral sensory bridge."
+            ),
             "claim": (
-                "benchmark phenomenology; not CFD, receptor kinetics, or recorded neural activity"
+                "benchmark phenomenology; not CFD, receptor kinetics, ORN spikes, or recorded neural activity"
             ),
         },
         "config": {
@@ -329,14 +364,19 @@ def main() -> None:
         default=["proxy", "random"],
         choices=sorted(_CONTROLLER_FACTORIES),
     )
-    parser.add_argument("--candidate-graph", help="Explicit exploratory signed GraphBundle; never a qualified result")
+    parser.add_argument(
+        "--candidate-graph",
+        help="Explicit exploratory signed GraphBundle; never a qualified result",
+    )
     args = parser.parse_args()
     bundle = build_recording(
         seed=args.seed,
         sim_seconds=args.sim_seconds,
         plume_points=args.plume_points,
         controller_names=tuple(args.controllers),
-        candidate_graph=GraphBundle.load(args.candidate_graph) if args.candidate_graph else None,
+        candidate_graph=GraphBundle.load(args.candidate_graph)
+        if args.candidate_graph
+        else None,
     )
     path = write_recording(args.output, bundle)
     print(path)
