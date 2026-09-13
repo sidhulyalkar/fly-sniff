@@ -16,6 +16,8 @@ SEALED_V1_MODULES = (
 V2_MODULES = {
     "fly_sniff.odor_motion",
     "fly_sniff.odor_events",
+    "fly_sniff.odor_event_cli",
+    "fly_sniff.odor_sensitivity",
     "fly_sniff.odor_motion_visual",
     "fly_sniff.odor_motion_showcase",
 }
