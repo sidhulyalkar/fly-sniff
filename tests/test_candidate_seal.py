@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import pytest
 
-from fly_sniff.candidate_seal import build_candidate_manifest, verify_candidate_manifest
+from fly_sniff import candidate_seal
 from fly_sniff.graph import GraphBundle
 from fly_sniff.sign_authority import build_sign_authority_report
 
@@ -153,7 +153,7 @@ def _fixture(tmp_path):
 
 def test_candidate_manifest_binds_exact_graph_and_roles(tmp_path):
     bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
-    manifest = build_candidate_manifest(
+    manifest = candidate_seal.build_candidate_manifest(
         bundle_dir=bundle,
         staged_root=staged,
         role_review_path=review,
@@ -166,13 +166,13 @@ def test_candidate_manifest_binds_exact_graph_and_roles(tmp_path):
     assert manifest["training_ready"] is True
     path = tmp_path / "candidate.json"
     path.write_text(json.dumps(manifest))
-    verified = verify_candidate_manifest(bundle, path, task_config_path=task)
+    verified = candidate_seal.verify_candidate_manifest(bundle, path, task_config_path=task)
     assert verified["manifest_sha256"] == manifest["manifest_sha256"]
 
 
 def test_candidate_manifest_rejects_graph_change(tmp_path):
     bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
-    manifest = build_candidate_manifest(
+    manifest = candidate_seal.build_candidate_manifest(
         bundle_dir=bundle,
         staged_root=staged,
         role_review_path=review,
@@ -188,4 +188,4 @@ def test_candidate_manifest_rejects_graph_change(tmp_path):
     edges.loc[0, "weight"] = 6.0
     edges.to_parquet(bundle / "edges.parquet", index=False)
     with pytest.raises(ValueError, match="GraphBundle fingerprint differs"):
-        verify_candidate_manifest(bundle, path, task_config_path=task)
+        candidate_seal.verify_candidate_manifest(bundle, path, task_config_path=task)
