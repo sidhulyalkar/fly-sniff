@@ -92,6 +92,8 @@ The matched cohort is:
 - eight independently seeded directed degree-preserving rewires;
 - the prespecified bilateral steering-input lesion.
 
+The directed rewire changes targets through double-edge swaps while keeping each edge record attached to its original presynaptic source. Exact directed in/out degree is preserved. The per-source multiset of structural weights and transmitter-derived signs is also preserved, and this is regression-tested directly on generated rewires. Thus the null does not gain or lose transmitter sign simply because an edge receives a new postsynaptic target.
+
 Every topology receives the same frozen train/validation split, trainable-parameter bounds, CEM population, generation count, episodes per candidate, objective, optimizer seed, and total represented episode budget. Each topology is optimized separately. Comparing a trained intact graph against untrained rewires is forbidden.
 
 The red-team lane additionally reconstructs optimizer work from persisted receipts, replays deterministic CEM mechanics, checks rewire completion and degree preservation, and runs diagnostic-only shortcut attacks. These diagnostics cannot change v1 graph membership, parameters, thresholds, or final-test policy.
