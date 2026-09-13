@@ -38,6 +38,35 @@
     "minimum_state_duration_s_grid": [0.05, 0.10, 0.20],
     "timing_confidence_grid": [0.20, 0.35, 0.50]
   },
+  "qualification": {
+    "status": "prefunctional_required",
+    "claim_boundary": "Qualification is controller-free. It tests whether the engineered comparator recognizes known bilateral latency and whether the current stochastic-puff benchmark supplies resolvable timing information to a fixed bilateral probe. It cannot establish a biological circuit mechanism or select navigation parameters.",
+    "traveling_edge": {
+      "concentration": 0.30,
+      "pre_stimulus_s": 0.50,
+      "whiff_duration_s": 0.75,
+      "post_stimulus_s": 0.75,
+      "latencies_s": [0.05, 0.10, 0.15, 0.20]
+    },
+    "fixed_plume_probe": {
+      "seeds": [13013, 13014, 13015, 13016, 13017, 13018, 13019, 13020],
+      "duration_s": 12.0,
+      "x_positions": [3.0, 6.0, 9.0],
+      "y_offsets_from_source": [-0.5, 0.0, 0.5],
+      "headings_rad": [1.5707963267948966, -1.5707963267948966, 0.0],
+      "heading_semantics": {
+        "1.5707963267948966": "antenna baseline aligned with +x; mean downwind transport should encounter left then right",
+        "-1.5707963267948966": "antenna baseline aligned with -x; mean downwind transport should encounter right then left",
+        "0.0": "antenna baseline crosswind; negative-control orientation for dominant +x advection"
+      }
+    },
+    "stop_rules": [
+      "traveling-edge assay must produce at least one qualified directional estimate for every prespecified latency and both directions",
+      "every qualified traveling-edge estimate must have the correct sign",
+      "if all longitudinal fixed-plume probes are directionally silent, the current plume/sensor stack is not eligible for functional-v2 escalation",
+      "qualification outcomes may not be used to retune the sealed estimator thresholds inside this protocol"
+    ]
+  },
   "direction_convention": {
     "positive": "left_to_right",
     "negative": "right_to_left",
@@ -52,6 +81,7 @@
     "offline temporal misalignment must preserve the shifted antenna channel's marginal values exactly",
     "offline circular shift is diagnostic-only and must never be described as a causal online sensory stream",
     "threshold sensitivity is secondary robustness analysis only and cannot redefine the primary thresholds",
+    "controller-free traveling-edge and fixed-plume assays must precede any functional-v2 controller access",
     "future v2 controller experiments must compare intact topology with equally optimized rewires and a temporal-information ablation"
   ],
   "visualization_contract": {
