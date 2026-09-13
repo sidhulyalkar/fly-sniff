@@ -4,7 +4,6 @@ import pandas as pd
 import pytest
 
 from fly_sniff import candidate_seal
-from fly_sniff.graph import GraphBundle
 from fly_sniff.sign_authority import write_sign_authority_report
 
 STAGES = [
