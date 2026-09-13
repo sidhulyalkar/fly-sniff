@@ -27,11 +27,16 @@
   ],
   "allowed_additional_roles": ["integration_hdelta_c", "pfl3_output"],
   "sign_authority": {
-    "resolution_order": ["exact_body_id", "type_level", "unknown"],
+    "resolution_order": [
+      "exact_body_id_reviewed_authority",
+      "exact_body_id_malecns_annotation_prediction",
+      "type_level_prediction_applied_to_body_by_annotation",
+      "unknown"
+    ],
     "unknown_transmitter": null,
     "unknown_confidence": null,
     "unknown_sign": 0,
-    "edge_sign_rule": "presynaptic source-body sign only; type-level predictions are modeling evidence, not measured receptor-specific physiology",
+    "edge_sign_rule": "presynaptic source-body sign only; exact MaleCNS and type-level transmitter predictions are modeling evidence, not measured receptor-specific physiology",
     "minimum_signed_edge_fraction_for_training": 0.60
   },
   "sensory_drive_normalization": {
