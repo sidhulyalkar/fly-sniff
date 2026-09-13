@@ -12,13 +12,21 @@
     "configs/steering_scaffold_candidate_v1.json"
   ],
   "literature_reference": "https://doi.org/10.1038/s41586-023-07006-3",
-  "model_form": "r=f(cos(H-Hpref)+d*cos(G-Gpref))",
+  "model_form": "r=f(cos(H-Hpref)+d*cos(G-Gpref)); f(x)=a*log(1+exp(b*(x+c)))",
+  "fixed_published_parameters": {
+    "d": 0.63,
+    "a_hz": 29.23,
+    "b": 2.17,
+    "c": -0.7,
+    "source": "final Nature Methods fit used by the full PFL3 population model",
+    "fit_policy": "Do not refit these values to MaleCNS, DNa02 output, turning, or navigation performance."
+  },
   "mapping": {
     "absolute_world_offset": "nuisance-parameter",
     "nine_column_goal_sensitivity_degrees": [0.0, -45.0, -90.0, -135.0, -180.0, 135.0, 90.0, 45.0, 0.0],
     "heading_glomerulus_sequence_degrees_left_to_right": [-22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5],
     "status": "candidate-literature-crosswalk",
-    "nine_column_note": "Sensitivity mapping only. Do not promote MaleCNS C1-C9 to proven preferred goal angles."
+    "nine_column_note": "Sensitivity mapping only. The paper favors twelve functional columns; do not promote MaleCNS C1-C9 to proven preferred goal angles."
   },
   "readout": {
     "left_group_source": "configs/steering_scaffold_candidate_v1.json candidate_roles.turn_drive_left",
@@ -59,6 +67,7 @@
     "Do not select threshold from output amplitude.",
     "Do not tune phase offset from DNa02 output or navigation.",
     "Do not use PFL3 instance R/L as steering side.",
+    "Do not refit the published nonlinear parameters to this MaleCNS result.",
     "Do not promote the nine-column mapping because it looks cleaner.",
     "Do not add signed Delta7 dynamics without separate evidence."
   ],
