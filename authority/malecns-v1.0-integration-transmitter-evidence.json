@@ -1,0 +1,108 @@
+{
+  "authority_kind": "type-level-predicted-transmitter-evidence",
+  "dataset": "male-cns:v1.0",
+  "forbidden_inference": "Do not call any edge physiologically excitatory solely because its presynaptic type is predicted ACh. Do not convert prediction confidence into synapse-level certainty. Do not change relay membership or model thresholds based on downstream behavioral performance.",
+  "mandatory_sensitivity_cases": [
+    {
+      "name": "PFNp_b_unresolved_sign",
+      "reason": "PFNp_b has the lowest catalog transmitter confidence (0.532) and ambiguous cross-alias metadata.",
+      "rule": "Repeat the signed mechanistic probe with all PFNp_b presynaptic edges assigned modeled sign 0."
+    }
+  ],
+  "model_sign_policy": {
+    "ACh": 1,
+    "GABA": -1,
+    "Glu": 0,
+    "other_or_unclear": 0,
+    "warning": "A modeled sign is an explicit convention derived from predicted presynaptic transmitter identity, not proof of postsynaptic effect."
+  },
+  "qualification_status": "evidence-only-not-synapse-specific-physiology",
+  "source": {
+    "catalog": "Male CNS Cell Type Explorer",
+    "commit": "789cc6c105798ce2fd70ba85dab394f90899616b",
+    "neuprint_dataset": "male-cns:v1.0",
+    "provenance_note": "Predicted neurotransmitter labels are computational catalog predictions; they are not measured synapse-specific receptor physiology.",
+    "repository": "reiserlab/celltype-explorer-drosophila-male-cns"
+  },
+  "types": {
+    "FB5AB": {
+      "confidence": 0.932,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/FB5AB.html"
+    },
+    "PFL2": {
+      "confidence": 0.952,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFL2.html"
+    },
+    "PFL3": {
+      "confidence": 0.944,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFL3.html"
+    },
+    "PFNa": {
+      "confidence": 0.901,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNa.html"
+    },
+    "PFNm_a": {
+      "confidence": 0.777,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNm_a.html"
+    },
+    "PFNm_b": {
+      "confidence": 0.777,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNm_b.html"
+    },
+    "PFNp_a": {
+      "confidence": 0.749,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNp_a.html"
+    },
+    "PFNp_b": {
+      "confidence": 0.532,
+      "modeled_sign": 1,
+      "note": "Lowest-confidence ACh prediction in the frozen integration types; catalog AKA metadata spans PFNm/PFNp naming. Preserve as a mandatory downstream sensitivity case rather than treating this confidence as certainty.",
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNp_b.html"
+    },
+    "PFNp_c": {
+      "confidence": 0.874,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNp_c.html"
+    },
+    "PFNp_d": {
+      "confidence": 0.751,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNp_d.html"
+    },
+    "PFNp_e": {
+      "confidence": 0.866,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/PFNp_e.html"
+    },
+    "hDeltaC": {
+      "confidence": 0.843,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/hDeltaC.html"
+    },
+    "hDeltaG": {
+      "confidence": 0.956,
+      "modeled_sign": 1,
+      "predicted_neurotransmitter": "ACh",
+      "source_path": "types/hDeltaG.html"
+    }
+  }
+}
