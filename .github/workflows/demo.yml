@@ -56,6 +56,12 @@ jobs:
           fly-sniff-odor-events artifacts/showcase/who-farted-run.json
           artifacts/showcase/odor-motion-v2.json
           --output artifacts/showcase/odor-events-v2.json
+      - name: Run frozen threshold sensitivity audit
+        run: >-
+          fly-sniff-odor-sensitivity artifacts/showcase/who-farted-run.json
+          artifacts/showcase/odor-motion-v2.json
+          artifacts/showcase/odor-events-v2.json
+          --output artifacts/showcase/odor-sensitivity-v2.json
       - name: Build scientific odor timing diagnostic
         run: >-
           fly-sniff-plot-odor-motion artifacts/showcase/who-farted-run.json
