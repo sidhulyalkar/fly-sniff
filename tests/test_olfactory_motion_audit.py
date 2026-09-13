@@ -112,3 +112,20 @@ def test_report_records_exact_selected_ids_from_input_table(tmp_path):
 
     resolved = {row["bodyId"] for row in report["candidates"]["il3LN6"]}
     assert resolved == {7001, 7002}
+
+
+def test_anchored_patterns_match_instance_independently_of_type_column(tmp_path):
+    annotations = tmp_path / "annotations.feather"
+    frame = _annotations()
+    frame.loc[frame["bodyId"] == 1, "type"] = ""
+    frame.loc[frame["bodyId"] == 10, "type"] = ""
+    frame.to_feather(annotations)
+
+    report, _ = build_olfactory_motion_audit(annotations)
+
+    assert report["candidate_counts"]["il3LN6"] == 2
+    assert report["candidate_counts"]["DA1_lPN"] == 2
+    il3 = {row["bodyId"]: row["matched_patterns"] for row in report["candidates"]["il3LN6"]}
+    da1 = {row["bodyId"]: row["matched_patterns"] for row in report["candidates"]["DA1_lPN"]}
+    assert any(match["column"] == "instance" for match in il3[1])
+    assert any(match["column"] == "instance" for match in da1[10])
