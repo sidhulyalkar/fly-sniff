@@ -209,6 +209,7 @@ def _condition(
         "summary": first["summary"],
         "body_ids": first["body_ids"],
         "activity": first["activity"],
+        "deterministic_replay_error": error,
     }, error
 
 
@@ -218,7 +219,7 @@ def _serializable_run(run: dict[str, Any], error: float) -> dict[str, Any]:
         "drive": run["drive"],
         "summary": run["summary"],
         "body_ids": run["body_ids"],
-        "deterministic_replay_error": error,
+        "deterministic_replay_error": float(run.get("deterministic_replay_error", error)),
         "activity": activity.tolist(),
     }
 
