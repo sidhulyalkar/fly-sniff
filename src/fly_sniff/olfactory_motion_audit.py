@@ -44,11 +44,33 @@ def load_audit_config(path: str | Path | None = None) -> dict[str, Any]:
     return document
 
 
-def _search_text(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
+def _configured_text_columns(frame: pd.DataFrame, columns: list[str]) -> list[str]:
     present = [column for column in columns if column in frame.columns]
     if not present:
         raise ValueError(f"no configured annotation text columns found; columns={list(frame.columns)}")
-    return frame[present].fillna("").astype(str).agg(" | ".join, axis=1)
+    return present
+
+
+def _row_matches(
+    frame: pd.DataFrame,
+    columns: list[str],
+    compiled: list[re.Pattern[str]],
+    raw_patterns: list[str],
+) -> tuple[pd.Series, dict[int, list[dict[str, str]]]]:
+    matches: dict[int, list[dict[str, str]]] = {}
+    mask = pd.Series(False, index=frame.index)
+    text = frame[columns].fillna("").astype(str)
+    for row_index, row in text.iterrows():
+        row_matches: list[dict[str, str]] = []
+        for column in columns:
+            value = row[column]
+            for pattern_index, pattern in enumerate(compiled):
+                if pattern.search(value):
+                    row_matches.append({"column": column, "pattern": raw_patterns[pattern_index]})
+        if row_matches:
+            mask.loc[row_index] = True
+            matches[int(row_index)] = row_matches
+    return mask, matches
 
 
 def resolve_candidate_families(
@@ -57,7 +79,7 @@ def resolve_candidate_families(
 ) -> pd.DataFrame:
     if "bodyId" not in annotations.columns:
         raise ValueError("MaleCNS annotations must contain bodyId")
-    searchable = _search_text(annotations, list(document["annotation_text_columns"]))
+    text_columns = _configured_text_columns(annotations, list(document["annotation_text_columns"]))
     pieces: list[pd.DataFrame] = []
     identity = [
         column
@@ -66,15 +88,12 @@ def resolve_candidate_families(
     ]
     for family, patterns in document["candidate_families"].items():
         compiled = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
-        mask = searchable.map(lambda value: any(pattern.search(value) for pattern in compiled))
+        mask, match_details = _row_matches(annotations, text_columns, compiled, patterns)
         if not bool(mask.any()):
             continue
         part = annotations.loc[mask, identity].copy()
         part["candidate_family"] = family
-        part["matched_patterns"] = [
-            [patterns[index] for index, pattern in enumerate(compiled) if pattern.search(searchable.loc[row_index])]
-            for row_index in part.index
-        ]
+        part["matched_patterns"] = [match_details[int(row_index)] for row_index in part.index]
         pieces.append(part)
     if not pieces:
         return pd.DataFrame(columns=[*identity, "candidate_family", "matched_patterns"])
