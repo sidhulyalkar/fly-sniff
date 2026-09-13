@@ -15,8 +15,10 @@
   "mechanism_probe": {
     "e002b_required": true,
     "e002c_protocol": "E002c-pfl3-goal-heading-convergence-v1",
+    "e002c_sha256": "46cf03f75dd6956722f1874877070f06243afc1cdae385cb459263422b14a0c2",
     "e002c_must_pass": true,
     "fc2_protocol": "malecns-fc2-goal-interface-audit-v1",
+    "fc2_sha256": "49e416da2c11681892e62cfbe233495c5c46dc323069c9c2524e7a0ffbc5e860",
     "display_threshold": 5,
     "all_thresholds_must_be_reported": [1, 3, 5, 10],
     "phase_mapping_must_remain_unresolved": true,
