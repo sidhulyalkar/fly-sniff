@@ -98,6 +98,31 @@ def _recent_event(
     return eligible[-1] if eligible else None
 
 
+def _event_banner(context: ReplayContext, event: dict[str, Any]) -> tuple[str, float]:
+    kind = str(event["kind"])
+    if kind == "encounter":
+        return "ODOR ENCOUNTER", 10.0
+    if kind == "loss":
+        return "ODOR LOST", 10.0
+    if kind != "reacquisition":
+        return kind.upper(), 10.0
+
+    latency = event.get("latency_s")
+    if latency is None:
+        return "PLUME REACQUIRED", 10.0
+    horizon = float(
+        context.diagnostics_bundle["diagnostics"]["config"]["event_detection"][
+            "reacquisition_horizon_s"
+        ]
+    )
+    latency_value = float(latency)
+    relation = "within" if latency_value <= horizon else "outside"
+    return (
+        f"PLUME REACQUIRED\n{latency_value:.1f}s after loss • {relation} {horizon:.1f}s metric",
+        8.5,
+    )
+
+
 def _draw_timing_hud(
     ax,
     context: ReplayContext,
@@ -147,7 +172,7 @@ def _draw_timing_hud(
         times,
         0.5 + 0.45 * evidence,
         linewidth=1.2,
-        label="timing evidence",
+        label="timing evidence (0 = midline)",
         color="#F8FAFC",
         alpha=0.9,
     )
@@ -161,7 +186,7 @@ def _draw_timing_hud(
     trace_ax.legend(
         loc="upper left",
         frameon=False,
-        fontsize=6.8,
+        fontsize=6.5,
         labelcolor="#CBD5E1",
         ncol=3,
     )
@@ -220,18 +245,15 @@ def _draw_timing_hud(
         hold_steps=max(1, round(0.55 / dt)),
     )
     if event is not None:
-        banner = {
-            "encounter": "ODOR ENCOUNTER",
-            "loss": "ODOR LOST",
-            "reacquisition": "PLUME REACQUIRED",
-        }[str(event["kind"])]
+        banner, banner_size = _event_banner(context, event)
         ax.text(
             0.73,
             0.12,
             banner,
             color="#F8FAFC",
-            fontsize=10,
+            fontsize=banner_size,
             fontweight="bold",
+            va="center",
             bbox={
                 "boxstyle": "round,pad=0.28",
                 "facecolor": BG,
