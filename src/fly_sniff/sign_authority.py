@@ -7,12 +7,31 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from .graph import GraphBundle
 
 DEFAULT_AUTHORITIES = (
     "authority/malecns-v1.0-steering-sign-evidence.json",
     "authority/malecns-v1.0-body-sign-overrides-v1.json",
+)
+NT_COLUMN_CANDIDATES = (
+    "predictedNt",
+    "predicted_nt",
+    "predictedNT",
+    "predictedNeurotransmitter",
+    "cell_type_nt",
+    "nt_type",
+    "neurotransmitter",
+)
+CONFIDENCE_COLUMN_CANDIDATES = (
+    "predictedNtProb",
+    "predicted_nt_prob",
+    "predictedNTProb",
+    "predictedNeurotransmitterConfidence",
+    "predictedNtConfidence",
+    "nt_confidence",
+    "neurotransmitter_confidence",
 )
 
 
@@ -34,7 +53,24 @@ def canonical_sha256(payload: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _clean_optional(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except (AttributeError, ValueError):
+            pass
+    return value
+
+
 def _normalize_transmitter(value: Any) -> str | None:
+    value = _clean_optional(value)
     if value is None:
         return None
     text = str(value).strip()
@@ -51,12 +87,18 @@ def _normalize_transmitter(value: Any) -> str | None:
 
 
 def _validate_confidence(value: Any) -> float | None:
+    value = _clean_optional(value)
     if value is None:
         return None
     confidence = float(value)
     if not np.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
         raise ValueError(f"transmitter confidence must be in [0, 1], got {value!r}")
     return confidence
+
+
+def _first_present(columns: Any, candidates: tuple[str, ...]) -> str | None:
+    available = set(columns)
+    return next((name for name in candidates if name in available), None)
 
 
 def _merge_record(
@@ -122,10 +164,12 @@ def load_authorities(paths: list[str | Path]) -> dict[str, Any]:
             record["confidence"] = _validate_confidence(record.get("confidence"))
             record["authority_path"] = str(path)
             record["authority_sha256"] = sha256_file(path)
-            record["evidence_level"] = "exact_body_id_authority"
+            record["evidence_level"] = "exact_body_id_reviewed_authority"
             _merge_record(body_records, body_id, record, label="body-ID")
 
-    canonical_rule = sign_rules[0] if sign_rules else {"ACh": 1, "GABA": -1, "Glu": 0}
+    if not sign_rules:
+        raise ValueError("at least one authority file must explicitly define model_sign_rule")
+    canonical_rule = sign_rules[0]
     for rule in sign_rules[1:]:
         if rule != canonical_rule:
             raise ValueError("sign authority files disagree on the model sign convention")
@@ -152,15 +196,52 @@ def _sign_for_transmitter(transmitter: str | None, rule: dict[str, int]) -> int:
     return int(rule.get("other_or_unclear", 0))
 
 
+def _dataset_body_annotation(
+    row: Any,
+    *,
+    transmitter_column: str | None,
+    confidence_column: str | None,
+    node_authority_receipt: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if transmitter_column is None:
+        return None
+    transmitter = _normalize_transmitter(row.get(transmitter_column))
+    if transmitter is None:
+        return None
+    confidence = (
+        _validate_confidence(row.get(confidence_column))
+        if confidence_column is not None
+        else None
+    )
+    receipt = node_authority_receipt or {}
+    return {
+        "predicted_neurotransmitter": transmitter,
+        "confidence": confidence,
+        "authority_path": receipt.get("path"),
+        "authority_sha256": receipt.get("sha256"),
+        "evidence_level": "exact_body_id_malecns_annotation_prediction",
+        "source": (
+            f"sealed MaleCNS node annotation: {transmitter_column}"
+            + (f" / {confidence_column}" if confidence_column else "")
+        ),
+        "transmitter_column": transmitter_column,
+        "confidence_column": confidence_column,
+    }
+
+
 def build_sign_authority_report(
     bundle: GraphBundle,
     authority_paths: list[str | Path],
+    *,
+    node_authority_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     bundle.validate(require_sign=True, require_qualified=False)
     if "type" not in bundle.nodes.columns:
         raise ValueError("sign authority audit requires bundle nodes to include a type column")
 
     authorities = load_authorities(authority_paths)
+    transmitter_column = _first_present(bundle.nodes.columns, NT_COLUMN_CANDIDATES)
+    confidence_column = _first_present(bundle.nodes.columns, CONFIDENCE_COLUMN_CANDIDATES)
     node_rows = bundle.nodes.drop_duplicates("bodyId").set_index("bodyId")
     source_ids = sorted(set(bundle.edges.source.astype(int)))
     source_records: list[dict[str, Any]] = []
@@ -171,9 +252,24 @@ def build_sign_authority_report(
             raise ValueError(f"presynaptic source body ID {body_id} is absent from nodes.parquet")
         row = node_rows.loc[body_id]
         cell_type = str(row.get("type", ""))
-        exact = authorities["body_records"].get(body_id)
+        reviewed_exact = authorities["body_records"].get(body_id)
+        dataset_exact = _dataset_body_annotation(
+            row,
+            transmitter_column=transmitter_column,
+            confidence_column=confidence_column,
+            node_authority_receipt=node_authority_receipt,
+        )
         type_level = authorities["type_records"].get(cell_type)
-        evidence = exact or type_level
+        if reviewed_exact is not None and dataset_exact is not None:
+            reviewed_nt = reviewed_exact.get("predicted_neurotransmitter")
+            dataset_nt = dataset_exact.get("predicted_neurotransmitter")
+            allow_override = reviewed_exact.get("allow_dataset_annotation_override") is True
+            if reviewed_nt != dataset_nt and not allow_override:
+                raise ValueError(
+                    "reviewed body-ID transmitter authority conflicts with sealed MaleCNS annotation "
+                    f"for body ID {body_id}: {reviewed_nt!r} vs {dataset_nt!r}"
+                )
+        evidence = reviewed_exact or dataset_exact or type_level
         if evidence is None:
             transmitter = None
             confidence = None
@@ -244,20 +340,34 @@ def build_sign_authority_report(
         ),
         "edge_sign_mismatch_count": len(mismatches),
     }
+    node_annotation_authority = {
+        "path": (node_authority_receipt or {}).get("path"),
+        "sha256": (node_authority_receipt or {}).get("sha256"),
+        "transmitter_column": transmitter_column,
+        "confidence_column": confidence_column,
+        "resolution_order": [
+            "exact_body_id_reviewed_authority",
+            "exact_body_id_malecns_annotation_prediction",
+            "type_level_prediction_applied_to_body_by_annotation",
+            "unknown",
+        ],
+    }
     report = {
         "protocol": "source-body-transmitter-sign-authority-v1",
         "dataset": (bundle.manifest or {}).get("dataset", "unspecified"),
         "graph_sha256": bundle.replay_fingerprint(),
         "model_sign_rule": authorities["model_sign_rule"],
         "authority_files": authorities["authority_receipts"],
+        "node_annotation_authority": node_annotation_authority,
         "source_records": source_records,
         "coverage": coverage,
         "edge_sign_mismatches": mismatches,
         "passed": len(mismatches) == 0,
         "claim_boundary": (
             "A nonzero sign is a conservative presynaptic transmitter-derived modeling convention. "
-            "It is not a measurement of receptor-specific postsynaptic effect. Unknown evidence "
-            "remains transmitter=null, confidence=null, sign=0."
+            "Exact MaleCNS body annotations and type-level predictions are still predictions, not "
+            "measurements of receptor-specific postsynaptic effect. Unknown evidence remains "
+            "transmitter=null, confidence=null, sign=0."
         ),
     }
     report["report_sha256"] = canonical_sha256(report)
@@ -269,8 +379,17 @@ def write_sign_authority_report(
     authority_paths: list[str | Path],
     output: str | Path,
 ) -> dict[str, Any]:
+    bundle_dir = Path(bundle_dir)
+    nodes_path = bundle_dir / "nodes.parquet"
     bundle = GraphBundle.load(bundle_dir)
-    report = build_sign_authority_report(bundle, authority_paths)
+    report = build_sign_authority_report(
+        bundle,
+        authority_paths,
+        node_authority_receipt={
+            "path": str(nodes_path),
+            "sha256": sha256_file(nodes_path),
+        },
+    )
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     (output / "source_sign_authority.json").write_text(
