@@ -1,0 +1,62 @@
+name: olfactory-motion-realdata
+
+on:
+  pull_request:
+    paths:
+      - "configs/olfactory_motion_audit_v1.json"
+      - "src/fly_sniff/olfactory_motion_audit.py"
+      - "src/fly_sniff/public_data.py"
+      - "pyproject.toml"
+      - ".github/workflows/olfactory-motion-realdata.yml"
+  workflow_dispatch:
+
+jobs:
+  annotation-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package
+        run: python -m pip install .
+      - name: Download exact MaleCNS v1.0 annotations
+        run: |
+          mkdir -p artifacts/olfactory-motion-realdata
+          fly-sniff-download-annotations \
+            --output artifacts/olfactory-motion-realdata/body-annotations-male-cns-v1.0-minconf-0.5.feather \
+            > artifacts/olfactory-motion-realdata/annotation-download-receipt.json
+      - name: Run frozen annotation identity audit
+        run: |
+          fly-sniff-audit-olfactory-motion \
+            --annotations artifacts/olfactory-motion-realdata/body-annotations-male-cns-v1.0-minconf-0.5.feather \
+            --output artifacts/olfactory-motion-realdata/annotation-audit.json
+      - name: Preserve result and enforce only the claim boundary
+        run: |
+          python - <<'PY'
+          import json
+          path = "artifacts/olfactory-motion-realdata/annotation-audit.json"
+          report = json.load(open(path))
+          print("status:", report["status"])
+          print("candidate_counts:", report["candidate_counts"])
+          print("selected_body_count:", report["selected_body_count"])
+          assert report["controller_access"] is False
+          assert report["navigation_performance_used"] is False
+          assert report["functional_motion_claim_allowed"] is False
+          assert report["navigation_claim_allowed"] is False
+          # Missing biological families are a scientific result, not a CI failure.
+          assert report["status"] in {
+              "blocked_missing_required_candidate_family",
+              "candidate_audit_pass_incomplete_motif",
+              "candidate_audit_pass_complete_structural_motif",
+          }
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: olfactory-motion-realdata-annotation-audit
+          path: |
+            artifacts/olfactory-motion-realdata/annotation-download-receipt.json
+            artifacts/olfactory-motion-realdata/annotation-audit.json
+          if-no-files-found: error
+          retention-days: 30
