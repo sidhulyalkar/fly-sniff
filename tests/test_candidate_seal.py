@@ -7,7 +7,6 @@ from fly_sniff import candidate_seal
 from fly_sniff.graph import GraphBundle
 from fly_sniff.sign_authority import build_sign_authority_report
 
-
 STAGES = [
     "odor_value_to_fb5ab",
     "fb5ab_to_hDeltaC",
