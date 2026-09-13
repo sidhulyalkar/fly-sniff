@@ -1,0 +1,37 @@
+{
+  "protocol": "bilateral-odor-motion-analysis-v2",
+  "status": "pre-performance_sensory_adapter",
+  "claim_boundary": "This adapter computes an engineered causal temporal comparison from the benchmark's modeled left/right antenna transduction. It is not a measured neural signal, not a claim that MaleCNS contains this exact computation, and is not a controller input in the sealed v1 experiment.",
+  "source_signal": "modeled_antenna_transduction",
+  "controller_access_in_v1": false,
+  "estimator": {
+    "delays_s": [0.05, 0.10, 0.15, 0.20],
+    "delay_decay_tau_s": 0.15,
+    "signal_scale": 0.08,
+    "minimum_absolute_evidence": 0.12,
+    "minimum_confidence": 0.08
+  },
+  "direction_convention": {
+    "positive": "left_to_right",
+    "negative": "right_to_left",
+    "definition": "For each causal delay d, compare left(t-d)*right(t) against right(t-d)*left(t). Positive evidence means the left antenna led the right antenna at that delay."
+  },
+  "scientific_controls": [
+    "sealed v1 mean-odor interface remains unchanged",
+    "mirror left/right histories and require motion-evidence sign reversal",
+    "simultaneous bilateral pulses should produce near-zero direction evidence",
+    "prefix invariance proves future frames cannot change prior estimates",
+    "future v2 controller experiments must compare intact topology with equally optimized rewires and a temporal-information ablation"
+  ],
+  "visualization_contract": {
+    "show": [
+      "left antenna response trace",
+      "right antenna response trace",
+      "causal odor-motion evidence",
+      "confidence",
+      "dominant tested delay"
+    ],
+    "label": "MODELED BILATERAL ODOR TIMING",
+    "forbidden_label": "measured odor-motion neuron activity"
+  }
+}
