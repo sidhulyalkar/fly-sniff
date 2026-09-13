@@ -31,6 +31,12 @@ fly-sniff-choice = "fly_sniff.choice:main"
 fly-sniff-party = "fly_sniff.party_social:main"
 fly-sniff-showcase = "fly_sniff.showcase:main"
 fly-sniff-record = "fly_sniff.recording:main"
+fly-sniff-odor-motion = "fly_sniff.odor_motion:main"
+fly-sniff-odor-events = "fly_sniff.odor_event_cli:main"
+fly-sniff-odor-sensitivity = "fly_sniff.odor_sensitivity:main"
+fly-sniff-qualify-odor-motion = "fly_sniff.odor_motion_qualification:main"
+fly-sniff-plot-odor-motion = "fly_sniff.odor_motion_visual:main"
+fly-sniff-replay-odor-motion = "fly_sniff.odor_motion_showcase:main"
 fly-sniff-replay-showcase = "fly_sniff.recorded_showcase:main"
 fly-sniff-export-neural-scene = "fly_sniff.neural_scene:main"
 fly-sniff-cinematic = "fly_sniff.cinematic_showcase:main"
@@ -69,6 +75,9 @@ fly-sniff-render-final = "fly_sniff.final_social:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"configs/odor_motion_v2.json" = "fly_sniff/configs/odor_motion_v2.json"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

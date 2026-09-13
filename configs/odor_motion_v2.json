@@ -1,0 +1,99 @@
+{
+  "protocol": "bilateral-odor-motion-analysis-v2",
+  "status": "pre-performance_sensory_adapter",
+  "claim_boundary": "This adapter computes an engineered causal temporal comparison from the benchmark's modeled left/right antenna transduction. It is not a measured neural signal, not a claim that MaleCNS contains this exact computation, and is not a controller input in the sealed v1 experiment.",
+  "source_signal": "modeled_antenna_transduction",
+  "controller_access_in_v1": false,
+  "estimator": {
+    "delays_s": [0.05, 0.10, 0.15, 0.20],
+    "delay_decay_tau_s": 0.15,
+    "signal_scale": 0.08,
+    "minimum_absolute_evidence": 0.12,
+    "minimum_confidence": 0.08
+  },
+  "event_detection": {
+    "odor_on_threshold": 0.16,
+    "odor_off_threshold": 0.08,
+    "minimum_state_duration_s": 0.10,
+    "reacquisition_horizon_s": 2.0,
+    "turn_response_horizon_s": 0.50,
+    "high_confidence_threshold": 0.35,
+    "high_confidence_refractory_s": 0.20
+  },
+  "counterfactuals": {
+    "mirror_left_right": true,
+    "zero_temporal_evidence": true,
+    "right_channel_shift_s": 0.75,
+    "right_channel_shift_is_analysis_only": true
+  },
+  "sensitivity_analysis": {
+    "status": "secondary_robustness_only",
+    "may_select_or_redefine_primary_thresholds": false,
+    "interpretation": "This grid measures whether descriptive replay conclusions are fragile to nearby engineering thresholds. It must not be used to choose a threshold that improves navigation, event counts, or a future scientific claim.",
+    "odor_hysteresis_grid": [
+      {"label": "lower", "odor_on_threshold": 0.12, "odor_off_threshold": 0.06},
+      {"label": "primary", "odor_on_threshold": 0.16, "odor_off_threshold": 0.08},
+      {"label": "higher", "odor_on_threshold": 0.20, "odor_off_threshold": 0.10}
+    ],
+    "minimum_state_duration_s_grid": [0.05, 0.10, 0.20],
+    "timing_confidence_grid": [0.20, 0.35, 0.50]
+  },
+  "qualification": {
+    "status": "prefunctional_required",
+    "claim_boundary": "Qualification is controller-free. It tests whether the engineered comparator recognizes known bilateral latency and whether the current stochastic-puff benchmark supplies resolvable timing information to a fixed bilateral probe. It cannot establish a biological circuit mechanism or select navigation parameters.",
+    "traveling_edge": {
+      "concentration": 0.30,
+      "pre_stimulus_s": 0.50,
+      "whiff_duration_s": 0.75,
+      "post_stimulus_s": 0.75,
+      "latencies_s": [0.05, 0.10, 0.15, 0.20]
+    },
+    "fixed_plume_probe": {
+      "seeds": [13013, 13014, 13015, 13016, 13017, 13018, 13019, 13020],
+      "duration_s": 12.0,
+      "x_positions": [3.0, 6.0, 9.0],
+      "y_offsets_from_source": [-0.5, 0.0, 0.5],
+      "headings_rad": [1.5707963267948966, -1.5707963267948966, 0.0],
+      "heading_semantics": {
+        "1.5707963267948966": "antenna baseline aligned with +x; mean downwind transport should encounter left then right",
+        "-1.5707963267948966": "antenna baseline aligned with -x; mean downwind transport should encounter right then left",
+        "0.0": "antenna baseline crosswind; negative-control orientation for dominant +x advection"
+      }
+    },
+    "stop_rules": [
+      "traveling-edge assay must produce at least one qualified directional estimate for every prespecified latency and both directions",
+      "every qualified traveling-edge estimate must have the correct sign",
+      "if all longitudinal fixed-plume probes are directionally silent, the current plume/sensor stack is not eligible for functional-v2 escalation",
+      "qualification outcomes may not be used to retune the sealed estimator thresholds inside this protocol"
+    ]
+  },
+  "direction_convention": {
+    "positive": "left_to_right",
+    "negative": "right_to_left",
+    "definition": "For each causal delay d, compare left(t-d)*right(t) against right(t-d)*left(t). Positive evidence means the left antenna led the right antenna at that delay."
+  },
+  "scientific_controls": [
+    "sealed v1 mean-odor interface remains unchanged",
+    "odor encounter/loss/reacquisition events use frozen hysteresis and a minimum dwell time",
+    "mirror left/right histories and require motion-evidence sign reversal",
+    "simultaneous bilateral pulses should produce near-zero direction evidence",
+    "prefix invariance proves future frames cannot change prior causal estimates",
+    "offline temporal misalignment must preserve the shifted antenna channel's marginal values exactly",
+    "offline circular shift is diagnostic-only and must never be described as a causal online sensory stream",
+    "threshold sensitivity is secondary robustness analysis only and cannot redefine the primary thresholds",
+    "controller-free traveling-edge and fixed-plume assays must precede any functional-v2 controller access",
+    "future v2 controller experiments must compare intact topology with equally optimized rewires and a temporal-information ablation"
+  ],
+  "visualization_contract": {
+    "show": [
+      "left antenna response trace",
+      "right antenna response trace",
+      "causal odor-motion evidence",
+      "confidence",
+      "dominant tested delay",
+      "odor encounter, loss, and reacquisition markers"
+    ],
+    "label": "MODELED BILATERAL ODOR TIMING",
+    "forbidden_label": "measured odor-motion neuron activity"
+  }
+}

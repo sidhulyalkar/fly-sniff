@@ -1,0 +1,46 @@
+name: odor-motion-qualification
+
+on:
+  pull_request:
+    paths:
+      - "src/fly_sniff/odor_motion*.py"
+      - "configs/odor_motion_v2.json"
+      - "pyproject.toml"
+      - ".github/workflows/odor-motion-qualification.yml"
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run controller-free qualification
+        run: >-
+          fly-sniff-qualify-odor-motion
+          --output artifacts/odor-motion-qualification-v2.json
+      - name: Verify algorithmic assay and claim boundary
+        run: |
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/odor-motion-qualification-v2.json"))["qualification"]
+          assert report["traveling_edge_assay"]["status"] == "pass"
+          assert report["controller_access_in_v1"] is False
+          assert report["navigation_performance_used"] is False
+          assert report["may_retune_estimator_from_this_report"] is False
+          print("fixed plume:", report["fixed_plume_probe_assay"]["status"])
+          print("functional v2 allowed:", report["functional_v2_allowed"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: odor-motion-qualification-v2
+          path: artifacts/odor-motion-qualification-v2.json
+          if-no-files-found: error
+          retention-days: 14
