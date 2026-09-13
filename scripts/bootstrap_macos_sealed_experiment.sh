@@ -57,6 +57,7 @@ echo "python: $VPY"
 REQUIRED_COMMANDS=(
   fly-sniff-e001-evidence
   fly-sniff-sign-authority
+  fly-sniff-seed-plan
   fly-sniff-seal-candidate
   fly-sniff-verify-candidate
   fly-sniff-sealed-train
