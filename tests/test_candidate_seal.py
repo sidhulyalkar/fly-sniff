@@ -4,7 +4,9 @@ import pandas as pd
 import pytest
 
 from fly_sniff import candidate_seal
+from fly_sniff.seed_plan import build_seed_plan
 from fly_sniff.sign_authority import write_sign_authority_report
+from fly_sniff.training import load_training_config
 
 STAGES = [
     "odor_value_to_fb5ab",
@@ -133,33 +135,28 @@ def _fixture(tmp_path):
             }
         )
     )
-    task = tmp_path / "task.json"
-    task.write_text(
-        json.dumps(
-            {
-                "connectome_sensory_interface": {
-                    "drive_normalization": "role_total_l1",
-                    "role_membership_source": "sealed_candidate_manifest_exact_ids",
-                }
-            }
-        )
-    )
-    return bundle_dir, staged, role_review, evidence, sign_path, policy, task
+    task = "configs/task_optimization_v1.json"
+    config = load_training_config(task)
+    seed_plan = tmp_path / "seed-plan.json"
+    seed_plan.write_text(json.dumps(build_seed_plan(config)))
+    return bundle_dir, staged, role_review, evidence, sign_path, seed_plan, policy, task
 
 
-def test_candidate_manifest_binds_exact_graph_and_roles(tmp_path):
-    bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
+def test_candidate_manifest_binds_exact_graph_roles_and_seed_plan(tmp_path):
+    bundle, staged, review, evidence, sign, seeds, policy, task = _fixture(tmp_path)
     manifest = candidate_seal.build_candidate_manifest(
         bundle_dir=bundle,
         staged_root=staged,
         role_review_path=review,
         e001_evidence_path=evidence,
         sign_authority_path=sign,
+        seed_plan_path=seeds,
         policy_path=policy,
         task_config_path=task,
         code_ref="fixture-commit",
     )
     assert manifest["training_ready"] is True
+    assert manifest["seed_plan"]["status"] == "SEALED_BEFORE_NAVIGATION_PERFORMANCE"
     path = tmp_path / "candidate.json"
     path.write_text(json.dumps(manifest))
     verified = candidate_seal.verify_candidate_manifest(bundle, path, task_config_path=task)
@@ -167,13 +164,14 @@ def test_candidate_manifest_binds_exact_graph_and_roles(tmp_path):
 
 
 def test_candidate_manifest_rejects_graph_change(tmp_path):
-    bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
+    bundle, staged, review, evidence, sign, seeds, policy, task = _fixture(tmp_path)
     manifest = candidate_seal.build_candidate_manifest(
         bundle_dir=bundle,
         staged_root=staged,
         role_review_path=review,
         e001_evidence_path=evidence,
         sign_authority_path=sign,
+        seed_plan_path=seeds,
         policy_path=policy,
         task_config_path=task,
         code_ref="fixture-commit",
@@ -188,7 +186,7 @@ def test_candidate_manifest_rejects_graph_change(tmp_path):
 
 
 def test_candidate_manifest_rejects_sign_report_from_different_nodes_file(tmp_path):
-    bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
+    bundle, staged, review, evidence, sign, seeds, policy, task = _fixture(tmp_path)
     report = json.loads(sign.read_text())
     report["node_annotation_authority"]["sha256"] = "not-the-bundle-nodes-sha"
     report.pop("report_sha256", None)
@@ -201,6 +199,26 @@ def test_candidate_manifest_rejects_sign_report_from_different_nodes_file(tmp_pa
             role_review_path=review,
             e001_evidence_path=evidence,
             sign_authority_path=sign,
+            seed_plan_path=seeds,
+            policy_path=policy,
+            task_config_path=task,
+            code_ref="fixture-commit",
+        )
+
+
+def test_candidate_manifest_rejects_mutated_preperformance_seed_plan(tmp_path):
+    bundle, staged, review, evidence, sign, seeds, policy, task = _fixture(tmp_path)
+    plan = json.loads(seeds.read_text())
+    plan["final"]["ood_seeds"][0] += 1
+    seeds.write_text(json.dumps(plan))
+    with pytest.raises(ValueError, match="seed-plan hash mismatch"):
+        candidate_seal.build_candidate_manifest(
+            bundle_dir=bundle,
+            staged_root=staged,
+            role_review_path=review,
+            e001_evidence_path=evidence,
+            sign_authority_path=sign,
+            seed_plan_path=seeds,
             policy_path=policy,
             task_config_path=task,
             code_ref="fixture-commit",
