@@ -17,6 +17,7 @@ dependencies = [
   "pyarrow>=15",
   "networkx>=3.2",
   "matplotlib>=3.8",
+  "h5py>=3.11",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,8 @@ fly-sniff-odor-events = "fly_sniff.odor_event_cli:main"
 fly-sniff-odor-sensitivity = "fly_sniff.odor_sensitivity:main"
 fly-sniff-qualify-odor-motion = "fly_sniff.odor_motion_qualification:main"
 fly-sniff-experimental-plume-contract = "fly_sniff.experimental_plume:main"
+fly-sniff-inspect-experimental-plume = "fly_sniff.experimental_plume_archive:main"
+fly-sniff-reproduce-plume-cues = "fly_sniff.experimental_plume_reproduction:main"
 fly-sniff-plot-odor-motion = "fly_sniff.odor_motion_visual:main"
 fly-sniff-replay-odor-motion = "fly_sniff.odor_motion_showcase:main"
 fly-sniff-replay-showcase = "fly_sniff.recorded_showcase:main"
