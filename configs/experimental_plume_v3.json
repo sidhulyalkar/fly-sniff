@@ -1,0 +1,98 @@
+{
+  "protocol": "experimental-plume-sensory-validation-v3",
+  "status": "prefunctional_data_validation",
+  "claim_boundary": "This protocol validates public experimental plume movies and derives auditable bilateral sensory histories. It does not grant controller access, modify sealed v1/v2 results, identify a MaleCNS odor-motion circuit, or evaluate navigation performance.",
+  "controller_access": false,
+  "navigation_performance_used": false,
+  "may_select_source_or_preprocessing_from_navigation": false,
+  "upstream": {
+    "repository": "https://github.com/emonetlab/GradientMotionMultiplePlumes",
+    "repository_file_contract": "metadata/figures_1_3.json",
+    "publication_code_role": "author-maintained publication/reproduction code used as provenance authority for public input contracts and published cue definitions"
+  },
+  "smooth": {
+    "repository": "Dryad",
+    "doi": "10.5061/dryad.g27mq71",
+    "file": "10302017_10cms_bounded_2.h5",
+    "file_id": 11167,
+    "dataset": "/dataset2",
+    "expected_shape": [3600, 406, 216],
+    "source_fps": 15.0,
+    "native_frame_interval_s": 0.06666666666666667,
+    "file_md5": "cf3cadd8a9b53c2a3f6d3aca37f71a62",
+    "license": "CC0-1.0",
+    "temporal_profiles": {
+      "publication_reproduction_primary": "corrected",
+      "publication_target_fps": 60.0,
+      "allowed_publication_sensitivity": ["notebook_legacy"],
+      "sensory_timing_evidence": "native_15hz_only",
+      "rule": "Corrected 60 Hz interpolation may reproduce the published processing timeline but does not create new measurements. Fly-sniff must not treat interpolated smooth frames as evidence for timing below the native 66.7 ms interval."
+    }
+  },
+  "complex": {
+    "repository": "DANDI",
+    "dandiset": "001871",
+    "version": "0.260630.1657",
+    "asset_id": "5e60d590-b1c1-4830-bb38-a36f6d967e75",
+    "path": "sub-figs1-complex-smoke-1a/sub-figs1-complex-smoke-1a_ses-figure-s1_image.nwb",
+    "dataset": "/scratch/smoke_1a_orig_figs1_background_subtracted_window_frames",
+    "expected_shape": [1500, 1088, 1728],
+    "full_video_frame_offset": 300,
+    "full_video_stop_exclusive": 1800,
+    "intensity_scale": 1.0,
+    "license": "CC-BY-4.0",
+    "native_fps_policy": "Read and receipt the archive/NWB time basis. Do not silently assume a frame rate from the fly-sniff simulator or the upstream model history contract.",
+    "known_gap": "The public validation window can reproduce the temporal maps but does not include the published Figure 1 complex snapshot at full-video frame 2900. No substitute snapshot may be labeled as the published frame."
+  },
+  "published_cue_contract": {
+    "frame_axes": "time,y,x",
+    "crosswind_image_axis": 0,
+    "gradient": "centered finite difference dI/dy",
+    "motion": "-(dI/dy)(dI/dt) with centered one-frame temporal difference",
+    "figure1_window": {
+      "gradient_samples": 1500,
+      "motion_samples": 1498,
+      "map_spatial_smoothing_sigma_px": 0.0
+    },
+    "published_bilateral_history": {
+      "history_frames": 30,
+      "history_seconds": 0.5,
+      "frame_rate_hz": 60.0,
+      "legacy_channels": ["right", "left"],
+      "legacy_intensity_transform": "log(max(I - 5, 0) + 1)",
+      "note": "This documents the upstream model-data contract. It does not imply that fly-sniff has the unavailable legacy train/test arrays or that every public raw movie is natively 60 Hz."
+    }
+  },
+  "required_receipt_fields": [
+    "source_url",
+    "source_version",
+    "source_file",
+    "source_sha256",
+    "source_dataset_path",
+    "source_shape",
+    "native_time_basis",
+    "selected_frame_range",
+    "intensity_transform",
+    "temporal_resampling",
+    "spatial_transform",
+    "coordinate_mapping",
+    "upstream_contract_sha256"
+  ],
+  "qualification_order": [
+    "verify source bytes and archive identity",
+    "reproduce upstream plume gradient/motion statistics before defining fly-sniff sensory features",
+    "freeze physical coordinate and antenna-sampling transform",
+    "derive bilateral histories without source coordinates, centerline labels, or future samples",
+    "qualify timing/gradient features on smooth and complex plumes while respecting each source native time basis",
+    "only then consider a separately sealed functional connectome protocol"
+  ],
+  "stop_rules": [
+    "do not proceed if source identity, dimensions, time basis, or coordinate mapping is unresolved",
+    "do not choose smooth versus complex plume based on which helps navigation",
+    "do not tune a timing estimator on future navigation performance",
+    "do not treat temporal interpolation as new sensory measurements",
+    "do not infer sub-66.7-ms smooth-plume timing from the native 15 Hz Dryad movie",
+    "do not overwrite or reinterpret the v2 blocked_no_resolvable_plume_timing result",
+    "do not describe any substitute complex snapshot as the unavailable published frame 2900"
+  ]
+}
