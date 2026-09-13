@@ -24,6 +24,11 @@ jobs:
           fly-sniff-record --help
           fly-sniff-odor-motion --help
           fly-sniff-plot-odor-motion --help
+          fly-sniff-record --output /tmp/odor-motion-recording.json --sim-seconds 0.10 --plume-points 8
+          fly-sniff-odor-motion /tmp/odor-motion-recording.json --output /tmp/odor-motion-analysis.json
+          fly-sniff-plot-odor-motion /tmp/odor-motion-recording.json /tmp/odor-motion-analysis.json --output /tmp/odor-motion.png
+          test -s /tmp/odor-motion-analysis.json
+          test -s /tmp/odor-motion.png
           fly-sniff-staged-trace --help
           fly-sniff-review-route --help
           fly-sniff-e001-evidence --help
