@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -21,6 +22,14 @@ def _load(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise TypeError(f"expected JSON object in {path}")
     return payload
+
+
+def _sha256(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def build_crosswalk(
@@ -116,7 +125,9 @@ def build_crosswalk(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build the preregistered E002d PFL3 phase crosswalk")
+    parser = argparse.ArgumentParser(
+        description="Build the preregistered E002d PFL3 phase crosswalk"
+    )
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--e002c", default=str(DEFAULT_E002C))
     parser.add_argument("--fc2", default=str(DEFAULT_FC2))
@@ -124,7 +135,21 @@ def main() -> None:
     parser.add_argument("--steering", default=str(DEFAULT_STEERING))
     parser.add_argument("--output", default="results/e002/pfl3-phase-crosswalk-v1.json")
     args = parser.parse_args()
-    report = build_crosswalk(_load(args.config), _load(args.e002c), _load(args.fc2), _load(args.heading), _load(args.steering))
+
+    report = build_crosswalk(
+        _load(args.config),
+        _load(args.e002c),
+        _load(args.fc2),
+        _load(args.heading),
+        _load(args.steering),
+    )
+    report["input_sha256"] = {
+        "config": _sha256(args.config),
+        "e002c": _sha256(args.e002c),
+        "fc2": _sha256(args.fc2),
+        "heading": _sha256(args.heading),
+        "steering": _sha256(args.steering),
+    }
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
