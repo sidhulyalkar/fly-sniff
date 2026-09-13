@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 
 import pytest
 
@@ -9,6 +10,7 @@ from fly_sniff.experimental_plume import (
     load_experimental_plume_config,
     upstream_contract_sha256,
     validate_source_receipt,
+    verify_source_bytes,
 )
 
 
@@ -29,7 +31,7 @@ def test_templates_are_not_valid_until_provenance_is_concrete():
             validate_source_receipt(expected_source_template(document, plume), document)
 
 
-def test_concrete_frozen_source_receipts_validate():
+def test_concrete_frozen_source_receipts_validate_structurally():
     document = load_experimental_plume_config()
     for plume in ("smooth", "complex"):
         validate_source_receipt(_concrete(document, plume), document)
@@ -46,6 +48,17 @@ def test_wrong_shape_and_smooth_timing_profile_are_rejected():
     smooth["temporal_resampling"]["profile"] = "notebook_legacy"
     with pytest.raises(ValueError, match="corrected"):
         validate_source_receipt(smooth, document)
+
+
+def test_source_bytes_must_match_receipted_sha256(tmp_path):
+    payload = b"experimental plume bytes\n"
+    source = tmp_path / "source.bin"
+    source.write_bytes(payload)
+    receipt = {"source_sha256": hashlib.sha256(payload).hexdigest()}
+    assert verify_source_bytes(source, receipt) == receipt["source_sha256"]
+    receipt["source_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="source-file SHA-256 mismatch"):
+        verify_source_bytes(source, receipt)
 
 
 def test_upstream_contract_hash_changes_if_source_contract_changes():
