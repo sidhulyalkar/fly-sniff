@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 
 import pytest
 
@@ -8,9 +9,12 @@ from fly_sniff.odor_motion import (
     BilateralOdorMotionEstimator,
     OdorMotionConfig,
     analyze_recording_bundle,
+    load_analysis,
     load_odor_motion_config,
+    write_analysis,
 )
-from fly_sniff.recording import build_recording
+from fly_sniff.odor_motion_visual import render_odor_motion_diagnostic
+from fly_sniff.recording import build_recording, write_recording
 
 
 def _run_sequence(sequence: list[tuple[float, float]]):
@@ -24,6 +28,15 @@ def _run_sequence(sequence: list[tuple[float, float]]):
         )
         for step, (left, right) in enumerate(sequence)
     ]
+
+
+def _analyze_source(source):
+    config_document, config = load_odor_motion_config()
+    return analyze_recording_bundle(
+        source,
+        config_document=config_document,
+        config=config,
+    )
 
 
 def test_left_leading_right_produces_positive_motion_evidence():
@@ -73,12 +86,7 @@ def test_duplicate_realized_lags_are_rejected():
 
 def test_recording_analysis_is_hash_bound_and_v1_read_only():
     source = build_recording(seed=31, sim_seconds=0.25, plume_points=16)
-    config_document, config = load_odor_motion_config()
-    result = analyze_recording_bundle(
-        source,
-        config_document=config_document,
-        config=config,
-    )
+    result = _analyze_source(source)
 
     analysis = result["analysis"]
     assert analysis["source_recording_sha256"] == source["recording_sha256"]
@@ -106,3 +114,30 @@ def test_recording_analysis_rejects_source_hash_tampering():
             config_document=config_document,
             config=config,
         )
+
+
+def test_analysis_receipt_rejects_tampering(tmp_path):
+    source = build_recording(seed=33, sim_seconds=0.10, plume_points=8)
+    result = _analyze_source(source)
+    path = write_analysis(tmp_path / "motion.json", result)
+    raw = json.loads(path.read_text())
+    raw["analysis"]["agents"][0]["samples"][-1]["evidence"] += 0.1
+    path.write_text(json.dumps(raw))
+
+    with pytest.raises(ValueError, match="odor-motion SHA-256 mismatch"):
+        load_analysis(path)
+
+
+def test_odor_motion_diagnostic_is_bound_to_source_recording(tmp_path):
+    source = build_recording(seed=34, sim_seconds=0.25, plume_points=16)
+    analysis = _analyze_source(source)
+    recording_path = write_recording(tmp_path / "episode.json", source)
+    analysis_path = write_analysis(tmp_path / "motion.json", analysis)
+    output = render_odor_motion_diagnostic(
+        recording_path,
+        analysis_path,
+        tmp_path / "motion.png",
+    )
+
+    assert output.exists()
+    assert output.stat().st_size > 0
