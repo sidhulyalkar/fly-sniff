@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 from dataclasses import asdict, dataclass
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ from .recording import load_recording, recording_sha256
 
 PROTOCOL = "bilateral-odor-motion-analysis-v2"
 SCHEMA_VERSION = 1
-DEFAULT_CONFIG_PATH = Path("configs/odor_motion_v2.json")
+DEFAULT_CONFIG_RESOURCE = "configs/odor_motion_v2.json"
 
 
 def analysis_sha256(payload: dict[str, Any]) -> str:
@@ -201,6 +202,11 @@ class BilateralOdorMotionEstimator:
             direction = "right_to_left"
 
         dominant = max(components, key=lambda item: abs(item.weight * item.evidence))
+        dominant_delay = (
+            float(dominant.delay_s)
+            if direction in {"left_to_right", "right_to_left"}
+            else None
+        )
         return OdorMotionEstimate(
             step=int(step),
             t=sample_t,
@@ -209,15 +215,24 @@ class BilateralOdorMotionEstimator:
             evidence=evidence,
             confidence=confidence,
             direction=direction,
-            dominant_delay_s=float(dominant.delay_s),
+            dominant_delay_s=dominant_delay,
             delay_evidence=tuple(components),
         )
 
 
+def _default_config_text() -> str:
+    resource = files("fly_sniff").joinpath(DEFAULT_CONFIG_RESOURCE)
+    if resource.is_file():
+        return resource.read_text(encoding="utf-8")
+    source_path = Path(__file__).resolve().parents[2] / "configs" / "odor_motion_v2.json"
+    return source_path.read_text()
+
+
 def load_odor_motion_config(
-    path: str | Path = DEFAULT_CONFIG_PATH,
+    path: str | Path | None = None,
 ) -> tuple[dict[str, Any], OdorMotionConfig]:
-    raw = json.loads(Path(path).read_text())
+    text = Path(path).read_text() if path is not None else _default_config_text()
+    raw = json.loads(text)
     if raw.get("protocol") != PROTOCOL:
         raise ValueError(f"unsupported odor-motion protocol {raw.get('protocol')!r}")
     if raw.get("controller_access_in_v1") is not False:
@@ -344,7 +359,7 @@ def main() -> None:
         description="Derive a causal bilateral odor-motion sidecar from an auditable recording"
     )
     parser.add_argument("recording")
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
+    parser.add_argument("--config")
     parser.add_argument(
         "--output",
         default="artifacts/showcase/odor-motion-v2.json",
