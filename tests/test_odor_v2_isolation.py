@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 SEALED_V1_MODULES = (
     "controllers.py",
     "graph.py",
