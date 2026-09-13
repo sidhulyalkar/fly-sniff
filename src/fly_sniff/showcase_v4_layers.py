@@ -58,6 +58,34 @@ def density_rgba(density: np.ndarray) -> np.ndarray:
     return rgba
 
 
+def social_display_frame_limit(
+    payload: dict[str, Any],
+    *,
+    reveal_hold_s: float = 2.6,
+    no_success_window_s: float = 18.0,
+) -> int:
+    """Return the last recorded frame used by the social edit.
+
+    The simulation is never truncated or rerun. This only chooses a replay window
+    so a successful episode pays off near the end instead of showing a stationary
+    post-success animal for most of the clip.
+    """
+    frames = payload.get("frames", [])
+    if not frames:
+        raise ValueError("recording has no frames")
+    final_t = float(frames[-1]["t"])
+    found_times: list[float] = []
+    for frame in frames:
+        if any(bool(agent.get("found")) for agent in frame.get("agents", [])):
+            found_times.append(float(frame["t"]))
+    if found_times:
+        display_end_t = min(final_t, min(found_times) + float(reveal_hold_s))
+    else:
+        display_end_t = min(final_t, float(no_success_window_s))
+    eligible = [index for index, frame in enumerate(frames) if float(frame["t"]) <= display_end_t]
+    return eligible[-1] if eligible else 0
+
+
 def pfl3_population_frame(
     e002c: dict[str, Any],
     fc2: dict[str, Any],
