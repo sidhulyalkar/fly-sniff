@@ -27,11 +27,15 @@ def _authority(tmp_path):
     return path
 
 
-def _bundle(unknown_sign=0):
+def _bundle(unknown_sign=0, *, exact_mystery_annotation=False):
+    mystery = {"bodyId": 2, "type": "Mystery"}
+    if exact_mystery_annotation:
+        mystery["predictedNt"] = "GABA"
+        mystery["predictedNtProb"] = 0.83
     nodes = pd.DataFrame(
         [
             {"bodyId": 1, "type": "FB5AB"},
-            {"bodyId": 2, "type": "Mystery"},
+            mystery,
         ]
     )
     edges = pd.DataFrame(
@@ -53,6 +57,24 @@ def test_unknown_transmitter_stays_unknown_and_zero_signed(tmp_path):
     assert records[2]["confidence"] is None
     assert records[2]["model_sign"] == 0
     assert report["coverage"]["signed_edge_fraction"] == 0.5
+
+
+def test_exact_body_annotation_precedes_type_fallback_and_is_receipted(tmp_path):
+    receipt = {"path": "fixture/nodes.parquet", "sha256": "fixture-node-sha"}
+    report = build_sign_authority_report(
+        _bundle(unknown_sign=-1, exact_mystery_annotation=True),
+        [_authority(tmp_path)],
+        node_authority_receipt=receipt,
+    )
+    records = {item["source_body_id"]: item for item in report["source_records"]}
+    exact = records[2]
+    assert report["passed"] is True
+    assert exact["transmitter"] == "GABA"
+    assert exact["confidence"] == 0.83
+    assert exact["model_sign"] == -1
+    assert exact["evidence_level"] == "exact_body_id_malecns_annotation_prediction"
+    assert exact["authority_sha256"] == "fixture-node-sha"
+    assert report["node_annotation_authority"]["sha256"] == "fixture-node-sha"
 
 
 def test_nonzero_sign_without_authority_is_rejected(tmp_path):
