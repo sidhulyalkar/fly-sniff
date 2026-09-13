@@ -64,6 +64,17 @@ def test_sensitivity_grid_contains_exact_primary_and_cannot_select_thresholds():
         )
         assert primary_odor[0]["loss_count"] == source_summary["loss_count"]
         assert primary_odor[0]["reacquisition_count"] == source_summary["reacquisition_count"]
+        assert primary_odor[0]["reacquisition_within_horizon_fraction"] == pytest.approx(
+            source_summary["reacquisition_within_horizon_fraction"]
+            if source_summary["reacquisition_within_horizon_fraction"] is not None
+            else None
+        )
+        primary_latency = primary_odor[0]["median_reacquisition_latency_within_horizon_s"]
+        source_latency = source_summary["median_reacquisition_latency_s"]
+        if source_latency is None:
+            assert primary_latency is None
+        else:
+            assert primary_latency == pytest.approx(source_latency)
         assert primary_timing[0]["timing_event_count"] == source_summary["timing_event_count"]
 
 
