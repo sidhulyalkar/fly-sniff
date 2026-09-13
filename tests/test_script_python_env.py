@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 E002D_SCRIPTS = (
     Path("scripts/run_e002d_phase_crosswalk.sh"),
