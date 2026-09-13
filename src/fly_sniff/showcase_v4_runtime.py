@@ -18,7 +18,7 @@ from .recorded_showcase_v3 import _load_json, _validate_inputs
 from .recording import load_recording
 from .showcase import SHOWCASE_DPI, SHOWCASE_HEIGHT, SHOWCASE_WIDTH
 from .showcase_v4_draw import draw_population_panel, draw_room_v4
-from .showcase_v4_layers import social_display_frame_limit
+from .showcase_v4_layers import recording_density_scale, social_display_frame_limit
 
 
 def render_v4(
@@ -45,6 +45,7 @@ def render_v4(
     output.parent.mkdir(parents=True, exist_ok=True)
     frames = payload["frames"]
     display_last_index = social_display_frame_limit(payload)
+    plume_scale = recording_density_scale(payload, display_last_index)
     histories = _precompute_histories(payload)
     n_video = max(1, seconds * fps)
     first_label = payload["controllers"][0]["label"]
@@ -105,7 +106,14 @@ def render_v4(
             color=MUTED,
             fontweight="bold",
         )
-        draw_room_v4(room_ax, payload, histories, record_index, reveal=reveal)
+        draw_room_v4(
+            room_ax,
+            payload,
+            histories,
+            record_index,
+            reveal=reveal,
+            density_scale=plume_scale,
+        )
         _draw_sensor_hud(sensor_ax, first)
         draw_population_panel(mechanism_ax, config, e002c, fc2, probe_index)
 
