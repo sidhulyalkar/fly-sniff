@@ -1,0 +1,43 @@
+{
+  "authority_kind": "type-level-heading-transmitter-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "modeled-sign-input-authority",
+  "catalog": {
+    "repository": "reiserlab/celltype-explorer-drosophila-male-cns",
+    "commit": "789cc6c105798ce2fd70ba85dab394f90899616b",
+    "dataset": "male-cns:v1.0",
+    "files": {
+      "EPG": "types/EPG.html",
+      "Delta7": "types/Delta7.html"
+    }
+  },
+  "predictions": {
+    "EPG": {
+      "neuron_count": 46,
+      "predicted_neurotransmitter": "ACh",
+      "catalog_confidence": 0.905,
+      "modeled_sign": 1,
+      "allowed_use": "Direct EPG presynaptic edges may use modeled sign +1 in a restricted mechanistic heading probe.",
+      "forbidden_inference": "Catalog-predicted acetylcholine does not establish heading tuning, firing rate, synaptic efficacy, or behavioral steering."
+    },
+    "Delta7": {
+      "neuron_count": 42,
+      "predicted_neurotransmitter": "Glu",
+      "catalog_confidence": 0.644,
+      "modeled_sign": 0,
+      "allowed_use": "Delta7 may be retained as structural and literature-guided sensitivity evidence.",
+      "forbidden_inference": "Do not infer an effective postsynaptic sign from glutamate identity alone under the conservative fly-sniff sign policy."
+    }
+  },
+  "literature_context": {
+    "reference": "https://doi.org/10.1038/s41586-023-07006-3",
+    "summary": "Published PFL3 work treats EPG and Delta7 inputs as heading-related and notes that Delta7 is glutamatergic and appears sign-inverting on many downstream targets. This literature context is not substituted for a receptor-resolved MaleCNS effective-sign authority."
+  },
+  "policy": {
+    "ACh": 1,
+    "GABA": -1,
+    "Glu": 0,
+    "unresolved": 0
+  },
+  "claim_boundary": "This authority only constrains modeled presynaptic sign assumptions for the heading lane. It does not qualify heading tuning, preferred angles, effective Delta7 sign, neural dynamics, PFL3 comparison, steering, or behavior."
+}
