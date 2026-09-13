@@ -13,12 +13,7 @@ DEFAULT_CONFIG_RESOURCE = "configs/experimental_plume_v3.json"
 
 
 def _canonical_sha(payload: dict[str, Any]) -> str:
-    encoded = json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -51,14 +46,13 @@ def load_experimental_plume_config(path: str | Path | None = None) -> dict[str, 
 
 
 def upstream_contract_sha256(document: dict[str, Any]) -> str:
-    payload = {
+    return _canonical_sha({
         "protocol": document["protocol"],
         "upstream": document["upstream"],
         "smooth": document["smooth"],
         "complex": document["complex"],
         "published_cue_contract": document["published_cue_contract"],
-    }
-    return _canonical_sha(payload)
+    })
 
 
 def expected_source_template(document: dict[str, Any], plume: str) -> dict[str, Any]:
@@ -66,6 +60,7 @@ def expected_source_template(document: dict[str, Any], plume: str) -> dict[str, 
         raise ValueError("plume must be 'smooth' or 'complex'")
     source = document[plume]
     if plume == "smooth":
+        temporal = source["temporal_profiles"]
         return {
             "schema_version": SCHEMA_VERSION,
             "protocol": PROTOCOL,
@@ -80,8 +75,10 @@ def expected_source_template(document: dict[str, Any], plume: str) -> dict[str, 
             "selected_frame_range": [0, source["expected_shape"][0]],
             "intensity_transform": "upstream prepare_smooth_frame contract; receipt exact implementation",
             "temporal_resampling": {
-                "profile": source["temporal_profiles"]["primary"],
-                "target_fps": source["temporal_profiles"]["target_fps"],
+                "role": "publication_reproduction_only",
+                "profile": temporal["publication_reproduction_primary"],
+                "target_fps": temporal["publication_target_fps"],
+                "creates_new_measurements": False,
             },
             "spatial_transform": "<required exact transform>",
             "coordinate_mapping": "<required physical/image mapping>",
@@ -155,15 +152,19 @@ def validate_source_receipt(receipt: dict[str, Any], document: dict[str, Any]) -
         if not isinstance(time_basis, dict) or float(time_basis.get("fps", -1)) != float(source["source_fps"]):
             raise ValueError("smooth native time basis does not match frozen source rate")
         resampling = receipt["temporal_resampling"]
+        temporal = source["temporal_profiles"]
         if not isinstance(resampling, dict):
             raise TypeError("smooth temporal_resampling must be explicit")
-        if resampling.get("profile") != source["temporal_profiles"]["primary"]:
-            raise ValueError("primary smooth validation must use the frozen corrected profile")
-        if float(resampling.get("target_fps", -1)) != float(source["temporal_profiles"]["target_fps"]):
-            raise ValueError("smooth target frame rate does not match frozen corrected profile")
-    else:
-        if receipt["intensity_transform"] != f"scale={source['intensity_scale']}":
-            raise ValueError("complex intensity transform does not match frozen DANDI contract")
+        if resampling.get("role") != "publication_reproduction_only":
+            raise ValueError("smooth interpolation must remain publication-reproduction only")
+        if resampling.get("profile") != temporal["publication_reproduction_primary"]:
+            raise ValueError("publication reproduction must use the frozen corrected profile")
+        if float(resampling.get("target_fps", -1)) != float(temporal["publication_target_fps"]):
+            raise ValueError("smooth publication target frame rate does not match frozen profile")
+        if resampling.get("creates_new_measurements") is not False:
+            raise ValueError("smooth interpolation must never be receipted as new measurements")
+    elif receipt["intensity_transform"] != f"scale={source['intensity_scale']}":
+        raise ValueError("complex intensity transform does not match frozen DANDI contract")
 
 
 def verify_source_bytes(path: str | Path, receipt: dict[str, Any]) -> str:
