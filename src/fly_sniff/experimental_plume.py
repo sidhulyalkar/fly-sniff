@@ -22,6 +22,14 @@ def _canonical_sha(payload: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def file_sha256(path: str | Path, *, chunk_bytes: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        while chunk := stream.read(chunk_bytes):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _default_config_text() -> str:
     resource = files("fly_sniff").joinpath(DEFAULT_CONFIG_RESOURCE)
     if resource.is_file():
@@ -70,7 +78,7 @@ def expected_source_template(document: dict[str, Any], plume: str) -> dict[str, 
             "source_shape": source["expected_shape"],
             "native_time_basis": {"fps": source["source_fps"], "kind": "fixed_rate"},
             "selected_frame_range": [0, source["expected_shape"][0]],
-            "intensity_transform": "upstream crop/pad/resize/uint8 preparation; receipt exact implementation",
+            "intensity_transform": "upstream prepare_smooth_frame contract; receipt exact implementation",
             "temporal_resampling": {
                 "profile": source["temporal_profiles"]["primary"],
                 "target_fps": source["temporal_profiles"]["target_fps"],
@@ -106,6 +114,12 @@ def _require_concrete(value: Any, field: str) -> None:
         raise ValueError(f"source receipt field {field!r} is unresolved")
 
 
+def _expected_source_url(plume: str, source: dict[str, Any]) -> str:
+    if plume == "smooth":
+        return f"https://doi.org/{source['doi']}"
+    return f"https://doi.org/10.48324/dandi.{source['dandiset']}/{source['version']}"
+
+
 def validate_source_receipt(receipt: dict[str, Any], document: dict[str, Any]) -> None:
     if receipt.get("schema_version") != SCHEMA_VERSION or receipt.get("protocol") != PROTOCOL:
         raise ValueError("unsupported experimental plume receipt protocol/schema")
@@ -117,18 +131,26 @@ def validate_source_receipt(receipt: dict[str, Any], document: dict[str, Any]) -
             raise ValueError(f"source receipt is missing required field {field!r}")
         _require_concrete(receipt[field], field)
     source = document[plume]
+    if receipt["source_url"] != _expected_source_url(plume, source):
+        raise ValueError("source URL does not match frozen upstream contract")
+    expected_version = source["doi"] if plume == "smooth" else source["version"]
+    if receipt["source_version"] != expected_version:
+        raise ValueError("source version does not match frozen upstream contract")
+    expected_file = source["file"] if plume == "smooth" else source["path"]
+    if receipt["source_file"] != expected_file:
+        raise ValueError("source file does not match frozen upstream contract")
     if receipt["source_dataset_path"] != source["dataset"]:
         raise ValueError("source dataset path does not match frozen upstream contract")
     if list(receipt["source_shape"]) != list(source["expected_shape"]):
         raise ValueError("source shape does not match frozen upstream contract")
+    if list(receipt["selected_frame_range"]) != [0, int(source["expected_shape"][0])]:
+        raise ValueError("selected frame range does not match frozen source-validation range")
     if receipt["upstream_contract_sha256"] != upstream_contract_sha256(document):
         raise ValueError("upstream contract SHA-256 mismatch")
-    sha = str(receipt["source_sha256"])
-    if len(sha) != 64 or any(char not in "0123456789abcdef" for char in sha.lower()):
+    sha = str(receipt["source_sha256"]).lower()
+    if len(sha) != 64 or any(char not in "0123456789abcdef" for char in sha):
         raise ValueError("source_sha256 must be a concrete 64-character hexadecimal SHA-256")
     if plume == "smooth":
-        if receipt["source_file"] != source["file"]:
-            raise ValueError("smooth source filename does not match frozen contract")
         time_basis = receipt["native_time_basis"]
         if not isinstance(time_basis, dict) or float(time_basis.get("fps", -1)) != float(source["source_fps"]):
             raise ValueError("smooth native time basis does not match frozen source rate")
@@ -137,11 +159,19 @@ def validate_source_receipt(receipt: dict[str, Any], document: dict[str, Any]) -
             raise TypeError("smooth temporal_resampling must be explicit")
         if resampling.get("profile") != source["temporal_profiles"]["primary"]:
             raise ValueError("primary smooth validation must use the frozen corrected profile")
+        if float(resampling.get("target_fps", -1)) != float(source["temporal_profiles"]["target_fps"]):
+            raise ValueError("smooth target frame rate does not match frozen corrected profile")
     else:
-        if receipt["source_file"] != source["path"]:
-            raise ValueError("complex DANDI asset path does not match frozen contract")
-        if receipt["source_version"] != source["version"]:
-            raise ValueError("complex DANDI version does not match frozen contract")
+        if receipt["intensity_transform"] != f"scale={source['intensity_scale']}":
+            raise ValueError("complex intensity transform does not match frozen DANDI contract")
+
+
+def verify_source_bytes(path: str | Path, receipt: dict[str, Any]) -> str:
+    actual = file_sha256(path)
+    expected = str(receipt["source_sha256"]).lower()
+    if actual != expected:
+        raise ValueError(f"source-file SHA-256 mismatch: expected {expected}, got {actual}")
+    return actual
 
 
 def write_template(path: str | Path, plume: str, document: dict[str, Any]) -> Path:
@@ -155,6 +185,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Validate the experimental-plume v3 provenance airlock")
     parser.add_argument("--config")
     parser.add_argument("--manifest")
+    parser.add_argument("--source-file")
+    parser.add_argument("--structural-only", action="store_true")
     parser.add_argument("--plume", choices=("smooth", "complex"))
     parser.add_argument("--write-template")
     args = parser.parse_args()
@@ -168,7 +200,13 @@ def main() -> None:
         parser.error("provide --manifest or --write-template")
     receipt = json.loads(Path(args.manifest).read_text())
     validate_source_receipt(receipt, document)
-    print("experimental plume source receipt: valid")
+    if not args.structural_only:
+        if args.source_file is None:
+            parser.error("byte verification requires --source-file; use --structural-only explicitly otherwise")
+        verify_source_bytes(args.source_file, receipt)
+        print("experimental plume source bytes: verified")
+    else:
+        print("experimental plume manifest structure: valid; source bytes NOT VERIFIED")
     print(upstream_contract_sha256(document))
 
 
