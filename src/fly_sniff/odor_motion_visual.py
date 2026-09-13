@@ -92,13 +92,18 @@ def render_odor_motion_diagnostic(
         fontweight="bold",
     )
     subtitle = f"{selected_label} • causal replay diagnostic • not measured neural activity"
-    if event_agent is not None:
+    if event_agent is not None and event_bundle is not None:
         summary = event_agent["summary"]
         fraction = summary["reacquisition_within_horizon_fraction"]
         reacquisition_text = "n/a" if fraction is None else f"{100.0 * float(fraction):.0f}%"
+        horizon = float(
+            event_bundle["diagnostics"]["config"]["event_detection"][
+                "reacquisition_horizon_s"
+            ]
+        )
         subtitle += (
             f" • losses {summary['loss_count']} • "
-            f"reacquired≤horizon {reacquisition_text}"
+            f"reacquired within {horizon:.1f}s {reacquisition_text}"
         )
     title_ax.text(
         0.0,
