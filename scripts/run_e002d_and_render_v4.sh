@@ -20,7 +20,7 @@ do
   fi
 done
 
-bash scripts/run_e002d_phase_crosswalk.sh
+# The phase-probe script builds the crosswalk exactly once before running E002d.
 bash scripts/run_e002d_phase_probe.sh
 
 "$PYTHON_BIN" - <<'PY'
