@@ -1,0 +1,23 @@
+{
+  "protocol": "malecns-fc2-goal-interface-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "expected_goal_relay_audit_sha256": "12c43b0f497d97e72f0fa16fe5f293ed9d4bf9828286f66422a75ebd6a4f8208",
+  "thresholds": [1, 3, 5, 10],
+  "source_populations": ["FC2A", "FC2B", "FC2C"],
+  "target_population": "PFL3",
+  "instance_column_regex": "_C([0-9]+)",
+  "requirements": [
+    "All exact FC2A/B/C and PFL3 population rows must be present and count-consistent.",
+    "Each FC2 subtype must have exactly one stored FC2->PFL3 direct-prediction block.",
+    "All fixed thresholds are reported; no threshold is selected by modeled response or behavior.",
+    "Exact source and target body-ID coverage is reported at every threshold.",
+    "Instance-column parsing is descriptive only and is allowed to fail without reinterpretation."
+  ],
+  "interpretation_rules": [
+    "FC2A/B/C remain separate subtypes; do not pool them because one subtype gives a cleaner topology.",
+    "A parsed C-number is an anatomical metadata label only until a literature-derived phase mapping is separately sealed.",
+    "No physical angle may be assigned from soma side or C-number by this audit.",
+    "No FC2 subtype may be selected or dropped using PFL3 model amplitude, DNa02 turn, or navigation performance."
+  ],
+  "claim_boundary": "This audit can qualify exact MaleCNS FC2A/B/C-to-PFL3 structural support and descriptive instance topology. It cannot qualify goal tuning, preferred goal angles, physiological transmission, comparison computation, steering, or behavior."
+}
