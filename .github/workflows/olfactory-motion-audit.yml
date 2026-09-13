@@ -1,0 +1,62 @@
+name: olfactory-motion-audit
+
+on:
+  pull_request:
+    paths:
+      - "configs/olfactory_motion_audit_v1.json"
+      - "src/fly_sniff/olfactory_motion_audit.py"
+      - "tests/test_olfactory_motion_audit.py"
+      - "tests/test_odor_v2_isolation.py"
+      - "pyproject.toml"
+      - ".github/workflows/olfactory-motion-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Build and install wheel
+        run: |
+          python -m pip wheel . --wheel-dir /tmp/fly-sniff-wheel
+          python -m pip install /tmp/fly-sniff-wheel/*.whl
+      - name: Exercise installed audit outside checkout
+        working-directory: /tmp
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          ann = pd.DataFrame([
+              {"bodyId": 1, "type": "il3LN6", "instance": "il3LN6_L", "class": "AL local", "subclass": "", "somaSide": "L", "rootSide": "L"},
+              {"bodyId": 2, "type": "il3LN6", "instance": "il3LN6_R", "class": "AL local", "subclass": "", "somaSide": "R", "rootSide": "R"},
+              {"bodyId": 10, "type": "DA1_lPN", "instance": "DA1_lPN_L", "class": "ALPN", "subclass": "uniglomerular", "somaSide": "L", "rootSide": "L"},
+              {"bodyId": 11, "type": "DA1_lPN", "instance": "DA1_lPN_R", "class": "ALPN", "subclass": "uniglomerular", "somaSide": "R", "rootSide": "R"},
+              {"bodyId": 20, "type": "Or67d_ORN", "instance": "Or67d_ORN_L", "class": "ORN", "subclass": "DA1", "somaSide": "L", "rootSide": "L"},
+              {"bodyId": 21, "type": "Or67d_ORN", "instance": "Or67d_ORN_R", "class": "ORN", "subclass": "DA1", "somaSide": "R", "rootSide": "R"},
+          ])
+          edges = pd.DataFrame([
+              {"body_pre": 20, "body_post": 1, "weight": 5},
+              {"body_pre": 21, "body_post": 2, "weight": 7},
+              {"body_pre": 1, "body_post": 10, "weight": 9},
+              {"body_pre": 2, "body_post": 11, "weight": 11},
+          ])
+          ann.to_feather("annotations.feather")
+          edges.to_feather("weights.feather")
+          PY
+          fly-sniff-audit-olfactory-motion \
+            --annotations annotations.feather \
+            --weights weights.feather \
+            --output audit.json \
+            --edges-output selected-edges.parquet
+          python - <<'PY'
+          import json
+          report = json.load(open("audit.json"))
+          assert report["status"] == "candidate_audit_pass_complete_structural_motif"
+          assert report["candidate_counts"] == {"DA1_ORN": 2, "DA1_lPN": 2, "il3LN6": 2}
+          assert report["selected_edge_count"] == 4
+          assert report["functional_motion_claim_allowed"] is False
+          assert report["navigation_claim_allowed"] is False
+          PY
