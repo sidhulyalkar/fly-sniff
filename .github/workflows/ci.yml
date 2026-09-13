@@ -26,6 +26,7 @@ jobs:
           fly-sniff-review-route --help
           fly-sniff-e001-evidence --help
           fly-sniff-sign-authority --help
+          fly-sniff-seed-plan --help
           fly-sniff-seal-candidate --help
           fly-sniff-verify-candidate --help
           fly-sniff-cinematic --help
