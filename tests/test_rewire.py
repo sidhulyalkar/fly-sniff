@@ -8,7 +8,17 @@ def _degree(edges, col):
     return edges.groupby(col).size().sort_index().to_dict()
 
 
-def test_rewire_preserves_directed_degrees():
+def _source_attributes(edges):
+    return {
+        int(source): sorted(
+            (float(row.weight), int(row.sign))
+            for row in frame[["weight", "sign"]].itertuples(index=False)
+        )
+        for source, frame in edges.groupby("source")
+    }
+
+
+def test_rewire_preserves_directed_degrees_and_presynaptic_attributes():
     nodes = pd.DataFrame({"bodyId": list(range(8))})
     edges = pd.DataFrame(
         {
@@ -27,6 +37,7 @@ def test_rewire_preserves_directed_degrees():
     rewired = degree_preserving_rewire(bundle, seed=9, swaps_per_edge=2)
     assert _degree(edges, "source") == _degree(rewired.edges, "source")
     assert _degree(edges, "target") == _degree(rewired.edges, "target")
+    assert _source_attributes(edges) == _source_attributes(rewired.edges)
     assert len(set(zip(rewired.edges.source, rewired.edges.target, strict=True))) == len(rewired.edges)
     assert rewired.manifest["qualification_status"] == "qualified"
     assert rewired.manifest["graph_role"] == "degree-preserving-rewire"

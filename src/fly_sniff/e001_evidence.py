@@ -194,6 +194,13 @@ def _edge_context(
     selected_ids: set[int],
     node_index: dict[int, dict[str, Any]],
 ) -> dict[int, dict[str, Any]]:
+    """Summarize unique biological edges while preserving staged-route provenance.
+
+    The same MaleCNS source-target edge may be present in more than one staged
+    corridor. It is one biological edge, not one edge per stage. We therefore
+    deduplicate by (source, target), retain every stage name in `stages_seen`, and
+    fail if repeated stage artifacts disagree about the structural weight.
+    """
     stats: dict[int, dict[str, Any]] = {
         body_id: {
             "incoming_edge_count": 0,
@@ -205,8 +212,8 @@ def _edge_context(
         }
         for body_id in selected_ids
     }
-    incoming: dict[int, list[tuple[float, int, str]]] = defaultdict(list)
-    outgoing: dict[int, list[tuple[float, int, str]]] = defaultdict(list)
+    registry: dict[tuple[int, int], dict[str, Any]] = {}
+    stage_occurrences = 0
 
     for stage in staged_report.get("stages", []):
         name = str(stage.get("name", ""))
@@ -217,31 +224,50 @@ def _edge_context(
         if not {"source", "target", "weight"}.issubset(frame.columns):
             continue
         for row in frame.itertuples(index=False):
+            stage_occurrences += 1
             source = int(row.source)
             target = int(row.target)
             weight = float(row.weight)
-            if source in selected_ids:
-                entry = stats[source]
-                entry["outgoing_edge_count"] += 1
-                entry["outgoing_weight"] += weight
-                outgoing[source].append((weight, target, name))
-            if target in selected_ids:
-                entry = stats[target]
-                entry["incoming_edge_count"] += 1
-                entry["incoming_weight"] += weight
-                incoming[target].append((weight, source, name))
+            key = (source, target)
+            prior = registry.get(key)
+            if prior is None:
+                registry[key] = {"weight": weight, "stages_seen": {name}}
+                continue
+            if float(prior["weight"]) != weight:
+                raise ValueError(
+                    "duplicate staged edge has inconsistent MaleCNS structural weight: "
+                    f"{source}->{target}: {prior['weight']} vs {weight}"
+                )
+            prior["stages_seen"].add(name)
 
-    def neighbor_record(item: tuple[float, int, str]) -> dict[str, Any]:
-        weight, neighbor, stage = item
+    incoming: dict[int, list[tuple[float, int, tuple[str, ...]]]] = defaultdict(list)
+    outgoing: dict[int, list[tuple[float, int, tuple[str, ...]]]] = defaultdict(list)
+    for (source, target), record in registry.items():
+        weight = float(record["weight"])
+        stages_seen = tuple(sorted(record["stages_seen"]))
+        if source in selected_ids:
+            entry = stats[source]
+            entry["outgoing_edge_count"] += 1
+            entry["outgoing_weight"] += weight
+            outgoing[source].append((weight, target, stages_seen))
+        if target in selected_ids:
+            entry = stats[target]
+            entry["incoming_edge_count"] += 1
+            entry["incoming_weight"] += weight
+            incoming[target].append((weight, source, stages_seen))
+
+    def neighbor_record(item: tuple[float, int, tuple[str, ...]]) -> dict[str, Any]:
+        weight, neighbor, stages_seen = item
         annotation = node_index.get(neighbor, {})
         return {
             "body_id": neighbor,
             "type": annotation.get("type"),
             "instance": annotation.get("instance"),
             "weight": weight,
-            "stage": stage,
+            "stages_seen": list(stages_seen),
         }
 
+    duplicate_occurrences = stage_occurrences - len(registry)
     for body_id in selected_ids:
         stats[body_id]["top_incoming"] = [
             neighbor_record(item) for item in sorted(incoming[body_id], reverse=True)[:5]
@@ -251,6 +277,12 @@ def _edge_context(
         ]
         stats[body_id]["incoming_weight"] = round(stats[body_id]["incoming_weight"], 3)
         stats[body_id]["outgoing_weight"] = round(stats[body_id]["outgoing_weight"], 3)
+        stats[body_id]["accounting"] = {
+            "identity": "unique_source_target",
+            "stage_occurrences_seen_global": stage_occurrences,
+            "unique_edges_seen_global": len(registry),
+            "duplicate_stage_occurrences_collapsed_global": duplicate_occurrences,
+        }
     return stats
 
 
@@ -403,9 +435,7 @@ def build_evidence_pack(
             "literature_authority_git_blob_sha1": git_blob_sha1(authority_path),
             "raw_input_provenance": staged_report.get("input_provenance"),
         },
-        "role_counts": {
-            role: len(role_draft.get(role, [])) for role in ALL_ROLES
-        },
+        "role_counts": {role: len(role_draft.get(role, [])) for role in ALL_ROLES},
         "wind_resolution": role_review.get("wind_resolution"),
         "primary_stage_summaries": role_review.get("primary_stage_summaries", []),
         "body_id_claims": body_records,
@@ -458,10 +488,15 @@ def _render_markdown(pack: dict[str, Any]) -> str:
             )
         )
     lines.extend(["", "## Claim table", ""])
-    lines.append("| claim | direct evidence | indirect evidence | uncertainty | allowed wording | forbidden wording |")
+    lines.append(
+        "| claim | direct evidence | indirect evidence | uncertainty | allowed wording | forbidden wording |"
+    )
     lines.append("|---|---|---|---|---|---|")
     for item in pack["body_id_claims"]:
-        direct = f"MaleCNS body ID {item['body_id']} retained in {', '.join(item['stage_membership']) or 'reviewed role'}"
+        direct = (
+            f"MaleCNS body ID {item['body_id']} retained in "
+            f"{', '.join(item['stage_membership']) or 'reviewed role'}"
+        )
         indirect = item["evidence_class"]
         uncertainty = item["functional_verdict"]
         lines.append(

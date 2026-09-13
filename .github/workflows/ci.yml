@@ -25,9 +25,27 @@ jobs:
           fly-sniff-staged-trace --help
           fly-sniff-review-route --help
           fly-sniff-e001-evidence --help
+          fly-sniff-sign-authority --help
+          fly-sniff-seed-plan --help
+          fly-sniff-seal-candidate --help
+          fly-sniff-verify-candidate --help
           fly-sniff-cinematic --help
           fly-sniff-train-dynamics --help
           fly-sniff-qualify-trained --help
+          fly-sniff-sealed-train --help
+          fly-sniff-sealed-qualify --help
+          fly-sniff-sealed-freeze-final --help
+          fly-sniff-sealed-final --help
+          fly-sniff-redteam-training --help
+          fly-sniff-redteam-rewires --help
+          fly-sniff-redteam-budget --help
+          fly-sniff-redteam-cem-replay --help
+          fly-sniff-freeze-trained-final --help
+          fly-sniff-trained-final --help
+      - name: Check sealed Mac shell syntax
+        run: |
+          bash -n scripts/bootstrap_macos_sealed_experiment.sh
+          bash -n scripts/run_sealed_experiment_mac.sh
       - name: Ruff
         id: ruff
         continue-on-error: true
