@@ -5,7 +5,7 @@ import pytest
 
 from fly_sniff import candidate_seal
 from fly_sniff.graph import GraphBundle
-from fly_sniff.sign_authority import build_sign_authority_report
+from fly_sniff.sign_authority import write_sign_authority_report
 
 STAGES = [
     "odor_value_to_fb5ab",
@@ -106,11 +106,9 @@ def _fixture(tmp_path):
             }
         )
     )
-    sign_report = build_sign_authority_report(
-        GraphBundle.load(bundle_dir), [authority]
-    )
-    sign_path = tmp_path / "source_sign_authority.json"
-    sign_path.write_text(json.dumps(sign_report))
+    sign_dir = tmp_path / "sign-authority"
+    write_sign_authority_report(bundle_dir, [authority], sign_dir)
+    sign_path = sign_dir / "source_sign_authority.json"
 
     policy = tmp_path / "candidate_policy.json"
     policy.write_text(
@@ -188,3 +186,23 @@ def test_candidate_manifest_rejects_graph_change(tmp_path):
     edges.to_parquet(bundle / "edges.parquet", index=False)
     with pytest.raises(ValueError, match="GraphBundle fingerprint differs"):
         candidate_seal.verify_candidate_manifest(bundle, path, task_config_path=task)
+
+
+def test_candidate_manifest_rejects_sign_report_from_different_nodes_file(tmp_path):
+    bundle, staged, review, evidence, sign, policy, task = _fixture(tmp_path)
+    report = json.loads(sign.read_text())
+    report["node_annotation_authority"]["sha256"] = "not-the-bundle-nodes-sha"
+    report.pop("report_sha256", None)
+    report["report_sha256"] = candidate_seal.canonical_sha256(report)
+    sign.write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="different nodes.parquet annotations"):
+        candidate_seal.build_candidate_manifest(
+            bundle_dir=bundle,
+            staged_root=staged,
+            role_review_path=review,
+            e001_evidence_path=evidence,
+            sign_authority_path=sign,
+            policy_path=policy,
+            task_config_path=task,
+            code_ref="fixture-commit",
+        )
