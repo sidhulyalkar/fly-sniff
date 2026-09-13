@@ -171,8 +171,12 @@ def test_goal_channel_probe_passes_fixed_causal_cuts_without_turn_semantics() ->
         == "frozen_comparator_not_eligible_for_promotion"
     )
     assert threshold_five["PFNp_b_sign_zero_sensitivity"]["run"]["summary"]["pfl3_peak_abs"] == 0
-    assert threshold_five["column_impulses"]["probe_PFNa_family_C1"]["directional_role_status"] == "unresolved"
-    assert all("turn" not in text.lower() for text in report["explicit_nonclaims"])
+    assert (
+        threshold_five["column_impulses"]["probe_PFNa_family_C1"]["directional_role_status"]
+        == "unresolved"
+    )
+    assert "No DNa02 turn is computed." in report["explicit_nonclaims"]
+    assert "No PFL activity is labeled a steering command." in report["explicit_nonclaims"]
 
 
 def test_goal_channel_probe_rejects_directional_promotion() -> None:
