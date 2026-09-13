@@ -126,8 +126,12 @@ def probe_phase_comparison(
     all_ids = {int(row["body_id"]) for row in records}
     if len(records) != 24 or len(all_ids) != 24:
         raise ValueError("E002d requires exact 24-cell PFL3 crosswalk")
-    left_ids = {int(row["body_id"]) for row in records if row["readout_side"] == "turn_drive_left"}
-    right_ids = {int(row["body_id"]) for row in records if row["readout_side"] == "turn_drive_right"}
+    left_ids = {
+        int(row["body_id"]) for row in records if row["readout_side"] == "turn_drive_left"
+    }
+    right_ids = {
+        int(row["body_id"]) for row in records if row["readout_side"] == "turn_drive_right"
+    }
     side_groups_ok = not (left_ids & right_ids) and len(left_ids) == len(right_ids) == 12
 
     params = dict(protocol["fixed_published_parameters"])
@@ -199,7 +203,10 @@ def probe_phase_comparison(
     )
     gates = [
         {"name": "sealed_inputs_match", "passed": True},
-        {"name": "fc2_columns_complete", "passed": set(int(row["column"]) for row in records) == set(range(1, 10))},
+        {
+            "name": "fc2_columns_complete",
+            "passed": {int(row["column"]) for row in records} == set(range(1, 10)),
+        },
         {"name": "steering_side_groups_match_candidate_config", "passed": side_groups_ok},
         {"name": "no_absolute_world_angle_claim", "passed": no_absolute_claim},
         {
