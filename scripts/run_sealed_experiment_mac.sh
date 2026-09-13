@@ -11,7 +11,7 @@ if [[ "$CURRENT_BRANCH" != "$EXPECTED_BRANCH" && "${ALLOW_OTHER_BRANCH:-0}" != "
   exit 2
 fi
 if [[ -n "$(git status --porcelain)" && "${ALLOW_DIRTY:-0}" != "1" ]]; then
-  echo "ERROR: working tree is dirty; seal and training must start from an exact checkout." >&2
+  echo "ERROR: working tree is dirty; sealed execution requires an exact checkout." >&2
   exit 3
 fi
 
@@ -26,33 +26,47 @@ if [[ ! -x .venv/bin/python ]]; then
   exit 5
 fi
 
-# Final mode never rebuilds, retrains, requalifies, or refreezes anything. It can
-# only consume artifacts from an already completed development run.
+if [[ "${RUN_TRAIN:-0}" == "1" && "${RUN_FINAL:-0}" == "1" ]]; then
+  echo "ERROR: RUN_TRAIN and RUN_FINAL are mutually exclusive phases." >&2
+  exit 6
+fi
+
+# Phase 3: consume an already trained/frozen final exactly once. This path never
+# rebuilds the candidate, retrains, requalifies, or refreezes anything.
 if [[ "${RUN_FINAL:-0}" == "1" ]]; then
   OUT="${FINAL_RUN_DIR:-}"
   if [[ -z "$OUT" && -L results/sealed-experiment/LATEST ]]; then
     OUT="results/sealed-experiment/$(readlink results/sealed-experiment/LATEST)"
   fi
   if [[ -z "$OUT" || ! -d "$OUT" ]]; then
-    echo "ERROR: set FINAL_RUN_DIR to the frozen run directory to consume." >&2
-    exit 6
+    echo "ERROR: set FINAL_RUN_DIR to the exact frozen development run directory." >&2
+    exit 7
   fi
+
   CANDIDATE_MANIFEST="$OUT/candidate-graph-v1.json"
   MATCHED="$OUT/matched-training-v1.json"
   TRAINED_E002="$OUT/trained-e002-v1.json"
   FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
   FINAL_LOCK="$OUT/final-run-consumed-v1.json"
   FINAL_OUT="$OUT/final-v1"
-  for required in "$CANDIDATE_MANIFEST" "$MATCHED" "$TRAINED_E002" "$FINAL_MANIFEST"; do
+  for required in \
+    "$OUT/SEALED_BEFORE_PERFORMANCE.md" \
+    "$OUT/READY_FOR_FINAL.md" \
+    "$CANDIDATE_MANIFEST" \
+    "$MATCHED" \
+    "$TRAINED_E002" \
+    "$FINAL_MANIFEST"; do
     if [[ ! -f "$required" ]]; then
       echo "ERROR: frozen final prerequisite missing: $required" >&2
-      exit 7
+      exit 8
     fi
   done
+
   .venv/bin/fly-sniff-verify-candidate \
     "$BUNDLE" \
     "$CANDIDATE_MANIFEST" \
     --task-config configs/task_optimization_v1.json
+
   .venv/bin/fly-sniff-sealed-final \
     "$BUNDLE" \
     "$CANDIDATE_MANIFEST" \
@@ -63,18 +77,131 @@ if [[ "${RUN_FINAL:-0}" == "1" ]]; then
     --output "$FINAL_OUT" \
     --final-lock "$FINAL_LOCK" \
     --arm-final
+
   echo "Final v1 consumed. Do not rerun this protocol."
   echo "Result: $FINAL_OUT/gold_report.json"
   exit 0
 fi
 
+# Phase 2: create development performance only from an already sealed candidate.
+# The sealed experiment command independently enforces HEAD == candidate.code_ref.
+if [[ "${RUN_TRAIN:-0}" == "1" ]]; then
+  OUT="${TRAIN_RUN_DIR:-}"
+  if [[ -z "$OUT" && -L results/sealed-experiment/LATEST ]]; then
+    OUT="results/sealed-experiment/$(readlink results/sealed-experiment/LATEST)"
+  fi
+  if [[ -z "$OUT" || ! -d "$OUT" ]]; then
+    echo "ERROR: set TRAIN_RUN_DIR to the seal-only run directory." >&2
+    exit 9
+  fi
+
+  CANDIDATE_MANIFEST="$OUT/candidate-graph-v1.json"
+  MATCHED="$OUT/matched-training-v1.json"
+  INTACT="$OUT/intact-training-v1.json"
+  TRAINED_E002="$OUT/trained-e002-v1.json"
+  FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
+  for required in "$OUT/SEALED_BEFORE_PERFORMANCE.md" "$CANDIDATE_MANIFEST"; do
+    if [[ ! -f "$required" ]]; then
+      echo "ERROR: development prerequisite missing: $required" >&2
+      exit 10
+    fi
+  done
+  if [[ -e "$MATCHED" || -e "$TRAINED_E002" || -e "$FINAL_MANIFEST" ]]; then
+    echo "ERROR: development artifacts already exist in $OUT; refusing another v1 training run." >&2
+    exit 11
+  fi
+
+  .venv/bin/fly-sniff-verify-candidate \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    --task-config configs/task_optimization_v1.json
+
+  # This is the first point at which navigation performance is allowed to exist.
+  .venv/bin/fly-sniff-sealed-train \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    --config configs/task_optimization_v1.json \
+    --output "$MATCHED"
+
+  .venv/bin/fly-sniff-redteam-budget \
+    "$MATCHED" \
+    --config configs/task_optimization_v1.json \
+    --output "$OUT/execution-budget-audit-v1.json"
+
+  .venv/bin/fly-sniff-redteam-cem-replay \
+    "$MATCHED" \
+    --config configs/task_optimization_v1.json \
+    --output "$OUT/cem-replay-v1.json"
+
+  .venv/bin/fly-sniff-redteam-rewires \
+    "$BUNDLE" \
+    "$MATCHED" \
+    --output "$OUT/rewire-ensemble-diagnostics-v1.json"
+
+  .venv/bin/python - "$MATCHED" "$INTACT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+matched = json.loads(Path(sys.argv[1]).read_text())
+intact = matched["results"]["intact"]
+Path(sys.argv[2]).write_text(json.dumps(intact, indent=2, sort_keys=True) + "\n")
+PY
+
+  .venv/bin/fly-sniff-redteam-training \
+    "$BUNDLE" \
+    "$INTACT" \
+    --config configs/task_optimization_v1.json \
+    --output "$OUT/shortcut-diagnostics-v1.json"
+
+  .venv/bin/fly-sniff-sealed-qualify \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    "$MATCHED" \
+    --config configs/task_optimization_v1.json \
+    --output "$TRAINED_E002"
+
+  .venv/bin/fly-sniff-sealed-freeze-final \
+    "$BUNDLE" \
+    "$CANDIDATE_MANIFEST" \
+    "$MATCHED" \
+    "$TRAINED_E002" \
+    --config configs/task_optimization_v1.json \
+    --output "$FINAL_MANIFEST"
+
+  cat > "$OUT/READY_FOR_FINAL.md" <<EOF
+# READY FOR FINAL
+
+The candidate graph was sealed before any navigation performance. Matched topology
+training, optimizer budget reconstruction, CEM replay, rewire diagnostics, shortcut
+diagnostics, trained E002, and the final seed manifest are now frozen under commit
+$(git rev-parse HEAD).
+
+No held-out or OOD final episode has been evaluated.
+
+Candidate manifest: $CANDIDATE_MANIFEST
+Matched training: $MATCHED
+Trained E002: $TRAINED_E002
+Final manifest: $FINAL_MANIFEST
+EOF
+
+  echo
+  echo "Development phase complete. Final namespace remains untouched."
+  echo "Review: $OUT/READY_FOR_FINAL.md"
+  echo "When ready to consume this exact run once:"
+  echo "  RUN_FINAL=1 FINAL_RUN_DIR='$OUT' BUNDLE='$BUNDLE' bash scripts/run_sealed_experiment_mac.sh"
+  exit 0
+fi
+
+# Phase 1 (default): seal all graph/sign/normalization assumptions and STOP before
+# any navigation objective is evaluated.
 E001_RUN="${E001_RUN:-}"
 if [[ -z "$E001_RUN" && -f results/e001/LATEST ]]; then
   E001_RUN="$(cat results/e001/LATEST)"
 fi
 if [[ -z "$E001_RUN" || ! -d "$E001_RUN" ]]; then
   echo "ERROR: set E001_RUN to the exact passing Mac E001 run directory." >&2
-  exit 8
+  exit 12
 fi
 
 STAGED_ROOT="$E001_RUN/staged-route-v1"
@@ -91,10 +218,6 @@ ln -sfn "$RUN_ID" results/sealed-experiment/LATEST
 EVIDENCE_OUT="$OUT/e001-evidence-deduplicated"
 SIGN_OUT="$OUT/sign-authority"
 CANDIDATE_MANIFEST="$OUT/candidate-graph-v1.json"
-MATCHED="$OUT/matched-training-v1.json"
-INTACT="$OUT/intact-training-v1.json"
-TRAINED_E002="$OUT/trained-e002-v1.json"
-FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
 
 for required in \
   "$STAGED_ROOT/staged_trace_report.json" \
@@ -102,11 +225,12 @@ for required in \
   "$ROLE_REVIEW"; do
   if [[ ! -f "$required" ]]; then
     echo "ERROR: missing required E001 artifact: $required" >&2
-    exit 9
+    exit 13
   fi
 done
 
 cat > "$OUT/checkout.txt" <<EOF
+phase=seal-only
 branch=$CURRENT_BRANCH
 sha=$(git rev-parse HEAD)
 bundle=$BUNDLE
@@ -143,76 +267,23 @@ EOF
   "$CANDIDATE_MANIFEST" \
   --task-config configs/task_optimization_v1.json
 
-# This is the first point at which navigation performance is allowed to exist.
-.venv/bin/fly-sniff-sealed-train \
-  "$BUNDLE" \
-  "$CANDIDATE_MANIFEST" \
-  --config configs/task_optimization_v1.json \
-  --output "$MATCHED"
+cat > "$OUT/SEALED_BEFORE_PERFORMANCE.md" <<EOF
+# SEALED BEFORE PERFORMANCE
 
-.venv/bin/fly-sniff-redteam-budget \
-  "$MATCHED" \
-  --config configs/task_optimization_v1.json \
-  --output "$OUT/execution-budget-audit-v1.json"
+The exact GraphBundle membership, biological-edge accounting, source-body transmitter/sign
+authority, role membership, PFN/odor sensory normalization, task config, and source lineage
+are sealed under commit $(git rev-parse HEAD).
 
-.venv/bin/fly-sniff-redteam-cem-replay \
-  "$MATCHED" \
-  --config configs/task_optimization_v1.json \
-  --output "$OUT/cem-replay-v1.json"
-
-.venv/bin/fly-sniff-redteam-rewires \
-  "$BUNDLE" \
-  "$MATCHED" \
-  --output "$OUT/rewire-ensemble-diagnostics-v1.json"
-
-.venv/bin/python - "$MATCHED" "$INTACT" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-matched = json.loads(Path(sys.argv[1]).read_text())
-intact = matched["results"]["intact"]
-Path(sys.argv[2]).write_text(json.dumps(intact, indent=2, sort_keys=True) + "\n")
-PY
-
-.venv/bin/fly-sniff-redteam-training \
-  "$BUNDLE" \
-  "$INTACT" \
-  --config configs/task_optimization_v1.json \
-  --output "$OUT/shortcut-diagnostics-v1.json"
-
-.venv/bin/fly-sniff-sealed-qualify \
-  "$BUNDLE" \
-  "$CANDIDATE_MANIFEST" \
-  "$MATCHED" \
-  --config configs/task_optimization_v1.json \
-  --output "$TRAINED_E002"
-
-.venv/bin/fly-sniff-sealed-freeze-final \
-  "$BUNDLE" \
-  "$CANDIDATE_MANIFEST" \
-  "$MATCHED" \
-  "$TRAINED_E002" \
-  --config configs/task_optimization_v1.json \
-  --output "$FINAL_MANIFEST"
-
-cat > "$OUT/READY_FOR_FINAL.md" <<EOF
-# READY FOR FINAL
-
-The candidate graph, sign authority, sensory normalization, matched topology training,
-optimizer budget, CEM replay, rewire diagnostics, shortcut diagnostics, trained E002,
-and final seed manifest are frozen under commit $(git rev-parse HEAD).
-
-No held-out or OOD final episode has been evaluated.
+No navigation training, validation objective, held-out episode, or OOD episode has been run by
+this invocation.
 
 Candidate manifest: $CANDIDATE_MANIFEST
-Matched training: $MATCHED
-Trained E002: $TRAINED_E002
-Final manifest: $FINAL_MANIFEST
+Sign authority: $SIGN_OUT/source_sign_authority.json
+E001 evidence: $EVIDENCE_OUT/e001_evidence.json
 EOF
 
 echo
-echo "Development lane complete. Final namespace remains untouched."
-echo "Review: $OUT/READY_FOR_FINAL.md"
-echo "When ready to consume this exact frozen run once:"
-echo "  RUN_FINAL=1 FINAL_RUN_DIR='$OUT' BUNDLE='$BUNDLE' bash scripts/run_sealed_experiment_mac.sh"
+echo "Candidate seal complete. Navigation performance has NOT been created."
+echo "Review: $OUT/SEALED_BEFORE_PERFORMANCE.md"
+echo "Only after accepting this exact manifest, start development optimization with:"
+echo "  RUN_TRAIN=1 TRAIN_RUN_DIR='$OUT' BUNDLE='$BUNDLE' bash scripts/run_sealed_experiment_mac.sh"
