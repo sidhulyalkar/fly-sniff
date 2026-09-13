@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source scripts/python_env.sh
+
 RECORDING="${1:-artifacts/showcase/who-farted-run.json}"
 OUTPUT="${2:-artifacts/showcase/rapid-v4.mp4}"
 E002C="${3:-results/e002/pfl3-convergence-v1.json}"
 FC2="${4:-results/route/fc2-goal-interface-audit-v1.json}"
 
-python -m fly_sniff.recorded_showcase_v4 \
+"$PYTHON_BIN" -m fly_sniff.recorded_showcase_v4 \
   "$RECORDING" \
   --e002c-report "$E002C" \
   --fc2-audit "$FC2" \
