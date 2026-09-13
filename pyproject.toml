@@ -35,6 +35,7 @@ fly-sniff-odor-motion = "fly_sniff.odor_motion:main"
 fly-sniff-odor-events = "fly_sniff.odor_event_cli:main"
 fly-sniff-odor-sensitivity = "fly_sniff.odor_sensitivity:main"
 fly-sniff-qualify-odor-motion = "fly_sniff.odor_motion_qualification:main"
+fly-sniff-experimental-plume-contract = "fly_sniff.experimental_plume:main"
 fly-sniff-plot-odor-motion = "fly_sniff.odor_motion_visual:main"
 fly-sniff-replay-odor-motion = "fly_sniff.odor_motion_showcase:main"
 fly-sniff-replay-showcase = "fly_sniff.recorded_showcase:main"
@@ -78,6 +79,7 @@ packages = ["src/fly_sniff"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "configs/odor_motion_v2.json" = "fly_sniff/configs/odor_motion_v2.json"
+"configs/experimental_plume_v3.json" = "fly_sniff/configs/experimental_plume_v3.json"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
