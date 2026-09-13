@@ -32,6 +32,7 @@
     "reason": "Delta7 is catalog-predicted glutamatergic and remains modeled sign 0 under the conservative fly-sniff sign policy. The route must remain structural/literature sensitivity evidence unless an independent effective-sign authority is sealed.",
     "forbidden_selection": "Do not promote Delta7 into the signed primary lane because it produces stronger modeled convergence, steering, or navigation performance."
   },
+  "model_normalization_caveat": "MaleCNSRateController normalizes each postsynaptic row by total absolute incoming modeled weight. Adding the heading lane therefore changes PFL3 row normalization even when EPG drive is zero. E002c response amplitudes and single-vs-joint differences are descriptive engineering-model quantities, not biological integration strengths or effect sizes.",
   "probe_inputs": [
     "uniform_goal_lane_drive",
     "uniform_EPG_heading_lane_drive",
@@ -80,13 +81,14 @@
     },
     {
       "name": "joint_convergence_detected",
-      "criterion": "At every frozen threshold with at least one PFL3 body structurally reachable from both primary lanes, joint drive changes modeled state in at least one dual-reachable PFL3 body relative to both corresponding single-lane conditions."
+      "criterion": "At every frozen threshold with at least one PFL3 body structurally reachable from both primary lanes, joint drive changes modeled state in at least one dual-reachable PFL3 body relative to both corresponding single-lane conditions. This is a model-convergence gate, not an effect-size claim."
     }
   ],
   "mandatory_reports_not_pass_thresholds": [
     "dual-reachable PFL3 body-ID coverage at thresholds 1/3/5/10",
     "goal-only, heading-only, and joint PFL3 traces",
     "per-PFL3 dual-input response summaries",
+    "row-normalization denominator change when the heading lane is added",
     "same-PB direct EPG subset versus all direct EPG descriptive comparison",
     "PFNp_b sign-zero sensitivity",
     "Delta7 structural path counts with no signed Delta7 dynamics",
@@ -94,6 +96,7 @@
   ],
   "forbidden_selection": [
     "Do not choose a structural threshold because it maximizes joint response.",
+    "Do not interpret E002c amplitude differences as biological integration strength or lesion effect size.",
     "Do not infer physical heading degrees from PB labels using E002c output.",
     "Do not infer odor-source direction from PFN/hDeltaC/hDeltaG/PFL column labels using E002c output.",
     "Do not tune model gain or time constants using DNa02 output, turning, source finding, or navigation score.",
@@ -101,5 +104,5 @@
     "Do not promote the Delta7 lane post hoc."
   ],
   "next_gate": "Only after E002c passes may a subsequent experiment bind anatomical heading/goal phases to an explicit literature-derived angular mapping and then test PFL3-to-DNa02 steering through the already-audited E002a scaffold.",
-  "claim_boundary": "Passing E002c would qualify deterministic modeled convergence of independently constrained goal and direct-EPG heading candidates onto PFL3 under explicit structural and sign assumptions. It would not qualify physical heading tuning, preferred angles, a complete PFL3 comparison computation, physiological firing, steering direction, source finding, or intact-versus-rewire behavioral performance."
+  "claim_boundary": "Passing E002c would qualify deterministic modeled convergence of independently constrained goal and direct-EPG heading candidates onto PFL3 under explicit structural and sign assumptions. It would not qualify physical heading tuning, preferred angles, a complete PFL3 comparison computation, physiological firing, biological integration strength, steering direction, source finding, or intact-versus-rewire behavioral performance."
 }
