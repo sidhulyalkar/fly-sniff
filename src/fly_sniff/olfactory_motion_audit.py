@@ -207,7 +207,7 @@ def build_olfactory_motion_audit(
         "missing_complete_motif_families": missing_complete,
         "candidates": candidate_records,
         "selected_body_count": len(selected),
-        "selected_edge_count": int(len(edges)),
+        "selected_edge_count": len(edges),
         "family_connectivity": family_summaries,
         "literature_hypothesis": document["literature_hypothesis"],
         "claim_boundary": document["claim_boundary"],
