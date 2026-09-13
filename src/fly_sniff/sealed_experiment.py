@@ -32,12 +32,24 @@ def _candidate_manifest(
     manifest: str | Path,
     config: str | Path,
 ) -> dict[str, Any]:
-    return verify_candidate_manifest(
+    candidate = verify_candidate_manifest(
         bundle,
         manifest,
         task_config_path=config,
         require_training_ready=True,
     )
+    expected_ref = str(candidate.get("code_ref", ""))
+    observed_ref = current_git_ref()
+    if not expected_ref or expected_ref == "UNKNOWN":
+        raise ValueError("sealed candidate is missing an exact code_ref")
+    if not observed_ref or observed_ref == "UNKNOWN":
+        raise RuntimeError("cannot verify current git checkout against sealed candidate code_ref")
+    if observed_ref != expected_ref:
+        raise RuntimeError(
+            "current git checkout differs from the code commit sealed before performance: "
+            f"expected {expected_ref}, observed {observed_ref}"
+        )
+    return candidate
 
 
 def _bind_matched_report(
