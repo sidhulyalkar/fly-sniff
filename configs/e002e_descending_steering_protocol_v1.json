@@ -16,6 +16,8 @@
   "common_rotation_offsets_deg": [0, 45, 90, 135],
   "deterministic_tolerance": 1e-12,
   "zero_cut_tolerance": 1e-12,
+  "side_swap_definition": "Swap the complete frozen 12-cell left/right PFL3 groups by deterministic (anatomical column, PB label, body ID) rank, treating absent instantaneous drive as zero. This is an adversarial laterality-label swap, not a claim of bilateral cell homology.",
+  "lane_cut_definition": "At the primary threshold, a lane cut must reduce the number of preregistered mirrored phase pairs that retain opposite modeled turn signs relative to intact. No amplitude threshold is fit or selected from E002e results.",
   "frozen_controls": [
     "FC2_lane_cut",
     "EPG_lane_cut",
@@ -44,6 +46,6 @@
     "navigation_score",
     "behavioral_success"
   ],
-  "selection_rule": "Do not alter the primary threshold, phase probes, side groups, model parameters, or controls based on E002e outcome. Threshold 5 remains primary because it was frozen before E002d/E002e from the broad structural-support lane.",
+  "selection_rule": "Do not alter the primary threshold, phase probes, side groups, model parameters, or controls based on E002e outcome. Threshold 5 remains primary because it was frozen before E002d/E002e from the broad structural-support lane. The side-swap clarification repairs an implementation crash observed before any E002e result was produced; it does not change phase probes, side membership, thresholds, or model parameters.",
   "claim_boundary": "Passing E002e would support a modeled, body-ID-resolved PFL3-to-descending steering transformation under a literature-constrained relative phase representation. It would not establish sensory-to-goal encoding, measured firing, closed-loop odor navigation, or superiority of intact wiring over rewires."
 }
