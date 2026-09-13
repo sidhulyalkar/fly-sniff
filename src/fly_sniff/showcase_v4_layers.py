@@ -41,16 +41,20 @@ def viewer_density_field(
 
 
 def density_rgba(density: np.ndarray) -> np.ndarray:
-    """Convert plume density into a phone-legible translucent display layer."""
+    """Convert exact density into a display-normalized translucent layer.
+
+    Alpha is intentionally normalized for phone readability and must not be read
+    as a quantitative colorbar or compared across frames.
+    """
     density = np.asarray(density, dtype=float)
     rgba = np.zeros((*density.shape, 4), dtype=float)
     rgba[..., :3] = np.asarray(to_rgb(PLUME))
     positive = density[density > 0.0]
     if not positive.size:
         return rgba
-    scale = max(float(np.percentile(positive, 96.0)), 1e-12)
-    normalized = np.log1p(4.0 * density / scale) / np.log(5.0)
-    rgba[..., 3] = 0.68 * np.clip(normalized, 0.0, 1.0)
+    scale = max(float(np.percentile(positive, 98.0)), 1e-12)
+    normalized = np.log1p(3.0 * density / scale) / np.log(4.0)
+    rgba[..., 3] = 0.56 * np.clip(normalized, 0.0, 1.0)
     return rgba
 
 
