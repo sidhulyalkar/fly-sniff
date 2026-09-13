@@ -57,19 +57,22 @@ def _row_matches(
     compiled: list[re.Pattern[str]],
     raw_patterns: list[str],
 ) -> tuple[pd.Series, dict[int, list[dict[str, str]]]]:
-    matches: dict[int, list[dict[str, str]]] = {}
-    mask = pd.Series(False, index=frame.index)
     text = frame[columns].fillna("").astype(str)
-    for row_index, row in text.iterrows():
-        row_matches: list[dict[str, str]] = []
-        for column in columns:
-            value = row[column]
-            for pattern_index, pattern in enumerate(compiled):
-                if pattern.search(value):
-                    row_matches.append({"column": column, "pattern": raw_patterns[pattern_index]})
-        if row_matches:
-            mask.loc[row_index] = True
-            matches[int(row_index)] = row_matches
+    mask = pd.Series(False, index=frame.index)
+    hit_masks: list[tuple[str, str, pd.Series]] = []
+    for column in columns:
+        for pattern_index, pattern in enumerate(compiled):
+            hit = text[column].str.contains(pattern, regex=True, na=False)
+            mask |= hit
+            hit_masks.append((column, raw_patterns[pattern_index], hit))
+    matches = {
+        int(row_index): [
+            {"column": column, "pattern": raw_pattern}
+            for column, raw_pattern, hit in hit_masks
+            if bool(hit.loc[row_index])
+        ]
+        for row_index in frame.index[mask]
+    }
     return mask, matches
 
 
