@@ -100,7 +100,7 @@ class BilateralOdorMotionEstimator:
             raise ValueError("dt must be finite and > 0")
         self.config = (config or OdorMotionConfig()).validated()
         self.delay_steps = tuple(
-            max(1, int(round(delay_s / self.dt))) for delay_s in self.config.delays_s
+            max(1, round(delay_s / self.dt)) for delay_s in self.config.delays_s
         )
         if len(set(self.delay_steps)) != len(self.delay_steps):
             raise ValueError(
@@ -184,7 +184,7 @@ class BilateralOdorMotionEstimator:
         max_possible_weight = sum(
             np.exp(-delay / self.config.delay_decay_tau_s)
             for delay in self.realized_delays_s
-            if current_index >= int(round(delay / self.dt))
+            if current_index >= round(delay / self.dt)
         )
         signal_strength = float(weight_total / max_possible_weight) if max_possible_weight else 0.0
         confidence = float(np.clip(coverage * signal_strength * abs(evidence), 0.0, 1.0))
