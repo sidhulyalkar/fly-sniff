@@ -16,7 +16,7 @@ SCHEMA_VERSION = 1
 DEFAULT_CONFIG_PATH = Path("configs/odor_motion_v2.json")
 
 
-def _canonical_sha256(payload: dict[str, Any]) -> str:
+def analysis_sha256(payload: dict[str, Any]) -> str:
     encoded = json.dumps(
         payload,
         sort_keys=True,
@@ -106,7 +106,6 @@ class BilateralOdorMotionEstimator:
                 "configured delays collapse onto duplicate sample lags at this recording dt"
             )
         self.realized_delays_s = tuple(step * self.dt for step in self.delay_steps)
-        self.max_delay_steps = max(self.delay_steps)
         self.left_history: list[float] = []
         self.right_history: list[float] = []
 
@@ -215,7 +214,9 @@ class BilateralOdorMotionEstimator:
         )
 
 
-def load_odor_motion_config(path: str | Path = DEFAULT_CONFIG_PATH) -> tuple[dict[str, Any], OdorMotionConfig]:
+def load_odor_motion_config(
+    path: str | Path = DEFAULT_CONFIG_PATH,
+) -> tuple[dict[str, Any], OdorMotionConfig]:
     raw = json.loads(Path(path).read_text())
     if raw.get("protocol") != PROTOCOL:
         raise ValueError(f"unsupported odor-motion protocol {raw.get('protocol')!r}")
@@ -227,7 +228,10 @@ def load_odor_motion_config(path: str | Path = DEFAULT_CONFIG_PATH) -> tuple[dic
     return raw, OdorMotionConfig.from_mapping(estimator)
 
 
-def _agent_sequence(recording: dict[str, Any], label: str) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+def _agent_sequence(
+    recording: dict[str, Any],
+    label: str,
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     sequence: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for frame in recording.get("frames", []):
         matches = [agent for agent in frame.get("agents", []) if agent.get("label") == label]
@@ -308,7 +312,7 @@ def analyze_recording_bundle(
     }
     return {
         "analysis": analysis_payload,
-        "analysis_sha256": _canonical_sha256(analysis_payload),
+        "analysis_sha256": analysis_sha256(analysis_payload),
     }
 
 
@@ -317,6 +321,22 @@ def write_analysis(path: str | Path, bundle: dict[str, Any]) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(bundle, indent=2, sort_keys=True, allow_nan=False) + "\n")
     return output
+
+
+def load_analysis(path: str | Path) -> dict[str, Any]:
+    bundle = json.loads(Path(path).read_text())
+    payload = bundle.get("analysis")
+    expected = bundle.get("analysis_sha256")
+    if not isinstance(payload, dict) or not isinstance(expected, str):
+        raise TypeError("invalid odor-motion analysis bundle")
+    actual = analysis_sha256(payload)
+    if actual != expected:
+        raise ValueError(f"odor-motion SHA-256 mismatch: expected {expected}, got {actual}")
+    if payload.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError(f"unsupported odor-motion schema {payload.get('schema_version')!r}")
+    if payload.get("protocol") != PROTOCOL:
+        raise ValueError(f"unsupported odor-motion protocol {payload.get('protocol')!r}")
+    return bundle
 
 
 def main() -> None:
