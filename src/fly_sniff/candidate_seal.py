@@ -107,7 +107,12 @@ def _required_stage_union(
     return nodes, edges
 
 
-def _verify_sign_report(bundle: GraphBundle, report: dict[str, Any]) -> dict[str, Any]:
+def _verify_sign_report(
+    bundle: GraphBundle,
+    report: dict[str, Any],
+    *,
+    bundle_dir: Path,
+) -> dict[str, Any]:
     stored_sha = report.get("report_sha256")
     unsigned = dict(report)
     unsigned.pop("report_sha256", None)
@@ -117,6 +122,15 @@ def _verify_sign_report(bundle: GraphBundle, report: dict[str, Any]) -> dict[str
         raise ValueError("source sign-authority report contains graph/sign mismatches")
     if report.get("graph_sha256") != bundle.replay_fingerprint():
         raise ValueError("source sign-authority report was produced for a different graph")
+
+    node_authority = report.get("node_annotation_authority")
+    if not isinstance(node_authority, dict):
+        raise TypeError("source sign-authority report is missing node_annotation_authority")
+    nodes_path = bundle_dir / "nodes.parquet"
+    if node_authority.get("sha256") != sha256_file(nodes_path):
+        raise ValueError(
+            "source sign-authority report was produced from different nodes.parquet annotations"
+        )
 
     source_records = report.get("source_records")
     if not isinstance(source_records, list):
@@ -227,7 +241,7 @@ def build_candidate_manifest(
     if unexpected_roles:
         raise ValueError(f"sealed GraphBundle contains unexpected roles: {unexpected_roles}")
 
-    coverage = _verify_sign_report(bundle, sign_report)
+    coverage = _verify_sign_report(bundle, sign_report, bundle_dir=bundle_dir)
     minimum_signed = float(
         policy["sign_authority"]["minimum_signed_edge_fraction_for_training"]
     )
@@ -264,6 +278,7 @@ def build_candidate_manifest(
         "bundle_edges_unique_by_source_target": True,
         "model_roles_match_e001_role_review": True,
         "sign_authority_matches_every_graph_edge": True,
+        "sign_authority_nodes_file_matches_bundle": True,
         "task_config_uses_role_total_l1": True,
         "signed_edge_fraction_meets_training_gate": signed_fraction >= minimum_signed,
     }
@@ -300,6 +315,7 @@ def build_candidate_manifest(
             "handoff_audit_sha256": sha256_file(handoff_path),
             "role_review_sha256": sha256_file(role_review_path),
             "e001_evidence_sha256": sha256_file(e001_evidence_path),
+            "nodes_parquet_sha256": sha256_file(bundle_dir / "nodes.parquet"),
         },
         "performance_freeze": policy["performance_freeze"],
         "claim_boundary": policy["claim_boundary"],
