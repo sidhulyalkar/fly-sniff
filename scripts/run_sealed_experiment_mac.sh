@@ -52,6 +52,7 @@ if [[ "${RUN_FINAL:-0}" == "1" ]]; then
   for required in \
     "$OUT/SEALED_BEFORE_PERFORMANCE.md" \
     "$OUT/READY_FOR_FINAL.md" \
+    "$OUT/navigation-seed-plan-v1.json" \
     "$CANDIDATE_MANIFEST" \
     "$MATCHED" \
     "$TRAINED_E002" \
@@ -100,7 +101,10 @@ if [[ "${RUN_TRAIN:-0}" == "1" ]]; then
   INTACT="$OUT/intact-training-v1.json"
   TRAINED_E002="$OUT/trained-e002-v1.json"
   FINAL_MANIFEST="$OUT/sealed-trained-final-v1.json"
-  for required in "$OUT/SEALED_BEFORE_PERFORMANCE.md" "$CANDIDATE_MANIFEST"; do
+  for required in \
+    "$OUT/SEALED_BEFORE_PERFORMANCE.md" \
+    "$OUT/navigation-seed-plan-v1.json" \
+    "$CANDIDATE_MANIFEST"; do
     if [[ ! -f "$required" ]]; then
       echo "ERROR: development prerequisite missing: $required" >&2
       exit 10
@@ -172,14 +176,15 @@ PY
   cat > "$OUT/READY_FOR_FINAL.md" <<EOF
 # READY FOR FINAL
 
-The candidate graph was sealed before any navigation performance. Matched topology
-training, optimizer budget reconstruction, CEM replay, rewire diagnostics, shortcut
-diagnostics, trained E002, and the final seed manifest are now frozen under commit
-$(git rev-parse HEAD).
+The candidate graph and all train/validation/rewire/held-out/OOD seeds were sealed before any
+navigation performance. Matched topology training, optimizer budget reconstruction, CEM replay,
+rewire diagnostics, shortcut diagnostics, trained E002, and the final manifest are now frozen
+under commit $(git rev-parse HEAD).
 
 No held-out or OOD final episode has been evaluated.
 
 Candidate manifest: $CANDIDATE_MANIFEST
+Seed plan: $OUT/navigation-seed-plan-v1.json
 Matched training: $MATCHED
 Trained E002: $TRAINED_E002
 Final manifest: $FINAL_MANIFEST
@@ -193,8 +198,8 @@ EOF
   exit 0
 fi
 
-# Phase 1 (default): seal all graph/sign/normalization assumptions and STOP before
-# any navigation objective is evaluated.
+# Phase 1 (default): seal all graph/sign/normalization/seed assumptions and STOP
+# before any navigation objective is evaluated.
 E001_RUN="${E001_RUN:-}"
 if [[ -z "$E001_RUN" && -f results/e001/LATEST ]]; then
   E001_RUN="$(cat results/e001/LATEST)"
@@ -217,6 +222,7 @@ ln -sfn "$RUN_ID" results/sealed-experiment/LATEST
 
 EVIDENCE_OUT="$OUT/e001-evidence-deduplicated"
 SIGN_OUT="$OUT/sign-authority"
+SEED_PLAN="$OUT/navigation-seed-plan-v1.json"
 CANDIDATE_MANIFEST="$OUT/candidate-graph-v1.json"
 
 for required in \
@@ -252,12 +258,19 @@ EOF
   --authority authority/malecns-v1.0-body-sign-overrides-v1.json \
   --output "$SIGN_OUT"
 
+# Materialize every train, validation, rewire, held-out, and OOD seed now, before
+# the first navigation objective exists. The candidate manifest embeds this plan.
+.venv/bin/fly-sniff-seed-plan \
+  --config configs/task_optimization_v1.json \
+  --output "$SEED_PLAN"
+
 .venv/bin/fly-sniff-seal-candidate \
   "$BUNDLE" \
   "$STAGED_ROOT" \
   "$ROLE_REVIEW" \
   "$EVIDENCE_OUT/e001_evidence.json" \
   "$SIGN_OUT/source_sign_authority.json" \
+  --seed-plan "$SEED_PLAN" \
   --policy configs/candidate_graph_v1.json \
   --task-config configs/task_optimization_v1.json \
   --output "$CANDIDATE_MANIFEST"
@@ -271,19 +284,21 @@ cat > "$OUT/SEALED_BEFORE_PERFORMANCE.md" <<EOF
 # SEALED BEFORE PERFORMANCE
 
 The exact GraphBundle membership, biological-edge accounting, source-body transmitter/sign
-authority, role membership, PFN/odor sensory normalization, task config, and source lineage
-are sealed under commit $(git rev-parse HEAD).
+authority, role membership, PFN/odor sensory normalization, task config, exact train/validation/
+rewire/held-out/OOD seed lists, source lineage, and experiment code are sealed under commit
+$(git rev-parse HEAD).
 
 No navigation training, validation objective, held-out episode, or OOD episode has been run by
 this invocation.
 
 Candidate manifest: $CANDIDATE_MANIFEST
+Seed plan: $SEED_PLAN
 Sign authority: $SIGN_OUT/source_sign_authority.json
 E001 evidence: $EVIDENCE_OUT/e001_evidence.json
 EOF
 
 echo
-echo "Candidate seal complete. Navigation performance has NOT been created."
+echo "Candidate + seed seal complete. Navigation performance has NOT been created."
 echo "Review: $OUT/SEALED_BEFORE_PERFORMANCE.md"
 echo "Only after accepting this exact manifest, start development optimization with:"
 echo "  RUN_TRAIN=1 TRAIN_RUN_DIR='$OUT' BUNDLE='$BUNDLE' bash scripts/run_sealed_experiment_mac.sh"
