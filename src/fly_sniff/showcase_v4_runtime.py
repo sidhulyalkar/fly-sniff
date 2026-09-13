@@ -18,6 +18,7 @@ from .recorded_showcase_v3 import _load_json, _validate_inputs
 from .recording import load_recording
 from .showcase import SHOWCASE_DPI, SHOWCASE_HEIGHT, SHOWCASE_WIDTH
 from .showcase_v4_draw import draw_population_panel, draw_room_v4
+from .showcase_v4_layers import social_display_frame_limit
 
 
 def render_v4(
@@ -43,6 +44,7 @@ def render_v4(
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     frames = payload["frames"]
+    display_last_index = social_display_frame_limit(payload)
     histories = _precompute_histories(payload)
     n_video = max(1, seconds * fps)
     first_label = payload["controllers"][0]["label"]
@@ -69,7 +71,7 @@ def render_v4(
 
     def draw(video_index: int):
         fraction = 1.0 if n_video == 1 else video_index / (n_video - 1)
-        record_index = round(fraction * (len(frames) - 1))
+        record_index = round(fraction * display_last_index)
         probe_index = round(fraction * (probe_steps - 1))
         current = frames[record_index]
         first = _agent(current, first_label)
