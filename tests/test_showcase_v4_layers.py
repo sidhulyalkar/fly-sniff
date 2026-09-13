@@ -9,6 +9,7 @@ import pytest
 from fly_sniff.showcase_v4_layers import (
     density_rgba,
     pfl3_population_frame,
+    recording_density_scale,
     social_display_frame_limit,
     viewer_density_field,
 )
@@ -48,6 +49,31 @@ def test_density_rgba_is_transparent_where_density_is_zero() -> None:
     assert rgba.shape == (1, 2, 4)
     assert rgba[0, 0, 3] == 0.0
     assert rgba[0, 1, 3] > 0.0
+
+
+def test_density_rgba_fixed_scale_preserves_temporal_intensity_order() -> None:
+    weak = np.array([[0.0, 1.0]], dtype=float)
+    strong = np.array([[0.0, 2.0]], dtype=float)
+    weak_rgba = density_rgba(weak, scale=2.0)
+    strong_rgba = density_rgba(strong, scale=2.0)
+    assert strong_rgba[0, 1, 3] > weak_rgba[0, 1, 3]
+
+
+def test_recording_density_scale_is_positive_and_uses_complete_frames() -> None:
+    payload = {
+        "arena": {"width": 4.0, "height": 2.0},
+        "config": {"plume": {"puff_mass": 1.0}},
+        "frames": [
+            {
+                "plume_snapshot": {"complete": True},
+                "plume": [[1.0 + 0.2 * index, 1.0, 0.25]],
+            }
+            for index in range(4)
+        ],
+    }
+    scale = recording_density_scale(payload, 3, max_samples=4, nx=17, ny=9)
+    assert np.isfinite(scale)
+    assert scale > 0.0
 
 
 def test_social_display_window_ends_shortly_after_first_success() -> None:
