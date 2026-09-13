@@ -11,6 +11,7 @@ import pandas as pd
 
 from .freeze import current_git_ref
 from .graph import GraphBundle
+from .seed_plan import verify_seed_plan
 
 MODEL_ROLES = (
     "odor_context_left",
@@ -164,6 +165,7 @@ def build_candidate_manifest(
     role_review_path: str | Path,
     e001_evidence_path: str | Path,
     sign_authority_path: str | Path,
+    seed_plan_path: str | Path,
     policy_path: str | Path,
     task_config_path: str | Path,
     code_ref: str | None = None,
@@ -173,6 +175,7 @@ def build_candidate_manifest(
     role_review_path = Path(role_review_path)
     e001_evidence_path = Path(e001_evidence_path)
     sign_authority_path = Path(sign_authority_path)
+    seed_plan_path = Path(seed_plan_path)
     policy_path = Path(policy_path)
     task_config_path = Path(task_config_path)
 
@@ -185,8 +188,10 @@ def build_candidate_manifest(
     role_review = _load_json(role_review_path)
     e001_evidence = _load_json(e001_evidence_path)
     sign_report = _load_json(sign_authority_path)
+    seed_plan = _load_json(seed_plan_path)
     policy = _load_json(policy_path)
     task_config = _load_json(task_config_path)
+    verify_seed_plan(seed_plan, task_config)
 
     if policy.get("protocol") != "sealed-candidate-graph-v1":
         raise ValueError("unsupported candidate graph policy")
@@ -279,6 +284,7 @@ def build_candidate_manifest(
         "model_roles_match_e001_role_review": True,
         "sign_authority_matches_every_graph_edge": True,
         "sign_authority_nodes_file_matches_bundle": True,
+        "seed_plan_verified_before_performance": True,
         "task_config_uses_role_total_l1": True,
         "signed_edge_fraction_meets_training_gate": signed_fraction >= minimum_signed,
     }
@@ -302,6 +308,9 @@ def build_candidate_manifest(
         "role_receipt": role_receipt,
         "signed_edge_fraction": signed_fraction,
         "signed_edge_minimum_for_training": minimum_signed,
+        "seed_plan": seed_plan,
+        "seed_plan_sha256": seed_plan["seed_plan_sha256"],
+        "seed_plan_file_sha256": sha256_file(seed_plan_path),
         "training_ready": training_ready,
         "checks": checks,
         "inclusion_policy": policy,
@@ -365,10 +374,16 @@ def verify_candidate_manifest(
         path = bundle_dir / name
         if not path.exists() or sha256_file(path) != receipt["sha256"]:
             raise ValueError(f"sealed GraphBundle file changed: {name}")
-    if task_config_path is not None and sha256_file(task_config_path) != manifest.get(
-        "task_config_sha256"
-    ):
-        raise ValueError("task optimization config differs from candidate seal")
+    if task_config_path is not None:
+        if sha256_file(task_config_path) != manifest.get("task_config_sha256"):
+            raise ValueError("task optimization config differs from candidate seal")
+        task_config = _load_json(task_config_path)
+        seed_plan = manifest.get("seed_plan")
+        if not isinstance(seed_plan, dict):
+            raise TypeError("candidate manifest is missing the pre-performance seed plan")
+        verify_seed_plan(seed_plan, task_config)
+        if manifest.get("seed_plan_sha256") != seed_plan.get("seed_plan_sha256"):
+            raise ValueError("candidate seed-plan hash receipt mismatch")
     return manifest
 
 
@@ -381,6 +396,7 @@ def seal_main() -> None:
     parser.add_argument("role_review")
     parser.add_argument("e001_evidence")
     parser.add_argument("sign_authority")
+    parser.add_argument("--seed-plan", required=True)
     parser.add_argument("--policy", default="configs/candidate_graph_v1.json")
     parser.add_argument("--task-config", default="configs/task_optimization_v1.json")
     parser.add_argument("--output", default="manifests/candidate-graph-v1.json")
@@ -394,6 +410,7 @@ def seal_main() -> None:
         role_review_path=args.role_review,
         e001_evidence_path=args.e001_evidence,
         sign_authority_path=args.sign_authority,
+        seed_plan_path=args.seed_plan,
         policy_path=args.policy,
         task_config_path=args.task_config,
     )
@@ -403,6 +420,7 @@ def seal_main() -> None:
         json.dumps(
             {
                 "manifest_sha256": manifest["manifest_sha256"],
+                "seed_plan_sha256": manifest["seed_plan_sha256"],
                 "training_ready": manifest["training_ready"],
                 "signed_edge_fraction": manifest["signed_edge_fraction"],
                 "node_count": manifest["node_count"],
@@ -435,6 +453,7 @@ def verify_main() -> None:
                 "verified": True,
                 "manifest_sha256": manifest["manifest_sha256"],
                 "graph_sha256": manifest["graph_sha256"],
+                "seed_plan_sha256": manifest["seed_plan_sha256"],
             },
             indent=2,
             sort_keys=True,
