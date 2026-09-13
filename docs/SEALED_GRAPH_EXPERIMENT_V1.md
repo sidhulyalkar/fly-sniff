@@ -47,7 +47,7 @@ Every sealed node must occur in at least one required E001 primary-stage node ar
 
 The large `hDeltaC_to_pfl3` corridor is therefore handled without a post-hoc type whitelist. Exact intermediate membership is whatever was already present in the supplied pre-performance GraphBundle, subject to the required-stage provenance check.
 
-After sealing, v1 forbids changing node membership, edge membership, structural weights, model-role membership, signs, normalization, or scientific authority. Any such change requires a new protocol version and a new final seed draw.
+After sealing, v1 forbids changing node membership, edge membership, structural weights, model-role membership, signs, normalization, scientific authority, or experiment code. Any such change requires a new protocol version and a new final seed draw.
 
 ## 4. PFN and sensory normalization
 
@@ -78,9 +78,11 @@ The exact current PFN body IDs do not change. This rule prevents a larger left o
 - frozen sensory normalization;
 - the unchanged signed-edge coverage gate.
 
-The manifest binds the full node-ID set, canonical edge identity, role membership, GraphBundle file hashes, sign-authority report, inclusion policy, task config, E001 evidence, and source artifacts.
+The manifest binds the full node-ID set, canonical edge identity, role membership, GraphBundle file hashes, sign-authority report, inclusion policy, task config, E001 evidence, source artifacts, and the exact git commit at sealing.
 
-Real matched optimization is not allowed unless `training_ready=true` and the manifest verifies against the supplied GraphBundle and task config.
+Every real experiment entrypoint verifies that the current `HEAD` equals the candidate manifest's `code_ref`. A code-only change after sealing cannot be used for training, qualification, final freeze, or final evaluation under the same v1 candidate.
+
+Real matched optimization is not allowed unless `training_ready=true` and the manifest verifies against the supplied GraphBundle, task config, and sealed code commit.
 
 ## 6. Matched development optimization
 
@@ -107,15 +109,13 @@ The trained final manifest is frozen only after:
 - the represented optimizer execution audit verifies equal budgets;
 - intact trained E002 passes under the frozen criteria.
 
-The final command requires `--arm-final` and writes a one-way consumption lock before any held-out or OOD episode is evaluated. Presence of that lock forbids another v1 final run even if execution later fails.
+The final command requires `--arm-final` and writes a one-way consumption lock before any held-out or OOD episode is evaluated. Presence of that lock forbids another v1 final run even if execution later fails. This ordering is regression-tested by deliberately simulating a failure after evaluator start and verifying that a second invocation is refused.
 
 Changing the output directory is not a legal way to rerun the final test.
 
-## 8. Mac execution
+## 8. Mac execution has three explicit phases
 
-Development and final execution are intentionally separated.
-
-Development only:
+### Phase 1: seal only, no navigation performance
 
 ```bash
 BUNDLE=/path/to/sealed-graphbundle \
@@ -123,18 +123,31 @@ E001_RUN=/path/to/passing-e001-run \
 bash scripts/run_sealed_experiment_mac.sh
 ```
 
-This produces `READY_FOR_FINAL.md` after sealing, matched optimization, red-team audits, trained E002, and final-manifest freeze. It does not evaluate final held-out or OOD episodes.
+The default invocation produces `SEALED_BEFORE_PERFORMANCE.md` and stops. It creates the deduplicated E001 evidence, exact transmitter/sign audit, and immutable candidate manifest, but it does **not** run a training objective, validation objective, held-out episode, or OOD episode.
 
-After reviewing the frozen development artifacts, consume that exact run once:
+Review this exact seal before proceeding.
+
+### Phase 2: development optimization from that exact seal
 
 ```bash
-RUN_FINAL=1 \
-FINAL_RUN_DIR=results/sealed-experiment/<frozen-run-id> \
+RUN_TRAIN=1 \
+TRAIN_RUN_DIR=results/sealed-experiment/<sealed-run-id> \
 BUNDLE=/path/to/sealed-graphbundle \
 bash scripts/run_sealed_experiment_mac.sh
 ```
 
-Final mode does not rebuild, retrain, requalify, or refreeze the candidate. It only verifies and consumes the already frozen artifacts.
+This phase refuses to run if the checkout differs from the git commit stored in the candidate manifest. It creates matched intact/rewire/lesion development performance, red-team audit artifacts, trained E002, and the frozen final manifest. It then writes `READY_FOR_FINAL.md` and stops. Final held-out and OOD episodes remain untouched.
+
+### Phase 3: consume final exactly once
+
+```bash
+RUN_FINAL=1 \
+FINAL_RUN_DIR=results/sealed-experiment/<same-run-id> \
+BUNDLE=/path/to/sealed-graphbundle \
+bash scripts/run_sealed_experiment_mac.sh
+```
+
+Final mode does not rebuild, retrain, requalify, or refreeze anything. It requires both prior phase receipts, verifies the exact candidate/code binding, creates the one-way final-consumption lock, and only then evaluates the final seeds.
 
 ## Interpretation rule
 
