@@ -33,6 +33,7 @@ def draw_room_v4(
     frame_index: int,
     *,
     reveal: bool,
+    density_scale: float | None = None,
     recent_seconds: float = 5.0,
 ) -> None:
     arena = payload["arena"]
@@ -54,13 +55,16 @@ def draw_room_v4(
     if field is not None:
         density, extent = field
         ax.imshow(
-            density_rgba(density),
+            density_rgba(density, scale=density_scale),
             extent=extent,
             origin="lower",
             interpolation="bilinear",
             zorder=1,
         )
-        label = "VIEWER ODOR FIELD • complete recorded plume"
+        if density_scale is None:
+            label = "VIEWER ODOR FIELD • complete recorded plume"
+        else:
+            label = "VIEWER ODOR FIELD • complete plume • fixed clip scale"
     else:
         plume = np.asarray(current.get("plume", []), dtype=float)
         if plume.size:
