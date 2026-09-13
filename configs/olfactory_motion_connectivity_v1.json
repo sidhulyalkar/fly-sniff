@@ -1,0 +1,86 @@
+{
+  "protocol": "olfactory-motion-connectivity-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "status": "pre_connectivity_audit",
+  "gate_a": {
+    "required_protocol": "olfactory-motion-structural-audit-v1",
+    "required_status": "candidate_audit_pass_complete_structural_motif",
+    "report_sha256": "24a09683f4abe139ba57dc739a44873ab499c2a25e4ffb7e066c49b289551abb",
+    "annotation_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "selected_body_count": 219,
+    "candidate_counts": {
+      "DA1_ORN": 204,
+      "DA1_lPN": 13,
+      "il3LN6": 2
+    }
+  },
+  "side_authority": {
+    "DA1_ORN": "rootSide",
+    "DA1_lPN": "somaSide",
+    "il3LN6": "somaSide"
+  },
+  "prespecified_family_edges": [
+    {
+      "source": "DA1_ORN",
+      "target": "DA1_lPN",
+      "role": "direct_orn_to_projection_neuron_context",
+      "required_for_candidate_motif": true
+    },
+    {
+      "source": "DA1_ORN",
+      "target": "il3LN6",
+      "role": "candidate_orn_drive_to_local_interneuron",
+      "required_for_candidate_motif": true
+    },
+    {
+      "source": "il3LN6",
+      "target": "DA1_lPN",
+      "role": "candidate_local_interneuron_to_projection_neuron_path",
+      "required_for_candidate_motif": true
+    },
+    {
+      "source": "DA1_lPN",
+      "target": "il3LN6",
+      "role": "reciprocal_context",
+      "required_for_candidate_motif": false
+    },
+    {
+      "source": "il3LN6",
+      "target": "il3LN6",
+      "role": "local_interneuron_recurrent_context",
+      "required_for_candidate_motif": false
+    }
+  ],
+  "laterality_contract": {
+    "labels": ["L", "R", "unknown"],
+    "relations": ["same_annotation_side", "opposite_annotation_side", "unknown"],
+    "rule": "Laterality is descriptive only and uses the frozen family-specific annotation field. Same/opposite annotation side is not a claim about synaptic compartment location, functional ipsilateral/contralateral drive, or delay. Unknown side remains unknown."
+  },
+  "controller_access": false,
+  "navigation_performance_used": false,
+  "may_reselect_candidates": false,
+  "may_infer_neurotransmitter_sign": false,
+  "may_infer_delay": false,
+  "claim_boundary": {
+    "allowed": [
+      "Report exact MaleCNS v1.0 structural edges among the frozen Gate A candidate bodies.",
+      "Report aggregate structural weights by candidate family and frozen annotation side.",
+      "State whether each prespecified family-to-family structural path is present or absent."
+    ],
+    "forbidden": [
+      "Structural weight is equivalent to physiological synaptic strength.",
+      "An il3LN6 edge is inhibitory without an independent transmitter/sign audit.",
+      "Same/opposite annotation side proves ipsilateral/contralateral synaptic action.",
+      "Structural connectivity establishes the measured delay or odor-motion computation.",
+      "This audit supports navigation or source-finding performance claims."
+    ]
+  },
+  "stop_rules": [
+    "Stop if the regenerated Gate A report SHA-256 differs from the frozen value.",
+    "Stop if the annotation SHA-256 differs from Gate A.",
+    "Stop if selected candidate identities or counts differ from Gate A.",
+    "Do not add candidates based on the weight table.",
+    "Do not change required structural paths after inspecting the weight table.",
+    "Do not promote structural laterality to functional inhibitory direction without a separate sign/physiology gate."
+  ]
+}
