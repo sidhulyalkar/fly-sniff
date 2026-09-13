@@ -1,0 +1,79 @@
+{
+  "protocol": "olfactory-motion-structural-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "status": "prefunctional_structural_audit",
+  "controller_access": false,
+  "navigation_performance_used": false,
+  "may_select_body_ids_from_navigation": false,
+  "may_import_body_ids_from_other_connectomes": false,
+  "literature_hypothesis": {
+    "title": "A neural circuit for olfactory motion detection",
+    "doi": "10.64898/2026.07.13.738327",
+    "posted": "2026-07-20",
+    "review_status": "bioRxiv preprint; not peer reviewed",
+    "scope": "Female-fly physiology and FlyWire/connectomic evidence motivate il3LN6 and DA1 ALPN as candidate olfactory-motion circuit roles. They do not establish MaleCNS body identity or prove the same computation in MaleCNS."
+  },
+  "candidate_families": {
+    "il3LN6": [
+      "^il3LN6(?:_|$)",
+      "antennal lobe local neuron 6"
+    ],
+    "DA1_lPN": [
+      "^DA1[_ ]?lPN(?:_|$)",
+      "projection neuron DA1 lPN"
+    ],
+    "DA1_ORN": [
+      "Or67d",
+      "DA1.*ORN",
+      "ORN.*DA1"
+    ]
+  },
+  "required_families_for_candidate_audit": [
+    "il3LN6",
+    "DA1_lPN"
+  ],
+  "required_families_for_complete_motif": [
+    "il3LN6",
+    "DA1_lPN",
+    "DA1_ORN"
+  ],
+  "annotation_text_columns": [
+    "type",
+    "instance",
+    "class",
+    "subclass"
+  ],
+  "identity_columns_if_available": [
+    "bodyId",
+    "instance",
+    "type",
+    "class",
+    "subclass",
+    "somaSide",
+    "rootSide"
+  ],
+  "connectivity_contract": {
+    "weights_columns": ["body_pre", "body_post", "weight"],
+    "selection": "Only edges for annotation-resolved candidate body IDs may enter the audit.",
+    "interpretation": "Structural synapse weight only. No dynamical sign, delay, or functional motion computation is inferred from an edge."
+  },
+  "claim_boundary": {
+    "allowed": [
+      "MaleCNS v1.0 contains annotation-matched candidate cells of the reported types, if found.",
+      "Exact candidate-to-candidate MaleCNS structural edges and aggregate weights may be reported from the frozen weight table.",
+      "Cross-dataset literature may motivate a candidate role when explicitly labeled indirect."
+    ],
+    "forbidden": [
+      "MaleCNS il3LN6 computes odor motion without MaleCNS-specific functional evidence.",
+      "A FlyWire, hemibrain, or VFB body ID is automatically the same body ID in MaleCNS v1.0.",
+      "Structural connectivity establishes a 40 ms inhibitory delay.",
+      "This audit supports navigation or source-finding performance claims."
+    ]
+  },
+  "stop_rules": [
+    "Do not hand-add a body ID because it appears in another connectome.",
+    "Do not broaden a regex after seeing navigation performance.",
+    "If il3LN6 or DA1_lPN do not resolve from v1.0 annotations, report a blocked audit rather than substitute a neighboring type.",
+    "If DA1_ORN naming does not resolve cleanly, keep the motif incomplete and audit ORN identity separately."
+  ]
+}
