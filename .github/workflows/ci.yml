@@ -23,6 +23,7 @@ jobs:
         run: |
           fly-sniff-record --help
           fly-sniff-odor-motion --help
+          fly-sniff-plot-odor-motion --help
           fly-sniff-staged-trace --help
           fly-sniff-review-route --help
           fly-sniff-e001-evidence --help
