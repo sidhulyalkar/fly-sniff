@@ -1,0 +1,94 @@
+name: olfactory-motion-gate-b-realdata
+
+on:
+  pull_request:
+    paths:
+      - "configs/olfactory_motion_connectivity_v1.json"
+      - "src/fly_sniff/olfactory_motion_connectivity.py"
+      - "src/fly_sniff/olfactory_motion_audit.py"
+      - "pyproject.toml"
+      - ".github/workflows/olfactory-motion-gate-b-realdata.yml"
+  workflow_dispatch:
+
+jobs:
+  connectivity-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package
+        run: python -m pip install .
+      - name: Download exact MaleCNS v1.0 annotations
+        run: |
+          mkdir -p artifacts/olfactory-motion-gate-b
+          fly-sniff-download-annotations \
+            --output artifacts/olfactory-motion-gate-b/body-annotations.feather \
+            > artifacts/olfactory-motion-gate-b/annotation-download-receipt.json
+      - name: Regenerate frozen Gate A
+        run: |
+          fly-sniff-audit-olfactory-motion \
+            --annotations artifacts/olfactory-motion-gate-b/body-annotations.feather \
+            --output artifacts/olfactory-motion-gate-b/gate-a.json
+      - name: Enforce canonical Gate A before large download
+        run: |
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/olfactory-motion-gate-b/gate-a.json"))
+          assert report["report_sha256"] == "24a09683f4abe139ba57dc739a44873ab499c2a25e4ffb7e066c49b289551abb"
+          assert report["annotation_sha256"] == "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2"
+          assert report["status"] == "candidate_audit_pass_complete_structural_motif"
+          assert report["candidate_counts"] == {"DA1_ORN": 204, "DA1_lPN": 13, "il3LN6": 2}
+          assert report["selected_body_count"] == 219
+          assert report["selected_edge_count"] == 0
+          assert report["weights_sha256"] is None
+          assert report["functional_motion_claim_allowed"] is False
+          assert report["navigation_claim_allowed"] is False
+          PY
+      - name: Download full MaleCNS v1.0 connection weights
+        run: |
+          fly-sniff-download-weights \
+            --yes-large-download \
+            --output artifacts/olfactory-motion-gate-b/connectome-weights.feather \
+            > artifacts/olfactory-motion-gate-b/weights-download-receipt.json
+      - name: Run receipt-bound Gate B structural audit
+        run: |
+          fly-sniff-audit-olfactory-connectivity \
+            --gate-a artifacts/olfactory-motion-gate-b/gate-a.json \
+            --annotations artifacts/olfactory-motion-gate-b/body-annotations.feather \
+            --weights artifacts/olfactory-motion-gate-b/connectome-weights.feather \
+            --output artifacts/olfactory-motion-gate-b/gate-b.json \
+            --edges-output artifacts/olfactory-motion-gate-b/selected-edges.parquet
+      - name: Preserve biological result without threshold repair
+        run: |
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/olfactory-motion-gate-b/gate-b.json"))
+          print("status:", report["status"])
+          print("selected_edge_count:", report["selected_edge_count"])
+          print("all_required_structural_paths_present:", report["all_required_structural_paths_present"])
+          for path in report["prespecified_paths"]:
+              print(path["source"], "->", path["target"], "edges=", path["edge_count"], "weight=", path["aggregate_weight"])
+          assert report["gate_a_report_sha256"] == "24a09683f4abe139ba57dc739a44873ab499c2a25e4ffb7e066c49b289551abb"
+          assert report["status"] in {"candidate_structural_motif_present", "candidate_structural_motif_incomplete"}
+          assert report["controller_access"] is False
+          assert report["navigation_performance_used"] is False
+          assert report["neurotransmitter_sign_inferred"] is False
+          assert report["delay_inferred"] is False
+          assert report["functional_motion_claim_allowed"] is False
+          assert report["navigation_claim_allowed"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: olfactory-motion-gate-b-realdata
+          path: |
+            artifacts/olfactory-motion-gate-b/annotation-download-receipt.json
+            artifacts/olfactory-motion-gate-b/gate-a.json
+            artifacts/olfactory-motion-gate-b/weights-download-receipt.json
+            artifacts/olfactory-motion-gate-b/gate-b.json
+            artifacts/olfactory-motion-gate-b/selected-edges.parquet
+          if-no-files-found: error
+          retention-days: 30
