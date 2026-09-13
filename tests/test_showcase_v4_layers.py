@@ -6,7 +6,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from fly_sniff.showcase_v4_layers import density_rgba, pfl3_population_frame, viewer_density_field
+from fly_sniff.showcase_v4_layers import (
+    density_rgba,
+    pfl3_population_frame,
+    social_display_frame_limit,
+    viewer_density_field,
+)
 
 
 def test_viewer_density_requires_complete_snapshot() -> None:
@@ -43,6 +48,32 @@ def test_density_rgba_is_transparent_where_density_is_zero() -> None:
     assert rgba.shape == (1, 2, 4)
     assert rgba[0, 0, 3] == 0.0
     assert rgba[0, 1, 3] > 0.0
+
+
+def test_social_display_window_ends_shortly_after_first_success() -> None:
+    payload = {
+        "frames": [
+            {
+                "t": float(index),
+                "agents": [
+                    {"found": index >= 10},
+                    {"found": False},
+                ],
+            }
+            for index in range(46)
+        ]
+    }
+    assert social_display_frame_limit(payload, reveal_hold_s=2.6) == 12
+
+
+def test_social_display_window_has_bounded_no_success_fallback() -> None:
+    payload = {
+        "frames": [
+            {"t": float(index), "agents": [{"found": False}, {"found": False}]}
+            for index in range(46)
+        ]
+    }
+    assert social_display_frame_limit(payload, no_success_window_s=18.0) == 18
 
 
 def test_pfl3_population_frame_keeps_all_24_cells() -> None:
