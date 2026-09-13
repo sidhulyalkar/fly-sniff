@@ -41,6 +41,8 @@ jobs:
           fly-sniff-redteam-cem-replay --help
           fly-sniff-freeze-trained-final --help
           fly-sniff-trained-final --help
+      - name: Check sealed Mac runner shell syntax
+        run: bash -n scripts/run_sealed_experiment_mac.sh
       - name: Ruff
         id: ruff
         continue-on-error: true
