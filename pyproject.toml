@@ -40,6 +40,7 @@ fly-sniff-experimental-plume-contract = "fly_sniff.experimental_plume:main"
 fly-sniff-inspect-experimental-plume = "fly_sniff.experimental_plume_archive:main"
 fly-sniff-reproduce-plume-cues = "fly_sniff.experimental_plume_reproduction:main"
 fly-sniff-audit-olfactory-motion = "fly_sniff.olfactory_motion_audit:main"
+fly-sniff-audit-olfactory-connectivity = "fly_sniff.olfactory_motion_connectivity:main"
 fly-sniff-plot-odor-motion = "fly_sniff.odor_motion_visual:main"
 fly-sniff-replay-odor-motion = "fly_sniff.odor_motion_showcase:main"
 fly-sniff-replay-showcase = "fly_sniff.recorded_showcase:main"
@@ -85,6 +86,7 @@ packages = ["src/fly_sniff"]
 "configs/odor_motion_v2.json" = "fly_sniff/configs/odor_motion_v2.json"
 "configs/experimental_plume_v3.json" = "fly_sniff/configs/experimental_plume_v3.json"
 "configs/olfactory_motion_audit_v1.json" = "fly_sniff/configs/olfactory_motion_audit_v1.json"
+"configs/olfactory_motion_connectivity_v1.json" = "fly_sniff/configs/olfactory_motion_connectivity_v1.json"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
