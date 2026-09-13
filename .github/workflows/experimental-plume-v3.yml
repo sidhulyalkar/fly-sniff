@@ -1,0 +1,43 @@
+name: experimental-plume-v3
+
+on:
+  pull_request:
+    paths:
+      - "configs/experimental_plume_v3.json"
+      - "src/fly_sniff/experimental_plume.py"
+      - "tests/test_experimental_plume.py"
+      - "pyproject.toml"
+      - ".github/workflows/experimental-plume-v3.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Build and install wheel
+        run: |
+          python -m pip wheel . --no-deps --wheel-dir /tmp/fly-sniff-wheel
+          python -m pip install /tmp/fly-sniff-wheel/*.whl
+      - name: Generate provenance templates outside checkout
+        working-directory: /tmp
+        run: |
+          fly-sniff-experimental-plume-contract --plume smooth --write-template /tmp/smooth-source.json
+          fly-sniff-experimental-plume-contract --plume complex --write-template /tmp/complex-source.json
+          test -s /tmp/smooth-source.json
+          test -s /tmp/complex-source.json
+      - name: Confirm unresolved templates fail validation
+        working-directory: /tmp
+        run: |
+          if fly-sniff-experimental-plume-contract --manifest /tmp/smooth-source.json; then
+            echo "unresolved smooth template unexpectedly validated"
+            exit 1
+          fi
+          if fly-sniff-experimental-plume-contract --manifest /tmp/complex-source.json; then
+            echo "unresolved complex template unexpectedly validated"
+            exit 1
+          fi
