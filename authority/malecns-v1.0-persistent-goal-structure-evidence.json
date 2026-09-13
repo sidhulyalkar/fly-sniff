@@ -1,0 +1,37 @@
+{
+  "authority_kind": "body-id-resolved-persistent-goal-structural-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "structural-evidence-not-dynamics-qualification",
+  "source_audit": {
+    "protocol": "malecns-persistent-goal-alias-audit-v1",
+    "audit_sha256": "3b3e62186f7fa6de37de3d91d686d963221d85dd1abeeb672d59302fbd1e7e1e",
+    "git_sha": "913b82de0243761bfb65bde1aa6e94959525c15b",
+    "git_dirty_paths": [],
+    "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "config_sha256": "32edb758d87cb7c5c240d5d07a83858dc63f2fd87fc5018fdc317026c5981516",
+    "fixed_thresholds": [1, 3, 5, 10]
+  },
+  "nomenclature_resolution": {
+    "historical_exact_selector": "PFG",
+    "historical_count": 0,
+    "resolved_malecns_type": "PFGs",
+    "resolved_count": 18,
+    "rule": "The failed exact-name result remains part of audit history. The PFGs alias is tested as a separate preregistered structural audit rather than rewriting the earlier result."
+  },
+  "population_counts": {"hDeltaK": 31, "PFGs": 18, "PFL3": 24},
+  "recurrent_support": {
+    "hDeltaK_to_PFGs": {"edge_pairs": 131, "weight_sum": 2846.0, "edge_pairs_at_5": 105, "edge_pairs_at_10": 84, "coverage_at_10": {"hDeltaK": "31/31", "PFGs": "18/18"}},
+    "PFGs_to_hDeltaK": {"edge_pairs": 136, "weight_sum": 4790.0, "edge_pairs_at_5": 108, "edge_pairs_at_10": 96, "coverage_at_10": {"PFGs": "18/18", "hDeltaK": "31/31"}},
+    "reciprocal_pairs": {"at_1": 127, "at_3": 111, "at_5": 102, "at_10": 81, "coverage_at_10": {"hDeltaK": "31/31", "PFGs": "18/18"}}
+  },
+  "pfl3_access": {
+    "hDeltaK_to_PFL3": {"edge_pairs": 2, "weight_sum": 2.0, "edge_pairs_at_3": 0},
+    "PFGs_to_PFL3": {"edge_pairs": 8, "weight_sum": 8.0, "edge_pairs_at_3": 0},
+    "hDeltaK_via_PFGs_to_PFL3": {"paths_at_1": 52, "paths_at_3": 0, "paths_at_5": 0, "paths_at_10": 0},
+    "PFGs_via_hDeltaK_to_PFL3": {"paths_at_1": 9, "paths_at_3": 0, "paths_at_5": 0, "paths_at_10": 0}
+  },
+  "interpretation": "MaleCNS v1.0 contains dense, broadly distributed reciprocal hDeltaK<->PFGs structural connectivity that survives the fixed weight-10 threshold. The same audit finds no meaningful direct or two-hop PFL3 access above weight 1. This is consistent with a structurally recurrent module that should be studied separately from the hDeltaG steering bridge.",
+  "forbidden_inference": "Do not infer persistent activity, working memory, attractor dynamics, physiological sign, or behavioral necessity from structural recurrence alone.",
+  "claim_boundary": "This authority establishes strong reciprocal structural connectivity between hDeltaK and PFGs in MaleCNS v1.0 and a negative structural result for robust direct PFL3 access. It does not qualify persistent neural dynamics or navigation behavior."
+}
