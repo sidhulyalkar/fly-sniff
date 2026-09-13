@@ -14,7 +14,7 @@ from .recorded_showcase import (
     _validate_social_contract,
 )
 from .recorded_showcase_v2 import _assert_canvas_dimensions
-from .recorded_showcase_v3 import _load_json, _validate_inputs
+from .recorded_showcase_v3 import _load_json, _sha256_file, _validate_inputs
 from .recording import load_recording
 from .showcase import SHOWCASE_DPI, SHOWCASE_HEIGHT, SHOWCASE_WIDTH
 from .showcase_v4_draw import draw_population_panel, draw_room_v4
@@ -37,7 +37,13 @@ def render_v4(
     config = _load_json(evidence_config)
     e002c = _load_json(e002c_report)
     fc2 = _load_json(fc2_audit)
-    _validate_inputs(config, e002c, fc2)
+    _validate_inputs(
+        config,
+        e002c,
+        fc2,
+        e002c_sha256=_sha256_file(e002c_report),
+        fc2_sha256=_sha256_file(fc2_audit),
+    )
     if seconds < 1 or fps < 1:
         raise ValueError("seconds and fps must be >= 1")
 
