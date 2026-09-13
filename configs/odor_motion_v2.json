@@ -11,6 +11,21 @@
     "minimum_absolute_evidence": 0.12,
     "minimum_confidence": 0.08
   },
+  "event_detection": {
+    "odor_on_threshold": 0.16,
+    "odor_off_threshold": 0.08,
+    "minimum_state_duration_s": 0.10,
+    "reacquisition_horizon_s": 2.0,
+    "turn_response_horizon_s": 0.50,
+    "high_confidence_threshold": 0.35,
+    "high_confidence_refractory_s": 0.20
+  },
+  "counterfactuals": {
+    "mirror_left_right": true,
+    "zero_temporal_evidence": true,
+    "right_channel_shift_s": 0.75,
+    "right_channel_shift_is_analysis_only": true
+  },
   "direction_convention": {
     "positive": "left_to_right",
     "negative": "right_to_left",
@@ -18,9 +33,12 @@
   },
   "scientific_controls": [
     "sealed v1 mean-odor interface remains unchanged",
+    "odor encounter/loss/reacquisition events use frozen hysteresis and a minimum dwell time",
     "mirror left/right histories and require motion-evidence sign reversal",
     "simultaneous bilateral pulses should produce near-zero direction evidence",
-    "prefix invariance proves future frames cannot change prior estimates",
+    "prefix invariance proves future frames cannot change prior causal estimates",
+    "offline temporal misalignment must preserve the shifted antenna channel's marginal values exactly",
+    "offline circular shift is diagnostic-only and must never be described as a causal online sensory stream",
     "future v2 controller experiments must compare intact topology with equally optimized rewires and a temporal-information ablation"
   ],
   "visualization_contract": {
@@ -29,7 +47,8 @@
       "right antenna response trace",
       "causal odor-motion evidence",
       "confidence",
-      "dominant tested delay"
+      "dominant tested delay",
+      "odor encounter, loss, and reacquisition markers"
     ],
     "label": "MODELED BILATERAL ODOR TIMING",
     "forbidden_label": "measured odor-motion neuron activity"
