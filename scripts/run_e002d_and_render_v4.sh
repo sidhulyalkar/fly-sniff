@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source scripts/python_env.sh
+
 RECORDING="${1:-artifacts/showcase/who-farted-run.json}"
 OUTPUT="${2:-artifacts/showcase/who-farted-v4.mp4}"
 
@@ -21,7 +23,7 @@ done
 bash scripts/run_e002d_phase_crosswalk.sh
 bash scripts/run_e002d_phase_probe.sh
 
-python - <<'PY'
+"$PYTHON_BIN" - <<'PY'
 import json
 from pathlib import Path
 
