@@ -162,6 +162,11 @@ def test_e002c_probe_passes_causal_convergence_gates_on_toy_graph() -> None:
     assert gates["heading_lane_cut"]["value"] == 0.0
     assert gates["goal_lane_cut"]["value"] == 0.0
     threshold_10 = report["threshold_reports"]["10"]
+    assert threshold_10["goal_only"]["deterministic_replay_error"] == 0.0
+    assert threshold_10["heading_only"]["deterministic_replay_error"] == 0.0
+    assert threshold_10["joint"]["deterministic_replay_error"] == 0.0
+    assert threshold_10["heading_lane_cut"]["deterministic_replay_error"] == 0.0
+    assert threshold_10["goal_lane_cut"]["deterministic_replay_error"] == 0.0
     assert threshold_10["joint_convergence"]["dual_reachable_body_ids"] == [7]
     assert threshold_10["joint_convergence"]["changed_from_both_count"] == 1
     assert threshold_10["Delta7_structural_only"]["modeled_sign"] == 0
