@@ -40,11 +40,49 @@ def viewer_density_field(
     return np.where(local, density, 0.0).sum(axis=2), extent
 
 
-def density_rgba(density: np.ndarray) -> np.ndarray:
-    """Convert exact density into a display-normalized translucent layer.
+def recording_density_scale(
+    payload: dict[str, Any],
+    last_index: int,
+    *,
+    percentile: float = 98.0,
+    max_samples: int = 90,
+    nx: int = 44,
+    ny: int = 27,
+) -> float:
+    """Freeze one plume-display scale over the complete social replay window.
 
-    Alpha is intentionally normalized for phone readability and must not be read
-    as a quantitative colorbar or compared across frames.
+    The scale is a renderer-only quantity. Sampling frames and a coarser grid keeps
+    the prepass cheap while preventing per-frame normalization from making the
+    plume appear to brighten or dim merely because the normalization changed.
+    """
+    frames = payload.get("frames", [])
+    if not frames:
+        raise ValueError("recording has no frames")
+    if last_index < 0 or last_index >= len(frames):
+        raise ValueError("last_index outside recording")
+    sample_count = min(max_samples, last_index + 1)
+    indices = np.unique(np.linspace(0, last_index, sample_count, dtype=int))
+    positive_chunks: list[np.ndarray] = []
+    for index in indices:
+        field = viewer_density_field(frames[int(index)], payload, nx=nx, ny=ny)
+        if field is None:
+            continue
+        density, _ = field
+        positive = density[density > 0.0]
+        if positive.size:
+            positive_chunks.append(positive)
+    if not positive_chunks:
+        return 1.0
+    values = np.concatenate(positive_chunks)
+    return max(float(np.percentile(values, percentile)), 1e-12)
+
+
+def density_rgba(density: np.ndarray, *, scale: float | None = None) -> np.ndarray:
+    """Convert exact density into a translucent display layer.
+
+    When ``scale`` is supplied, the same fixed renderer scale is used across all
+    frames so opacity is temporally comparable. The nonlinear alpha mapping is
+    still for phone readability and is not a quantitative concentration colorbar.
     """
     density = np.asarray(density, dtype=float)
     rgba = np.zeros((*density.shape, 4), dtype=float)
@@ -52,7 +90,12 @@ def density_rgba(density: np.ndarray) -> np.ndarray:
     positive = density[density > 0.0]
     if not positive.size:
         return rgba
-    scale = max(float(np.percentile(positive, 98.0)), 1e-12)
+    if scale is None:
+        scale = max(float(np.percentile(positive, 98.0)), 1e-12)
+    else:
+        scale = float(scale)
+        if not np.isfinite(scale) or scale <= 0.0:
+            raise ValueError("density display scale must be finite and > 0")
     normalized = np.log1p(3.0 * density / scale) / np.log(4.0)
     rgba[..., 3] = 0.56 * np.clip(normalized, 0.0, 1.0)
     return rgba
