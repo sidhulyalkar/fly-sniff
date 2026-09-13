@@ -10,6 +10,29 @@ def _write_json(path, payload):
     path.write_text(json.dumps(payload))
 
 
+def test_candidate_manifest_requires_exact_sealing_checkout(monkeypatch):
+    candidate = {"code_ref": "sealed-commit"}
+    monkeypatch.setattr(
+        sealed_experiment,
+        "verify_candidate_manifest",
+        lambda bundle, manifest, task_config_path, require_training_ready: candidate,
+    )
+    monkeypatch.setattr(sealed_experiment, "current_git_ref", lambda: "different-commit")
+    with pytest.raises(RuntimeError, match="differs from the code commit sealed before performance"):
+        sealed_experiment._candidate_manifest("bundle", "candidate", "config")
+
+
+def test_candidate_manifest_accepts_exact_sealing_checkout(monkeypatch):
+    candidate = {"code_ref": "sealed-commit"}
+    monkeypatch.setattr(
+        sealed_experiment,
+        "verify_candidate_manifest",
+        lambda bundle, manifest, task_config_path, require_training_ready: candidate,
+    )
+    monkeypatch.setattr(sealed_experiment, "current_git_ref", lambda: "sealed-commit")
+    assert sealed_experiment._candidate_manifest("bundle", "candidate", "config") is candidate
+
+
 def test_final_lock_precedes_evaluation_and_survives_failed_final(tmp_path, monkeypatch):
     bundle = tmp_path / "bundle"
     bundle.mkdir()
