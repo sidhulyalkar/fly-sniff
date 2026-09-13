@@ -1,0 +1,38 @@
+{
+  "authority_kind": "e002b-postrun-input-seal",
+  "dataset": "male-cns:v1.0",
+  "protocol": {
+    "path": "configs/e002b_goal_channel_protocol_v1.json",
+    "git_blob_sha": "147def3726d269bfa6072efd57e04d5f18447c0d",
+    "note": "The preregistered protocol is not modified by this seal. This file only binds subsequently generated audit artifacts to the frozen E002b implementation input set."
+  },
+  "artifacts": {
+    "integration_route_audit_v1": {
+      "path": "results/route/integration-route-audit-v1.json",
+      "sha256": "393044451445af3c1ba1dd720adcb633e134b407e37a3dfcd42d17ad7d515a13",
+      "runtime_git_sha": "913b82de0243761bfb65bde1aa6e94959525c15b"
+    },
+    "integration_sign_audit_v2": {
+      "path": "results/route/integration-sign-audit-v2.json",
+      "sha256": "99f26acce9c00706bc00b7a47408157f1119f71aff49549e539db41f39925a1f",
+      "runtime_git_sha": "0619042e1a49276e3b87732b01fe2d6847c644fd",
+      "required_flags": {
+        "ready_for_modeled_sign_probe": true,
+        "ready_with_sensitivity_requirements": true
+      }
+    },
+    "integration_topography_audit_v1": {
+      "path": "results/route/integration-topography-audit-v1.json",
+      "sha256": "6b37488bac2adf37165d280064600fb16ea39975d535ff4af6b0f3570d54482c",
+      "runtime_git_sha": "0619042e1a49276e3b87732b01fe2d6847c644fd",
+      "required_directional_role_status": "unresolved"
+    }
+  },
+  "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+  "mandatory_sensitivity": {
+    "name": "PFNp_b_unresolved_sign",
+    "body_id_count": 136,
+    "rule": "Repeat the signed mechanistic probe with all PFNp_b presynaptic edges assigned modeled sign 0."
+  },
+  "claim_boundary": "This seal binds artifact identity only. It does not add a qualification criterion, change a threshold, promote a relay, or establish physiological or behavioral function."
+}
