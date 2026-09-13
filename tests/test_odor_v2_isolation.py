@@ -13,6 +13,8 @@ NEW_ANALYSIS = {
     "fly_sniff.odor_motion_showcase", "fly_sniff.odor_motion_edge_assay",
     "fly_sniff.odor_motion_plume_assay", "fly_sniff.odor_motion_qualification",
     "fly_sniff.odor_motion_qualification_receipt", "fly_sniff.experimental_plume",
+    "fly_sniff.experimental_plume_archive", "fly_sniff.experimental_plume_cues",
+    "fly_sniff.experimental_plume_reproduction",
 }
 
 
