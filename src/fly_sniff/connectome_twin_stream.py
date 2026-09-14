@@ -19,6 +19,14 @@ def _sha256(path: str | Path) -> str:
     return digest.hexdigest()
 
 
+def _plume_snapshot_state(frame: dict[str, Any]) -> tuple[bool | None, bool]:
+    """Return plume completeness without inventing metadata for legacy recordings."""
+    snapshot = frame.get("plume_snapshot")
+    if not isinstance(snapshot, dict) or "complete" not in snapshot:
+        return None, False
+    return bool(snapshot["complete"]), True
+
+
 def build_stream(
     recording_path: str | Path,
     *,
@@ -50,11 +58,13 @@ def build_stream(
                     },
                 }
             )
+        plume_complete, plume_metadata_available = _plume_snapshot_state(frame)
         behavior_frames.append(
             {
                 "t_s": float(frame["t"]),
                 "plume_t_s": float(frame["plume_t"]),
-                "plume_snapshot_complete": bool(frame["plume_snapshot"]["complete"]),
+                "plume_snapshot_complete": plume_complete,
+                "plume_snapshot_metadata_available": plume_metadata_available,
                 "plume_components": frame["plume"],
                 "agents": agents,
             }
