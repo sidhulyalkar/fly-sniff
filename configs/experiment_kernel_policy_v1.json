@@ -1,0 +1,48 @@
+{
+  "schema": "fly-sniff-experiment-kernel-policy-v1",
+  "status": "product_core_policy_not_scientific_result",
+  "programs": {
+    "latent_wiring": {
+      "navigation_reward_allowed": false,
+      "topology_specific_fit_allowed": false,
+      "whole_graph_backprop_allowed": false,
+      "independent_calibration_targets_required": true,
+      "interpretation": "Tests computation latent in biological wiring under independently constrained dynamics."
+    },
+    "topology_inductive_bias": {
+      "topology_specific_fit_requires_equal_budget": true,
+      "whole_graph_backprop_allowed": false,
+      "interpretation": "Tests whether biological topology is a better learning substrate under matched optimization."
+    },
+    "biological_learning": {
+      "explicit_plasticity_scope_required": true,
+      "whole_graph_backprop_allowed": false,
+      "interpretation": "Tests prespecified biologically supported plasticity mechanisms."
+    }
+  },
+  "confirmatory_topology_claim": {
+    "minimum_frozen_topology_nulls": 31,
+    "preferred_flagship_topology_nulls": 63,
+    "paired_episode_conditions_required": true,
+    "hidden_final_entropy_required": true,
+    "one_way_final_required": true,
+    "negative_results_retained": true,
+    "note": "This is a credibility floor for the project, not a universal statistical sufficiency rule."
+  },
+  "epistemic_classes": [
+    "measured_structure",
+    "measured_physiology",
+    "predicted_annotation",
+    "cross_dataset_prior",
+    "model_assumption",
+    "fitted_parameter",
+    "modeled_state",
+    "behavioral_output"
+  ],
+  "integration": {
+    "pr_22_controller_access_allowed": false,
+    "pr_23_controller_access_allowed": false,
+    "existing_task_optimization_program": "topology_inductive_bias",
+    "primary_future_odor_program": "latent_wiring"
+  }
+}
