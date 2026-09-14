@@ -6,7 +6,6 @@ import pytest
 
 from fly_sniff import experiment as exp
 
-
 SHA_A = "a" * 64
 SHA_B = "b" * 64
 SHA_C = "c" * 64
