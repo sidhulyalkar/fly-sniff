@@ -16,6 +16,11 @@ from .pose_neural import build_session_pose_neural_batch
 from .registry import load_registry
 from .ridge import load_split_lock, run_ridge_baseline
 from .schema import SampleWindow
+from .session_benchmark import (
+    build_session_split_lock,
+    load_session_batches,
+    run_within_animal_ridge,
+)
 from .split_lock import build_split_lock, load_window_manifests
 from .splits import validate_animal_disjoint_splits
 
@@ -63,6 +68,16 @@ def main() -> None:
     batch.add_argument("--dff-side", required=True, type=int)
     batch.add_argument("--output", required=True)
     batch.add_argument("--receipt", required=True)
+
+    v1_split = sub.add_parser("make-v1-session-split")
+    v1_split.add_argument("batches", nargs="+")
+    v1_split.add_argument("--output", required=True)
+
+    v1_ridge = sub.add_parser("within-animal-ridge")
+    v1_ridge.add_argument("split_lock")
+    v1_ridge.add_argument("batches", nargs="+")
+    v1_ridge.add_argument("--output", required=True)
+    v1_ridge.add_argument("--consume-test", action="store_true")
 
     lock = sub.add_parser("make-split-lock")
     lock.add_argument("windows", nargs="+")
@@ -136,6 +151,24 @@ def main() -> None:
                 sort_keys=True,
             )
         )
+        return
+    if args.command == "make-v1-session-split":
+        batch_data, source_files = load_session_batches(args.batches)
+        report = build_session_split_lock(batch_data, source_batches=source_files)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
+        return
+    if args.command == "within-animal-ridge":
+        batch_data, source_files = load_session_batches(args.batches)
+        lock_data = json.loads(Path(args.split_lock).read_text())
+        report = run_within_animal_ridge(
+            batch_data,
+            lock_data,
+            source_batches=source_files,
+            consume_test=args.consume_test,
+        )
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": report["test_status"], "animals": len(report["animals"])}, sort_keys=True))
         return
     if args.command == "make-split-lock":
         samples = load_window_manifests(args.windows)

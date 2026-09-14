@@ -108,6 +108,12 @@ def _validate_v1(document: dict[str, Any]) -> None:
         raise ValueError("v1 primary temporal contract is frozen to 3.0/0.5/0.5 s")
     if primary.get("split_unit") != "session_id_within_animal":
         raise ValueError("v1 primary split unit must be session within animal")
+    if primary.get("session_split_seed") != 2701:
+        raise ValueError("v1 primary session split seed is frozen to 2701")
+    if primary.get("validation_sessions_per_animal") != 1:
+        raise ValueError("v1 primary requires one validation session per animal")
+    if primary.get("test_sessions_per_animal") != 1:
+        raise ValueError("v1 primary requires one test session per animal")
     if primary.get("raw_neural_pixel_target_allowed") is not True:
         raise ValueError("v1 within-animal primary task allows measured neural image targets")
     if primary.get("target") != "future_mean_dff_image":

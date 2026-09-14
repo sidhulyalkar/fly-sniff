@@ -26,6 +26,9 @@ def test_v1_records_pre_score_scientific_correction():
 def test_v1_primary_is_within_animal_session_heldout():
     primary = load_benchmark(_path())["tasks"]["primary"]
     assert primary["split_unit"] == "session_id_within_animal"
+    assert primary["session_split_seed"] == 2701
+    assert primary["validation_sessions_per_animal"] == 1
+    assert primary["test_sessions_per_animal"] == 1
     assert primary["target"] == "future_mean_dff_image"
     assert primary["raw_neural_pixel_target_allowed"] is True
 
