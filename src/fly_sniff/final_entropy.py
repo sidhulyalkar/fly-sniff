@@ -70,7 +70,7 @@ class FinalEntropyCommitment:
         return payload
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "FinalEntropyCommitment":
+    def from_dict(cls, payload: dict[str, Any]) -> FinalEntropyCommitment:
         commitment = cls(
             experiment_id=str(payload["experiment_id"]),
             commitment_sha256=str(payload["commitment_sha256"]),
@@ -84,7 +84,7 @@ class FinalEntropyCommitment:
         return commitment
 
     @classmethod
-    def build(cls, *, experiment_id: str, secret: bytes) -> "FinalEntropyCommitment":
+    def build(cls, *, experiment_id: str, secret: bytes) -> FinalEntropyCommitment:
         commitment = cls(
             experiment_id=experiment_id,
             commitment_sha256=secret_commitment_sha256(secret),
@@ -236,7 +236,7 @@ class FinalSeedReceipt:
         return payload
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "FinalSeedReceipt":
+    def from_dict(cls, payload: dict[str, Any]) -> FinalSeedReceipt:
         receipt = cls(
             experiment_id=str(payload["experiment_id"]),
             commitment_sha256=str(payload["commitment_sha256"]),
