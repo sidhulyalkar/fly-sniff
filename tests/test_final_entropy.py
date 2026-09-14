@@ -12,7 +12,6 @@ from fly_sniff.final_entropy import (
     derive_unique_seed_stream,
 )
 
-
 SECRET = b"s" * 32
 OTHER_SECRET = b"t" * 32
 LOCK_A = "a" * 64
