@@ -5,7 +5,6 @@ from pathlib import Path
 
 from fly_sniff.evidence import EvidenceClass, EvidenceLedger
 
-
 AUTHORITY_PATH = Path("authority/program-a-physiology-evidence-v1.json")
 
 
