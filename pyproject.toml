@@ -64,6 +64,7 @@ fly-sniff-evidence-validate = "fly_sniff.evidence.ledger:main"
 fly-sniff-experiment-protocol = "fly_sniff.experiment_protocol:main"
 fly-sniff-connectome-necessity = "fly_sniff.connectome_necessity:main"
 fly-sniff-physiology-calibration = "fly_sniff.physiology_calibration:main"
+fly-sniff-null-factory-v2 = "fly_sniff.null_factory_v2:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
