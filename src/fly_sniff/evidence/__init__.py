@@ -2,15 +2,15 @@
 
 from .claims import ClaimDecision, ClaimStatus, compile_claim
 from .ledger import EvidenceLedger
-from .schema import EvidenceClass, EvidenceFact, EvidenceRecord, EntityRef
+from .schema import EntityRef, EvidenceClass, EvidenceFact, EvidenceRecord
 
 __all__ = [
     "ClaimDecision",
     "ClaimStatus",
+    "EntityRef",
     "EvidenceClass",
     "EvidenceFact",
     "EvidenceLedger",
     "EvidenceRecord",
-    "EntityRef",
     "compile_claim",
 ]
