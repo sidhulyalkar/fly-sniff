@@ -6,6 +6,7 @@
     "method": "directed degree-preserving edge swaps",
     "swaps_per_edge": 8,
     "require_full_requested_swap_count": true,
+    "minimum_changed_edge_fraction": 0.8,
     "preserve_source_out_degree": true,
     "preserve_target_in_degree": true,
     "preserve_edge_count": true,
@@ -47,7 +48,8 @@
     "no_self_loops",
     "no_duplicate_edges",
     "deterministic_same_seed_rewire",
-    "full_requested_swap_count"
+    "full_requested_swap_count",
+    "minimum_changed_edge_fraction"
   ],
   "claim_boundary": "E004a freezes fair controls only. It does not compare behavioral performance and cannot support a real-vs-rewired navigation claim by itself."
 }
