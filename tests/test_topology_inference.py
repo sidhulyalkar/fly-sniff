@@ -4,7 +4,6 @@ import pytest
 
 from fly_sniff.topology_inference import GraphEvaluation, topology_randomization_inference
 
-
 CONDITIONS = tuple(f"episode-{index:03d}" for index in range(20))
 
 
