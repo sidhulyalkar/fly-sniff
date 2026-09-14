@@ -1,0 +1,45 @@
+{
+  "schema": "fly-sniff-topology-null-protocol-v1",
+  "program": "latent_wiring",
+  "experimental_unit": "graph_realization",
+  "development": {
+    "existing_rewire_count_is_exploratory": 8,
+    "may_promote_to_confirmatory_topology_claim": false
+  },
+  "confirmatory": {
+    "minimum_null_graphs_per_family": 31,
+    "preferred_null_graphs_per_family": 63,
+    "paired_condition_ids_required": true,
+    "ties_count_against_intact": true,
+    "empirical_tail_probability": "(1 + count(null_stat >= intact_stat)) / (N_null + 1) for higher-is-better",
+    "null_family_must_be_frozen_before_performance": true,
+    "nulls_may_not_be_dropped_by_outcome": true,
+    "negative_results_retained": true
+  },
+  "generation": {
+    "default_swaps_per_edge": 8,
+    "fixed_swap_budget_is_not_stationarity_evidence": true,
+    "require_exact_directed_degree": true,
+    "require_presynaptic_weight_sign_multiset": true,
+    "families": [
+      "directed_degree",
+      "source_attribute",
+      "hemisphere",
+      "cell_type",
+      "constrained"
+    ],
+    "constrained_family_requires_predeclared_node_metadata_columns": true
+  },
+  "reporting": {
+    "report_each_null_family_separately": true,
+    "require_complete_null_distribution": true,
+    "require_intact_rank_and_percentile": true,
+    "require_effect_vs_null_mean_and_median": true,
+    "episode_uncertainty_is_secondary_to_topology_uncertainty": true
+  },
+  "claim_boundary": [
+    "Many episodes on one graph do not create many independent topology samples.",
+    "Completing a fixed number of double-edge swaps does not prove Markov-chain stationarity.",
+    "A favorable result against one null family does not automatically generalize to stricter null families."
+  ]
+}
