@@ -4,17 +4,7 @@ import copy
 
 import pytest
 
-from fly_sniff.experiment import (
-    ArtifactRef,
-    ExperimentLock,
-    ExperimentPhase,
-    ExperimentProgram,
-    ExperimentSpec,
-    FinalPolicy,
-    RunReceipt,
-    RunStatus,
-    TrainingPolicy,
-)
+from fly_sniff import experiment as exp
 
 
 SHA_A = "a" * 64
@@ -22,8 +12,8 @@ SHA_B = "b" * 64
 SHA_C = "c" * 64
 
 
-def _artifact(name: str = "connectome") -> ArtifactRef:
-    return ArtifactRef(
+def _artifact(name: str = "connectome") -> exp.ArtifactRef:
+    return exp.ArtifactRef(
         name=name,
         kind="scientific_input",
         sha256=SHA_A,
@@ -31,7 +21,7 @@ def _artifact(name: str = "connectome") -> ArtifactRef:
     )
 
 
-def _training(**overrides: object) -> TrainingPolicy:
+def _training(**overrides: object) -> exp.TrainingPolicy:
     values: dict[str, object] = {
         "navigation_reward_allowed": False,
         "topology_specific_fit_allowed": False,
@@ -41,10 +31,10 @@ def _training(**overrides: object) -> TrainingPolicy:
         "plasticity_scope": (),
     }
     values.update(overrides)
-    return TrainingPolicy(**values)  # type: ignore[arg-type]
+    return exp.TrainingPolicy(**values)  # type: ignore[arg-type]
 
 
-def _final(**overrides: object) -> FinalPolicy:
+def _final(**overrides: object) -> exp.FinalPolicy:
     values: dict[str, object] = {
         "topology_claim": False,
         "topology_null_count": 0,
@@ -54,18 +44,18 @@ def _final(**overrides: object) -> FinalPolicy:
         "one_way_final": False,
     }
     values.update(overrides)
-    return FinalPolicy(**values)  # type: ignore[arg-type]
+    return exp.FinalPolicy(**values)  # type: ignore[arg-type]
 
 
 def _spec(
     *,
-    program: ExperimentProgram = ExperimentProgram.LATENT_WIRING,
-    phase: ExperimentPhase = ExperimentPhase.DEVELOPMENT,
-    training_policy: TrainingPolicy | None = None,
-    final_policy: FinalPolicy | None = None,
+    program: exp.ExperimentProgram = exp.ExperimentProgram.LATENT_WIRING,
+    phase: exp.ExperimentPhase = exp.ExperimentPhase.DEVELOPMENT,
+    training_policy: exp.TrainingPolicy | None = None,
+    final_policy: exp.FinalPolicy | None = None,
     null_families: tuple[str, ...] = (),
-) -> ExperimentSpec:
-    return ExperimentSpec(
+) -> exp.ExperimentSpec:
+    return exp.ExperimentSpec(
         experiment_id="test-experiment",
         program=program,
         phase=phase,
@@ -86,7 +76,7 @@ def test_latent_wiring_development_spec_is_content_addressed() -> None:
     spec.validate()
     payload = spec.to_dict()
     assert payload["spec_sha256"] == spec.sha256
-    assert ExperimentSpec.from_dict(payload).sha256 == spec.sha256
+    assert exp.ExperimentSpec.from_dict(payload).sha256 == spec.sha256
 
 
 def test_latent_wiring_forbids_navigation_reward() -> None:
@@ -122,7 +112,7 @@ def test_confirmatory_topology_claim_requires_credible_null_ensemble() -> None:
         one_way_final=True,
     )
     spec = _spec(
-        phase=ExperimentPhase.CONFIRMATORY,
+        phase=exp.ExperimentPhase.CONFIRMATORY,
         final_policy=final,
         null_families=("degree_preserving",),
     )
@@ -140,7 +130,7 @@ def test_confirmatory_topology_claim_requires_hidden_entropy_and_pairing() -> No
     )
     with pytest.raises(ValueError, match="hidden final entropy"):
         _spec(
-            phase=ExperimentPhase.CONFIRMATORY,
+            phase=exp.ExperimentPhase.CONFIRMATORY,
             final_policy=unblinded,
             null_families=("degree_preserving",),
         ).validate()
@@ -154,7 +144,7 @@ def test_confirmatory_topology_claim_requires_hidden_entropy_and_pairing() -> No
     )
     with pytest.raises(ValueError, match="paired episode"):
         _spec(
-            phase=ExperimentPhase.CONFIRMATORY,
+            phase=exp.ExperimentPhase.CONFIRMATORY,
             final_policy=unpaired,
             null_families=("degree_preserving",),
         ).validate()
@@ -168,7 +158,7 @@ def test_confirmatory_runs_must_be_one_way_and_retain_negative_results() -> None
     )
     with pytest.raises(ValueError, match="one-way final"):
         _spec(
-            phase=ExperimentPhase.CONFIRMATORY,
+            phase=exp.ExperimentPhase.CONFIRMATORY,
             final_policy=non_one_way,
         ).validate()
 
@@ -179,7 +169,7 @@ def test_confirmatory_runs_must_be_one_way_and_retain_negative_results() -> None
     )
     with pytest.raises(ValueError, match="retain negative results"):
         _spec(
-            phase=ExperimentPhase.CONFIRMATORY,
+            phase=exp.ExperimentPhase.CONFIRMATORY,
             final_policy=discards_negative,
         ).validate()
 
@@ -192,7 +182,7 @@ def test_inductive_bias_topology_fitting_requires_equal_budgets() -> None:
         calibration_targets=(),
     )
     spec = _spec(
-        program=ExperimentProgram.TOPOLOGY_INDUCTIVE_BIAS,
+        program=exp.ExperimentProgram.TOPOLOGY_INDUCTIVE_BIAS,
         training_policy=training,
     )
     with pytest.raises(ValueError, match="equal optimization budgets"):
@@ -202,7 +192,7 @@ def test_inductive_bias_topology_fitting_requires_equal_budgets() -> None:
 def test_biological_learning_requires_explicit_plasticity_scope() -> None:
     training = _training(calibration_targets=(), plasticity_scope=())
     spec = _spec(
-        program=ExperimentProgram.BIOLOGICAL_LEARNING,
+        program=exp.ExperimentProgram.BIOLOGICAL_LEARNING,
         training_policy=training,
     )
     with pytest.raises(ValueError, match="plasticity_scope"):
@@ -215,25 +205,25 @@ def test_spec_lock_and_receipt_detect_tampering() -> None:
     tampered_spec = copy.deepcopy(spec_payload)
     tampered_spec["scientific_question"] = "A different question"
     with pytest.raises(ValueError, match="spec hash mismatch"):
-        ExperimentSpec.from_dict(tampered_spec)
+        exp.ExperimentSpec.from_dict(tampered_spec)
 
-    lock = ExperimentLock(spec=spec, code_ref="deadbeef", runtime_sha256=SHA_C)
+    lock = exp.ExperimentLock(spec=spec, code_ref="deadbeef", runtime_sha256=SHA_C)
     lock_payload = lock.to_dict()
     tampered_lock = copy.deepcopy(lock_payload)
     tampered_lock["runtime_sha256"] = SHA_A
     with pytest.raises(ValueError, match="lock hash mismatch"):
-        ExperimentLock.from_dict(tampered_lock)
+        exp.ExperimentLock.from_dict(tampered_lock)
 
-    result = ArtifactRef(
+    result = exp.ArtifactRef(
         name="results",
         kind="result",
         sha256=SHA_B,
         uri="artifact://results",
     )
-    receipt = RunReceipt(
+    receipt = exp.RunReceipt(
         run_id="run-1",
         lock_sha256=lock.sha256,
-        status=RunStatus.COMPLETED,
+        status=exp.RunStatus.COMPLETED,
         result_artifacts=(result,),
         metric_summary=(("spl", 0.42),),
     )
@@ -241,16 +231,16 @@ def test_spec_lock_and_receipt_detect_tampering() -> None:
     tampered_receipt = copy.deepcopy(receipt_payload)
     tampered_receipt["metric_summary"]["spl"] = 0.99
     with pytest.raises(ValueError, match="receipt hash mismatch"):
-        RunReceipt.from_dict(tampered_receipt)
+        exp.RunReceipt.from_dict(tampered_receipt)
 
 
 def test_completed_run_requires_content_addressed_result() -> None:
     spec = _spec()
-    lock = ExperimentLock(spec=spec, code_ref="deadbeef", runtime_sha256=SHA_C)
-    receipt = RunReceipt(
+    lock = exp.ExperimentLock(spec=spec, code_ref="deadbeef", runtime_sha256=SHA_C)
+    receipt = exp.RunReceipt(
         run_id="run-1",
         lock_sha256=lock.sha256,
-        status=RunStatus.COMPLETED,
+        status=exp.RunStatus.COMPLETED,
     )
     with pytest.raises(ValueError, match="content-addressed result artifact"):
         receipt.validate()
