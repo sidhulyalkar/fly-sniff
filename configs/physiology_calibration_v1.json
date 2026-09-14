@@ -1,0 +1,88 @@
+{
+  "protocol": "physiology-calibration-v1",
+  "status": "preregistered-not-run",
+  "purpose": "Calibrate the smallest permissible dynamics parameter set against independent neural constraints before any zero-shot odor-navigation evaluation.",
+  "dataset": "male-cns:v1.0",
+  "forbidden_calibration_signals": [
+    "navigation_reward",
+    "source_coordinates",
+    "distance_to_source",
+    "episode_success",
+    "SPL",
+    "path_efficiency",
+    "time_to_source",
+    "intact_vs_rewire_separation",
+    "final_test_performance"
+  ],
+  "permitted_parameters": [
+    "global_neural_time_constant",
+    "global_recurrent_gain",
+    "global_activation_scale",
+    "sensory_transduction_gain"
+  ],
+  "forbidden_parameters": [
+    "individual_edge_weights",
+    "body_id_membership",
+    "left_right_independent_gains",
+    "variant_specific_parameters",
+    "navigation_policy_parameters"
+  ],
+  "parameter_sharing": {
+    "same_parameters_for_intact_and_all_null_topologies": true,
+    "same_parameters_for_acute_lesions": true,
+    "no_recalibration_after_topology_assignment": true,
+    "no_recalibration_after_acute_intervention": true
+  },
+  "probe_contract": {
+    "objective_must_be_defined_before_fit": true,
+    "all_probes_require_evidence_ledger_authority": true,
+    "cross_dataset_probes_must_remain_labeled_cross_dataset": true,
+    "failed_probes_may_not_be_dropped_after_fit": true
+  },
+  "probes": [
+    {
+      "id": "PFN_airflow_tuning_geometry",
+      "target": "PFN airflow tuning geometry",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    },
+    {
+      "id": "PFN_mirrored_directional_response",
+      "target": "mirrored PFN directional responses",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    },
+    {
+      "id": "odor_context_gating",
+      "target": "odor-context gating of navigation-related state",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    },
+    {
+      "id": "PFL3_lateralized_steering_relationship",
+      "target": "PFL3 lateralized steering relationship",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    },
+    {
+      "id": "DNa02_turn_relationship",
+      "target": "DNa02 turn relationship",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    },
+    {
+      "id": "temporal_response_scale",
+      "target": "independently constrained neural temporal response scale",
+      "evidence_requirement": "MEASURED_PHYSIOLOGY_OR_CROSS_DATASET_PRIOR",
+      "authority_status": "unresolved"
+    }
+  ],
+  "fit_contract": {
+    "navigation_objective_weight": 0.0,
+    "topology_variant_visible_during_fit": false,
+    "final_evaluation_visible_during_fit": false,
+    "deterministic_fit_seed_required": true,
+    "frozen_output_artifact": "physiology-calibrated-model-v1.json"
+  },
+  "claim_boundary": "PhysiologyCalibration v1 may justify a frozen model parameterization under independently specified neural constraints. It cannot establish navigation performance, topology dependence, measured MaleCNS activity, or biological generalization."
+}
