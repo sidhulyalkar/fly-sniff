@@ -50,13 +50,14 @@ def build_authority_from_long_csv(
     source_name: str,
     source_version: str,
     source_commit: str | None = None,
+    selected_odorants: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build a compact receptor authority from receptor,odorant,response rows.
 
-    This function intentionally performs no imputation. Missing receptor/odorant
-    pairs remain zero only when the CSV explicitly contains a zero; otherwise the
-    odorant is rejected as incomplete. Scientific experiments should therefore
-    choose odorants with preregistered coverage rather than silently filling gaps.
+    No missing receptor response is imputed. When ``selected_odorants`` is
+    provided, the authority retains the intersection of receptors with explicit
+    measurements for every selected odorant. This makes sparse source databases
+    usable without converting missing measurements into biological zeros.
     """
     rows: list[tuple[str, str, float]] = []
     with Path(csv_path).open(newline="") as handle:
@@ -72,23 +73,42 @@ def build_authority_from_long_csv(
                 raise ValueError("invalid odor authority row")
             rows.append((receptor, odorant, response))
 
-    receptors = sorted({row[0] for row in rows})
-    odorant_names = sorted({row[1] for row in rows})
+    requested = [str(x).strip() for x in selected_odorants or [] if str(x).strip()]
+    available_odorants = {row[1] for row in rows}
+    if requested:
+        missing_requested = sorted(set(requested) - available_odorants)
+        if missing_requested:
+            raise ValueError("requested odorants missing from CSV: " + ", ".join(missing_requested))
+        requested_set = set(requested)
+        rows = [row for row in rows if row[1] in requested_set]
+        odorant_names = list(dict.fromkeys(requested))
+    else:
+        odorant_names = sorted(available_odorants)
+
     matrix: dict[str, dict[str, float]] = {name: {} for name in odorant_names}
     for receptor, odorant, response in rows:
         if receptor in matrix[odorant]:
             raise ValueError(f"duplicate receptor/odorant pair: {receptor}, {odorant}")
         matrix[odorant][receptor] = response
 
-    incomplete = [
-        odorant
-        for odorant, values in matrix.items()
-        if set(values) != set(receptors)
-    ]
-    if incomplete:
-        raise ValueError(
-            "incomplete odorants are not silently imputed: " + ", ".join(incomplete[:8])
-        )
+    receptor_sets = [set(matrix[name]) for name in odorant_names]
+    common_receptors = set.intersection(*receptor_sets) if receptor_sets else set()
+    if not common_receptors:
+        raise ValueError("selected odorants have no commonly measured receptors")
+
+    if not requested:
+        union_receptors = set.union(*receptor_sets)
+        incomplete = [name for name in odorant_names if set(matrix[name]) != union_receptors]
+        if incomplete:
+            raise ValueError(
+                "incomplete odorants are not silently imputed; select an explicit odor panel: "
+                + ", ".join(incomplete[:8])
+            )
+        receptors = sorted(union_receptors)
+        selection_policy = "complete-input-matrix"
+    else:
+        receptors = sorted(common_receptors)
+        selection_policy = "intersection-of-explicitly-measured-receptors-across-selected-odorants"
 
     odorants = {
         odorant: [float(matrix[odorant][receptor]) for receptor in receptors]
@@ -102,9 +122,15 @@ def build_authority_from_long_csv(
             "commit": source_commit,
             "input_sha256": sha256_file(csv_path),
         },
+        "selection": {
+            "odorants": odorant_names,
+            "receptor_policy": selection_policy,
+            "retained_receptor_count": len(receptors),
+            "no_imputation": True,
+        },
         "receptors": receptors,
         "odorants": odorants,
-        "missing_value_policy": "reject-incomplete-odorants; no imputation",
+        "missing_value_policy": "no imputation; only explicitly measured receptor/odorant pairs retained",
         "claim_boundary": (
             "Normalized receptor-response authority only. Values are external sensory evidence, "
             "not measured activity from the MaleCNS simulation and not a navigation result."
@@ -120,6 +146,11 @@ def main() -> None:
     parser.add_argument("--source-name", required=True)
     parser.add_argument("--source-version", required=True)
     parser.add_argument("--source-commit")
+    parser.add_argument(
+        "--odorants",
+        nargs="+",
+        help="Explicit preregistered odor panel. Sparse rows are restricted to the measured receptor intersection.",
+    )
     parser.add_argument("--output", default="authority/door-response-authority-v1.json")
     args = parser.parse_args()
 
@@ -128,11 +159,16 @@ def main() -> None:
         source_name=args.source_name,
         source_version=args.source_version,
         source_commit=args.source_commit,
+        selected_odorants=args.odorants,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     print(output)
+    print(
+        f"odorants={len(payload['odorants'])} receptors={len(payload['receptors'])} "
+        f"policy={payload['selection']['receptor_policy']}"
+    )
 
 
 if __name__ == "__main__":
