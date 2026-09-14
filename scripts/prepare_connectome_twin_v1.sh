@@ -9,7 +9,7 @@ SWC_DIR="${SWC_DIR:-}"
 RECORDING="${RECORDING:-artifacts/showcase/who-farted-run.json}"
 CROSSWALK="${CROSSWALK:-results/e002/pfl3-phase-crosswalk-v1.json}"
 STEERING_CONFIG="${STEERING_CONFIG:-configs/steering_scaffold_candidate_v1.json}"
-E002E="${E002E:-results/e002/pfl3-descending-steering-v1.json}"
+E002E="${E002E:-results/e002/pfl3-descending-steering-v2.json}"
 OUT_DIR="${OUT_DIR:-artifacts/connectome-twin}"
 WEB_DATA="${WEB_DATA:-web/connectome-twin/public/data}"
 BODY_IDS="$OUT_DIR/body-ids-v1.json"
@@ -41,13 +41,34 @@ mkdir -p "$OUT_DIR" "$WEB_DATA"
 "$PYTHON_BIN" - <<PY
 import json
 from pathlib import Path
+
 crosswalk = json.loads(Path("$CROSSWALK").read_text())
 steering = json.loads(Path("$STEERING_CONFIG").read_text())
-ids = [int(row["body_id"]) for row in crosswalk["records"]]
+metadata = {}
+ids = []
+for row in crosswalk["records"]:
+    body_id = int(row["body_id"])
+    ids.append(body_id)
+    metadata[str(body_id)] = {
+        "role": "PFL3",
+        "readout_side": row.get("readout_side"),
+        "column": row.get("column"),
+        "pb_label": row.get("pb_label"),
+    }
 for role in ("steer_left", "steer_right"):
-    ids.extend(int(x) for x in steering["candidate_roles"][role])
+    for value in steering["candidate_roles"][role]:
+        body_id = int(value)
+        ids.append(body_id)
+        metadata[str(body_id)] = {
+            "role": "DNa02",
+            "readout_side": role,
+            "column": None,
+            "pb_label": None,
+        }
 ids = list(dict.fromkeys(ids))
-Path("$BODY_IDS").write_text(json.dumps({"body_ids": ids}, indent=2) + "\n")
+Path("$BODY_IDS").write_text(
+    json.dumps({"body_ids": ids, "metadata": metadata}, indent=2, sort_keys=True) + "\n"
+)
 print(f"connectome-twin exact route body IDs: {len(ids)}")
 PY
 
@@ -56,6 +77,31 @@ PY
   --body-ids-file "$BODY_IDS" \
   --max-segments-per-neuron 1000000 \
   --output "$SKELETONS"
+
+# Add display metadata derived only from the frozen crosswalk and steering-role files.
+# Geometry itself remains the exact published MaleCNS centerline data.
+"$PYTHON_BIN" - <<PY
+import json
+from pathlib import Path
+
+body_payload = json.loads(Path("$BODY_IDS").read_text())
+assets = json.loads(Path("$SKELETONS").read_text())
+metadata = body_payload.get("metadata", {})
+counts = {}
+for neuron in assets["neurons"]:
+    meta = metadata.get(str(int(neuron["body_id"])), {})
+    neuron["display_metadata"] = meta
+    role = str(meta.get("role") or "unclassified")
+    counts[role] = counts.get(role, 0) + 1
+assets["display_metadata_source"] = {
+    "crosswalk": "$CROSSWALK",
+    "steering_config": "$STEERING_CONFIG",
+    "claim": "Display labels only; role colors are not measured activity.",
+}
+assets["role_counts"] = counts
+Path("$SKELETONS").write_text(json.dumps(assets, separators=(",", ":")) + "\n")
+print("connectome-twin roles:", counts)
+PY
 
 MECHANISM_ARGS=()
 if [[ -f "$E002E" ]] && "$PYTHON_BIN" - <<PY
