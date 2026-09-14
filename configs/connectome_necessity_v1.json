@@ -1,0 +1,112 @@
+{
+  "protocol": "connectome-necessity-v1",
+  "program": "latent-wiring",
+  "status": "preregistered-not-run",
+  "dataset": "male-cns:v1.0",
+  "question": "How much odor-navigation computation is latent in biological wiring before task-specific navigation learning?",
+  "training_contract": {
+    "navigation_reward_allowed": false,
+    "source_coordinates_allowed": false,
+    "episode_success_allowed_during_calibration": false,
+    "body_id_selection_from_navigation_performance_allowed": false,
+    "individual_edge_weight_fitting_allowed": false,
+    "variant_specific_parameter_fitting_allowed": false
+  },
+  "required_upstream_artifacts": {
+    "experimental_plume": "required-before-run",
+    "physiology_calibrated_dynamics": "required-before-run",
+    "evidence_ledger": "required-before-run",
+    "experiment_lock": "required-before-run"
+  },
+  "reference_variant": "exact_malecns_topology",
+  "counterfactuals": [
+    "degree_preserving_rewire",
+    "degree_sign_preserving_rewire",
+    "hemisphere_constrained_rewire",
+    "type_constrained_rewire",
+    "spatially_constrained_rewire",
+    "weight_shuffle",
+    "sign_shuffle",
+    "sensory_temporal_shuffle",
+    "odor_removed",
+    "wind_removed",
+    "PFN_acute_lesion",
+    "FB5AB_input_acute_lesion",
+    "PFL_DN_acute_lesion",
+    "generic_random_reservoir"
+  ],
+  "null_hierarchy": [
+    {
+      "level": 1,
+      "family": "degree_preserving",
+      "minimum_topologies": 63
+    },
+    {
+      "level": 2,
+      "family": "degree_sign_preserving",
+      "minimum_topologies": 63
+    },
+    {
+      "level": 3,
+      "family": "degree_sign_hemisphere_preserving",
+      "minimum_topologies": 63
+    },
+    {
+      "level": 4,
+      "family": "within_cell_type_rewire",
+      "minimum_topologies": 63
+    },
+    {
+      "level": 5,
+      "family": "spatially_constrained_rewire",
+      "minimum_topologies": 63
+    }
+  ],
+  "intervention_contract": {
+    "acute_and_adaptive_results_must_be_separate": true,
+    "primary_necessity_claim_uses_acute_interventions": true,
+    "lesions_may_not_trigger_recalibration": true
+  },
+  "dynamics_uncertainty": {
+    "required": true,
+    "families": [
+      "signed_rate_primary",
+      "alternate_rate_normalization",
+      "zero_unknown_sign_sensitivity",
+      "probabilistic_sign_sensitivity",
+      "lif_sensitivity"
+    ],
+    "topology_conclusion_must_report_family_sensitivity": true
+  },
+  "statistics": {
+    "primary_estimand": "SPL(exact_malecns)-mean_topology_null_SPL",
+    "primary_metric": "SPL",
+    "topology_is_unit_of_randomization": true,
+    "episode_count_must_not_be_treated_as_connectome_count": true,
+    "empirical_randomization_p": true,
+    "minimum_confirmatory_topology_nulls": 63,
+    "hierarchical_uncertainty_axes": [
+      "episode",
+      "plume_realization",
+      "topology",
+      "dynamics_family"
+    ],
+    "power_analysis_required_before_final": true
+  },
+  "secondary_metrics": [
+    "success_rate",
+    "time_to_source",
+    "path_efficiency",
+    "reacquisition_latency",
+    "casting_structure",
+    "upwind_alignment_after_odor_encounter"
+  ],
+  "mechanistic_metrics": [
+    "sensory_to_internal_state_coupling",
+    "internal_state_to_steering_coupling",
+    "acute_lesion_effect",
+    "state_dimensionality",
+    "pathway_involvement"
+  ],
+  "claim_boundary": "This protocol can support a topology-dependence claim only after independently calibrated dynamics, frozen unseen sensory evaluation, the required topology-null hierarchy, acute interventions, topology-level inference, and a sealed experiment lock all pass. It cannot support claims of measured neural activity or biological learning."
+}
