@@ -60,6 +60,9 @@ fly-sniff-qualify = "fly_sniff.qualification:main"
 fly-sniff-freeze = "fly_sniff.freeze:main"
 fly-sniff-final = "fly_sniff.qualified_eval:main"
 fly-sniff-render-final = "fly_sniff.final_social:main"
+fly-sniff-evidence-validate = "fly_sniff.evidence.ledger:main"
+fly-sniff-experiment-protocol = "fly_sniff.experiment_protocol:main"
+fly-sniff-connectome-necessity = "fly_sniff.connectome_necessity:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
