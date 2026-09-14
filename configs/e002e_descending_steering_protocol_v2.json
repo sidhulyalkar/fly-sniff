@@ -1,0 +1,56 @@
+{
+  "protocol": "E002e-pfl3-descending-steering-v2",
+  "parent_protocol": "E002e-pfl3-descending-steering-v1",
+  "dataset": "male-cns:v1.0",
+  "purpose": "Independently confirm the E002e modeled PFL3-to-descending steering result after v1 exposed that the 0-degree crossover is not an appropriate sign-reversal sentry for a bilateral label swap.",
+  "design_status": "declared-after-v1-diagnostic-before-v2-confirmation-run",
+  "confirmation_seed": 13014,
+  "required_inputs": {
+    "e002d_protocol": "E002d-pfl3-relative-phase-comparison-v3",
+    "e002d_must_pass": true,
+    "phase_crosswalk_protocol": "E002d-pfl3-phase-crosswalk-v1",
+    "steering_scaffold_protocol": "malecns-steering-scaffold-candidate-v1",
+    "steering_probe_protocol": "E002a-steering-scaffold-propagation-v2"
+  },
+  "primary_structural_threshold": 5,
+  "all_structural_thresholds": [1, 3, 5, 10],
+  "relative_phase_probe_deg": [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150],
+  "mirrored_phase_pairs_deg": [[-150, 150], [-120, 120], [-90, 90], [-60, 60], [-30, 30]],
+  "common_rotation_offsets_deg": [0, 45, 90, 135],
+  "deterministic_tolerance": 1e-12,
+  "zero_cut_tolerance": 1e-12,
+  "side_swap_definition": "Swap the complete frozen 12-cell left/right PFL3 groups by deterministic (anatomical column, PB label, body ID) rank, treating absent instantaneous drive as zero.",
+  "side_swap_gate_scope": "all ten nonzero phases participating in the five mirrored phase pairs at the frozen primary threshold",
+  "zero_phase_policy": "The 0-degree point is reported as a descriptive downstream baseline/asymmetry diagnostic. It is not a sign-reversal gate because reversing bilateral labels does not reverse the sign of a zero relative-phase stimulus itself.",
+  "lane_cut_definition": "At the primary threshold, a lane cut must reduce the number of preregistered mirrored phase pairs that retain opposite modeled turn signs relative to intact. No amplitude threshold is fit or selected from E002e results.",
+  "frozen_controls": [
+    "FC2_lane_cut",
+    "EPG_lane_cut",
+    "PFL3_output_cut",
+    "swap_frozen_PFL3_left_right_groups",
+    "common_coordinate_rotation",
+    "threshold_1_3_5_10"
+  ],
+  "qualification_gates": [
+    "sealed_inputs_match",
+    "no_behavior_oracle_inputs",
+    "deterministic_replay_le_1e-12",
+    "mirrored_phase_pairs_produce_opposite_turn_signs",
+    "FC2_lane_cut_destroys_phase_dependent_turning",
+    "EPG_lane_cut_destroys_phase_dependent_turning",
+    "PFL3_output_cut_zeroes_DNa02_turn",
+    "left_right_group_swap_reverses_nonzero_mirrored_phases",
+    "common_rotation_offset_invariance",
+    "all_structural_thresholds_reported"
+  ],
+  "forbidden_inputs": [
+    "source_coordinates",
+    "distance_to_source",
+    "culprit_identity",
+    "plume_image",
+    "navigation_score",
+    "behavioral_success"
+  ],
+  "selection_rule": "Do not alter the primary threshold, phase probes, side groups, model parameters, lane cuts, or confirmation seed based on the v2 outcome. V1 remains recorded as 9/10 and is not relabeled as a pass.",
+  "claim_boundary": "Passing E002e-v2 would independently support a modeled, body-ID-resolved PFL3-to-descending steering transformation under the frozen relative-phase representation. It would not establish sensory-to-goal encoding, measured firing, closed-loop odor navigation, or intact-over-rewire superiority."
+}
