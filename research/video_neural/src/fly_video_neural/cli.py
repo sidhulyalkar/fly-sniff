@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .benchmark import load_benchmark
+from .mc2p import build_manifest
 from .metrics import summarize_metrics
 from .registry import load_registry
 from .schema import SampleWindow
@@ -33,6 +34,10 @@ def main() -> None:
     split.add_argument("samples")
     split.add_argument("splits")
 
+    mc2p = sub.add_parser("inspect-mc2p")
+    mc2p.add_argument("root")
+    mc2p.add_argument("--output")
+
     score = sub.add_parser("score")
     score.add_argument("truth")
     score.add_argument("prediction")
@@ -52,6 +57,13 @@ def main() -> None:
         assignment = json.loads(Path(args.splits).read_text())["animal_to_split"]
         validate_animal_disjoint_splits(samples, assignment)
         print(json.dumps({"status": "valid", "samples": len(samples)}, sort_keys=True))
+        return
+    if args.command == "inspect-mc2p":
+        report = build_manifest(args.root)
+        text = json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.output:
+            Path(args.output).write_text(text)
+        print(text, end="")
         return
     truth = np.load(args.truth)
     prediction = np.load(args.prediction)

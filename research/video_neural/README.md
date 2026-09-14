@@ -17,7 +17,13 @@ Behavior does not uniquely identify the complete neural state. Missing sensory v
 ```bash
 python -m pip install -e '.[dev]'
 fly-video-neural validate-registry configs/datasets_v1.json
+fly-video-neural validate-benchmark configs/benchmark_v0.json
+fly-video-neural inspect-mc2p /path/to/extracted/MC2P --output mc2p-manifest.json
 pytest -q
 ```
 
 No public dataset is downloaded in CI.
+
+## MC2P ingress
+
+`inspect-mc2p` discovers trial directories, groups them by animal identity, and binds the behavior video, synchronization file, measured dF/F, optional pose/kinematics, rest mask, and optional ROI traces into a hash-addressed manifest. Discovery never deserializes upstream pickle files.
