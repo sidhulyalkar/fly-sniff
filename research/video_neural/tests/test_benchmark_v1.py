@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from fly_video_neural.benchmark import load_benchmark, validate_benchmark
+
+
+def _path() -> Path:
+    return Path(__file__).resolve().parents[1] / "configs" / "benchmark_v1.json"
+
+
+def test_v1_records_pre_score_scientific_correction():
+    document = load_benchmark(_path())
+    assert document["supersedes"] == "mc2p_future_neural_v0"
+    assert document["revision_status"] == "pre_data_scoring_correction"
+    assert document["revision_was_informed_by_benchmark_scores"] is False
+    assert document["measurement_rates_hz"] == {
+        "behavior_video": 100.0,
+        "two_photon_nominal": 16.0,
+    }
+
+
+def test_v1_primary_is_within_animal_session_heldout():
+    primary = load_benchmark(_path())["tasks"]["primary"]
+    assert primary["split_unit"] == "session_id_within_animal"
+    assert primary["target"] == "future_mean_dff_image"
+    assert primary["raw_neural_pixel_target_allowed"] is True
+
+
+def test_v1_forbids_raw_neural_pixels_for_unseen_animals():
+    document = json.loads(_path().read_text())
+    document["tasks"]["secondary"]["raw_neural_pixel_target_allowed"] = True
+    with pytest.raises(ValueError, match="raw cross-animal"):
+        validate_benchmark(document)
+
+
+def test_v1_cross_animal_lane_stays_blocked_until_representation_is_frozen():
+    document = json.loads(_path().read_text())
+    document["tasks"]["secondary"]["status"] = "ready"
+    with pytest.raises(ValueError, match="representation contract"):
+        validate_benchmark(document)

@@ -10,6 +10,7 @@ from .alignment import materialize_session_windows
 from .batch import load_batch
 from .benchmark import load_benchmark
 from .mc2p import build_manifest
+from .mc2p_legacy import convert_legacy_pickle
 from .metrics import summarize_metrics
 from .registry import load_registry
 from .ridge import load_split_lock, run_ridge_baseline
@@ -41,6 +42,13 @@ def main() -> None:
     mc2p = sub.add_parser("inspect-mc2p")
     mc2p.add_argument("root")
     mc2p.add_argument("--output")
+
+    convert = sub.add_parser("convert-mc2p-legacy")
+    convert.add_argument("source")
+    convert.add_argument("--kind", choices=("alignment", "pose3d"), required=True)
+    convert.add_argument("--output", required=True)
+    convert.add_argument("--receipt", required=True)
+    convert.add_argument("--trust-upstream-pickle", action="store_true")
 
     windows = sub.add_parser("make-mc2p-windows")
     windows.add_argument("session")
@@ -84,6 +92,21 @@ def main() -> None:
             Path(args.output).write_text(text)
         print(text, end="")
         return
+    if args.command == "convert-mc2p-legacy":
+        report = convert_legacy_pickle(
+            args.source,
+            args.output,
+            args.receipt,
+            kind=args.kind,
+            trust_upstream_pickle=args.trust_upstream_pickle,
+        )
+        print(
+            json.dumps(
+                {"status": "converted", "kind": report["kind"], "sha256": report["receipt_sha256"]},
+                sort_keys=True,
+            )
+        )
+        return
     if args.command == "make-mc2p-windows":
         report = materialize_session_windows(args.session, args.alignment)
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
@@ -100,7 +123,12 @@ def main() -> None:
         lock = load_split_lock(args.split_lock)
         report = run_ridge_baseline(batch, lock, consume_test=args.consume_test)
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-        print(json.dumps({"status": report["test_status"], "selected_alpha": report["selected_alpha"]}, sort_keys=True))
+        print(
+            json.dumps(
+                {"status": report["test_status"], "selected_alpha": report["selected_alpha"]},
+                sort_keys=True,
+            )
+        )
         return
     truth = np.load(args.truth)
     prediction = np.load(args.prediction)

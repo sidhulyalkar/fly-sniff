@@ -22,8 +22,10 @@ jobs:
         run: python -m pip install -e '.[dev]'
       - name: Validate frozen dataset registry
         run: fly-video-neural validate-registry configs/datasets_v1.json
-      - name: Validate frozen benchmark contract
+      - name: Validate historical v0 benchmark contract
         run: fly-video-neural validate-benchmark configs/benchmark_v0.json
+      - name: Validate corrected v1 benchmark contract
+        run: fly-video-neural validate-benchmark configs/benchmark_v1.json
       - name: Ruff
         run: ruff check src tests
       - name: Tests

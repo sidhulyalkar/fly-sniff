@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "mc2p_future_neural_v1",
+  "supersedes": "mc2p_future_neural_v0",
+  "revision_status": "pre_data_scoring_correction",
+  "revision_reason": "Raw two-photon image coordinates are subject-specific; direct across-animal raw-pixel prediction confounds neural dynamics with unobserved subject anatomy.",
+  "revision_was_informed_by_benchmark_scores": false,
+  "dataset_id": "mc2p_v1",
+  "target_evidence_class": "measured_neural_activity",
+  "measurement_rates_hz": {
+    "behavior_video": 100.0,
+    "two_photon_nominal": 16.0
+  },
+  "alignment_authority": "closest_timestamp_behavior_frame_to_neural_frame",
+  "tasks": {
+    "primary": {
+      "name": "within_animal_session_heldout",
+      "scientific_question": "Can recent behavior predict future measured neural activity within the same animal on held-out sessions?",
+      "input_history_s": 3.0,
+      "prediction_horizon_s": 0.5,
+      "window_stride_s": 0.5,
+      "split_unit": "session_id_within_animal",
+      "minimum_sessions_per_animal": 3,
+      "input_target_overlap_allowed": false,
+      "rest_behavior_included": true,
+      "target": "future_mean_dff_image",
+      "raw_neural_pixel_target_allowed": true,
+      "evaluation": "fit_and_select_within_animal_then_aggregate_animals",
+      "test_sessions_for_hyperparameter_selection": false
+    },
+    "secondary": {
+      "name": "across_animal_subject_invariant",
+      "scientific_question": "Can behavior predict a subject-invariant measured-neural representation in unseen animals?",
+      "split_unit": "animal_id",
+      "status": "blocked_pending_neural_representation_contract",
+      "raw_neural_pixel_target_allowed": false,
+      "required_unlock": "freeze a measured, cross-animal comparable neural representation without using held-out task performance",
+      "test_animals_for_hyperparameter_selection": false
+    }
+  },
+  "primary_metrics": [
+    "median_pearson_r",
+    "median_r2"
+  ],
+  "required_baselines": [
+    "train_mean",
+    "ridge"
+  ],
+  "model_lanes": [
+    "pose_only",
+    "video_only",
+    "video_plus_pose",
+    "video_pose_plus_measured_context"
+  ],
+  "connectome_prior_status": "future_separately_versioned_lane",
+  "whole_connectome_reconstruction_claim_allowed": false,
+  "ridge_alpha_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0
+  ],
+  "model_selection_metric": "median_pearson_r",
+  "test_consumption_requires_explicit_flag": true
+}
