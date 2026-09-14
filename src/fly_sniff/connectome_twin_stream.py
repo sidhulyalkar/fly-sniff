@@ -27,6 +27,7 @@ def build_stream(
 ) -> dict[str, Any]:
     bundle = load_recording(recording_path)
     recording = bundle["recording"]
+    arena = recording["arena"]
     behavior_frames: list[dict[str, Any]] = []
     for frame in recording["frames"]:
         agents = []
@@ -93,6 +94,7 @@ def build_stream(
             "MEASURED_CONNECTIVITY": "dataset-derived graph/morphology only",
             "MODELED_ACTIVITY": "explicit model state; never measured firing",
             "BEHAVIORAL_STATE": "body, sensor, plume and command replay",
+            "VIEWER_ONLY_WORLD": "world truth available to the renderer but forbidden to the controller",
         },
         "assets": assets,
         "timelines": {
@@ -100,6 +102,16 @@ def build_stream(
                 "clock": "recorded-behavior",
                 "recording_sha256": bundle["recording_sha256"],
                 "claim_boundary": recording["claim_boundary"],
+                "world": {
+                    "width": float(arena["width"]),
+                    "height": float(arena["height"]),
+                    "source_for_viewer_only": [
+                        float(arena["source_x"]),
+                        float(arena["source_y"]),
+                    ],
+                    "source_radius": float(arena["source_radius"]),
+                    "evidence_class": "VIEWER_ONLY_WORLD",
+                },
                 "frames": behavior_frames,
                 "evidence_class": "BEHAVIORAL_STATE",
             },
