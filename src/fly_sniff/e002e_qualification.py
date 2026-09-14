@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-
 PROTOCOL = "E002e-pfl3-descending-steering-v2"
 QUALIFICATION_PROTOCOL = "E002e-qualification-seal-v1"
 
