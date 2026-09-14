@@ -7,19 +7,20 @@
     <title>Fly Sniff · Connectome Twin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
+        <div class="title-block">
           <p class="eyebrow">FLY SNIFF · CONNECTOME TWIN</p>
-          <h1>Odor → circuit → action</h1>
+          <h1>Follow the signal.</h1>
+          <p class="subtitle">A measured MaleCNS route beside the sensory world and the modeled computation it can support.</p>
         </div>
-        <div class="status-stack">
-          <span class="status measured">MEASURED CONNECTIVITY</span>
-          <span class="status modeled">MODELED ACTIVITY</span>
-          <span class="status behavior">DEVELOPMENT BEHAVIOR</span>
+        <div class="status-stack" aria-label="Evidence classes">
+          <span class="status measured"><i></i>MEASURED ANATOMY</span>
+          <span class="status modeled"><i></i>MODELED MECHANISM</span>
+          <span class="status behavior"><i></i>DEVELOPMENT REPLAY</span>
         </div>
       </header>
 
@@ -27,53 +28,135 @@
         <article class="panel world-panel">
           <div class="panel-head">
             <div>
-              <p class="kicker">EMBODIED WORLD</p>
+              <p class="kicker">BEHAVIOR CLOCK</p>
               <h2>What the fly can sense</h2>
             </div>
-            <span id="behavior-clock" class="clock">0.00 s</span>
+            <div class="panel-meta">
+              <span class="micro-badge development">DEVELOPMENT PROXY</span>
+              <span id="behavior-clock" class="clock">0.00 s</span>
+            </div>
           </div>
-          <canvas id="world-canvas"></canvas>
+
+          <div class="world-stage">
+            <canvas id="world-canvas"></canvas>
+            <div class="world-legend" aria-hidden="true">
+              <span><i class="agent-dot proxy"></i>proxy</span>
+              <span><i class="agent-dot control"></i>control</span>
+              <span><i class="source-ring"></i>source · viewer only</span>
+            </div>
+            <div id="plume-integrity" class="integrity-note">plume snapshot metadata loading…</div>
+          </div>
+
           <div class="sensor-strip">
-            <div><span>LEFT ANTENNA</span><strong id="odor-left">0.00</strong></div>
-            <div><span>RIGHT ANTENNA</span><strong id="odor-right">0.00</strong></div>
-            <div><span>TURN</span><strong id="turn-command">0.00</strong></div>
+            <div class="sensor-card">
+              <span>LEFT ANTENNA</span>
+              <strong id="odor-left">0.00</strong>
+              <div class="meter"><i id="odor-left-meter"></i></div>
+            </div>
+            <div class="sensor-card">
+              <span>RIGHT ANTENNA</span>
+              <strong id="odor-right">0.00</strong>
+              <div class="meter"><i id="odor-right-meter"></i></div>
+            </div>
+            <div class="sensor-card">
+              <span>BODY WIND</span>
+              <strong id="wind-readout">0.00 · 0.00</strong>
+              <div class="wind-glyph" id="wind-glyph">→</div>
+            </div>
+            <div class="sensor-card action-card">
+              <span>COMMAND</span>
+              <strong id="turn-command">0.00</strong>
+              <small id="action-label">STRAIGHT</small>
+            </div>
           </div>
         </article>
 
         <article class="panel brain-panel">
           <div class="panel-head">
             <div>
-              <p class="kicker">MALECNS V1.0</p>
-              <h2>Exact neuron morphology</h2>
+              <p class="kicker">MALECNS V1.0 · MEASURED GEOMETRY</p>
+              <h2>Exact circuit morphology</h2>
             </div>
-            <span id="brain-status" class="clock">waiting for assets</span>
+            <div class="panel-meta">
+              <span id="brain-status" class="clock">waiting for assets</span>
+            </div>
           </div>
-          <div id="brain-canvas" class="brain-canvas"></div>
+
+          <div id="brain-canvas" class="brain-canvas">
+            <div class="brain-overlay top-left">
+              <p>ROUTE VIEW</p>
+              <strong>PFL3 → descending steering</strong>
+              <span>drag to orbit · scroll to zoom</span>
+            </div>
+            <div class="brain-overlay top-right filter-row" aria-label="Anatomy filters">
+              <button class="filter-chip active" data-filter="ALL" type="button">ALL</button>
+              <button class="filter-chip" data-filter="PFL3" type="button">PFL3</button>
+              <button class="filter-chip" data-filter="DNa02" type="button">DNa02</button>
+            </div>
+            <div id="neuron-hover" class="neuron-hover">hover a neuron</div>
+          </div>
+
+          <div class="mechanism-card">
+            <div class="mechanism-copy">
+              <p class="kicker">INDEPENDENT MECHANISM PROBE</p>
+              <div class="mechanism-title-row">
+                <strong id="mechanism-title">E002e · loading</strong>
+                <span id="mechanism-pass" class="micro-badge qualified">SEPARATE CLOCK</span>
+              </div>
+              <p id="mechanism-copy">Goal/heading phase is tested independently from this behavioral replay.</p>
+            </div>
+            <div class="curve-wrap">
+              <canvas id="phase-curve" aria-label="Modeled phase-to-turn curve"></canvas>
+              <span class="curve-label left">turn left</span>
+              <span class="curve-label right">turn right</span>
+            </div>
+          </div>
+
           <div class="brain-legend">
-            <span><i class="dot structure"></i> measured skeleton</span>
-            <span><i class="dot activity"></i> modeled state</span>
-            <span id="timeline-warning">separate mechanism clock</span>
+            <span><i class="line-key pfl3"></i>PFL3 · measured skeleton</span>
+            <span><i class="line-key dna02"></i>DNa02 · measured skeleton</span>
+            <span id="timeline-warning">mechanism probe uses a separate clock</span>
           </div>
         </article>
       </section>
 
-      <section class="causal-strip">
-        <div class="causal-node"><span>ODOR</span><strong>antennae</strong></div>
-        <div class="arrow">→</div>
-        <div class="causal-node"><span>GOAL</span><strong>FC2 candidate</strong></div>
-        <div class="arrow">+</div>
-        <div class="causal-node"><span>HEADING</span><strong>EPG</strong></div>
-        <div class="arrow">→</div>
-        <div class="causal-node"><span>COMPARE</span><strong>PFL3</strong></div>
-        <div class="arrow">→</div>
-        <div class="causal-node"><span>DESCEND</span><strong>DNa02</strong></div>
-        <div class="arrow">→</div>
-        <div class="causal-node accent"><span>ACTION</span><strong id="action-label">TURN</strong></div>
+      <section class="evidence-rail" aria-label="Evidence flow">
+        <div class="evidence-lane behavior-lane">
+          <div class="lane-label">
+            <span>BEHAVIOR REPLAY</span>
+            <strong>live clock</strong>
+          </div>
+          <div class="flow-node live"><span>SENSE</span><strong>antennae + wind</strong></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node live"><span>CONTROLLER</span><strong>development proxy</strong></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node live action"><span>ACTION</span><strong id="rail-action">straight</strong></div>
+        </div>
+
+        <div class="evidence-lane mechanism-lane">
+          <div class="lane-label">
+            <span>QUALIFIED MODEL PROBE</span>
+            <strong>independent clock</strong>
+          </div>
+          <div class="flow-node"><span>GOAL</span><strong>FC2 candidate</strong></div>
+          <div class="flow-plus">+</div>
+          <div class="flow-node"><span>HEADING</span><strong>EPG</strong></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><span>COMPARE</span><strong>PFL3</strong></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><span>DESCEND</span><strong>DNa02</strong></div>
+          <div class="qualification-pill" id="qualification-pill">E002e</div>
+        </div>
       </section>
 
       <footer class="timeline-bar">
-        <button id="play-button" type="button">Pause</button>
-        <input id="scrubber" type="range" min="0" max="1000" value="0" />
+        <button id="play-button" type="button" aria-label="Pause replay">
+          <span id="play-icon">Ⅱ</span>
+        </button>
+        <div class="timeline-track">
+          <input id="scrubber" type="range" min="0" max="1000" value="0" />
+          <div class="timeline-labels"><span>0 s</span><span id="duration-label">replay</span></div>
+        </div>
         <p id="evidence-note">Loading evidence-aware replay…</p>
       </footer>
     </main>
