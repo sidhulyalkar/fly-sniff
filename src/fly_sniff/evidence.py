@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable
+from typing import Any
 
 from .freeze import canonical_sha256
 
@@ -139,7 +140,10 @@ class EvidenceLedger:
         self.validate()
         # Record order is not scientific content. Sort by stable record ID so two
         # independently assembled ledgers with the same statements hash identically.
-        records = sorted((record.to_dict() for record in self.records), key=lambda x: x["record_id"])
+        records = sorted(
+            (record.to_dict() for record in self.records),
+            key=lambda item: item["record_id"],
+        )
         return {"schema": self.schema, "records": records}
 
     @property
