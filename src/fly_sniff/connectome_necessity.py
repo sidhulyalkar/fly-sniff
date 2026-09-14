@@ -29,7 +29,7 @@ def validate_protocol(config: dict[str, Any]) -> dict[str, Any]:
     training = dict(config["training_contract"])
     statistics = dict(config["statistics"])
     null_hierarchy = list(config["null_hierarchy"])
-    counterfactuals = set(str(x) for x in config["counterfactuals"])
+    counterfactuals = {str(x) for x in config["counterfactuals"]}
     upstream = dict(config["required_upstream_artifacts"])
     dynamics_uncertainty = dict(config["dynamics_uncertainty"])
     intervention = dict(config["intervention_contract"])
