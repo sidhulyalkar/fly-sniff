@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any
+import dataclasses
+import enum
+import typing
 
 from .freeze import canonical_sha256
 
@@ -15,7 +15,7 @@ def _validate_sha256(value: str, *, field: str) -> None:
         raise ValueError(f"{field} must be a lowercase 64-character SHA-256 digest")
 
 
-class ExperimentProgram(str, Enum):
+class ExperimentProgram(str, enum.Enum):
     """Scientific question represented by an experiment."""
 
     LATENT_WIRING = "latent_wiring"
@@ -23,18 +23,18 @@ class ExperimentProgram(str, Enum):
     BIOLOGICAL_LEARNING = "biological_learning"
 
 
-class ExperimentPhase(str, Enum):
+class ExperimentPhase(str, enum.Enum):
     DEVELOPMENT = "development"
     CONFIRMATORY = "confirmatory"
 
 
-class RunStatus(str, Enum):
+class RunStatus(str, enum.Enum):
     COMPLETED = "completed"
     BLOCKED = "blocked"
     FAILED = "failed"
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ArtifactRef:
     """Content-addressed scientific input or output."""
 
@@ -62,7 +62,7 @@ class ArtifactRef:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> ArtifactRef:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> ArtifactRef:
         artifact = cls(
             name=str(payload["name"]),
             kind=str(payload["kind"]),
@@ -73,7 +73,7 @@ class ArtifactRef:
         return artifact
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class TrainingPolicy:
     """What optimization freedom exists before evaluation."""
 
@@ -84,7 +84,7 @@ class TrainingPolicy:
     calibration_targets: tuple[str, ...] = ()
     plasticity_scope: tuple[str, ...] = ()
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         return {
             "navigation_reward_allowed": self.navigation_reward_allowed,
             "topology_specific_fit_allowed": self.topology_specific_fit_allowed,
@@ -95,7 +95,7 @@ class TrainingPolicy:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> TrainingPolicy:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> TrainingPolicy:
         return cls(
             navigation_reward_allowed=bool(payload["navigation_reward_allowed"]),
             topology_specific_fit_allowed=bool(payload["topology_specific_fit_allowed"]),
@@ -106,7 +106,7 @@ class TrainingPolicy:
         )
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class FinalPolicy:
     """Predeclared rules for claim-bearing evaluation."""
 
@@ -117,7 +117,7 @@ class FinalPolicy:
     negative_results_retained: bool
     one_way_final: bool
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         return {
             "topology_claim": self.topology_claim,
             "topology_null_count": self.topology_null_count,
@@ -128,7 +128,7 @@ class FinalPolicy:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> FinalPolicy:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> FinalPolicy:
         return cls(
             topology_claim=bool(payload["topology_claim"]),
             topology_null_count=int(payload["topology_null_count"]),
@@ -139,7 +139,7 @@ class FinalPolicy:
         )
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ExperimentSpec:
     """Machine-readable scientific contract before a run is sealed."""
 
@@ -191,17 +191,19 @@ class ExperimentSpec:
                     "latent-wiring experiments require independent calibration targets"
                 )
 
-        if self.program is ExperimentProgram.TOPOLOGY_INDUCTIVE_BIAS:
-            if policy.topology_specific_fit_allowed and not policy.equal_budget_across_topologies:
-                raise ValueError(
-                    "topology-specific fitting requires equal optimization budgets across topologies"
-                )
+        if (
+            self.program is ExperimentProgram.TOPOLOGY_INDUCTIVE_BIAS
+            and policy.topology_specific_fit_allowed
+            and not policy.equal_budget_across_topologies
+        ):
+            raise ValueError(
+                "topology-specific fitting requires equal optimization budgets across topologies"
+            )
 
-        if self.program is ExperimentProgram.BIOLOGICAL_LEARNING:
-            if not policy.plasticity_scope:
-                raise ValueError(
-                    "biological-learning experiments require an explicit plasticity_scope"
-                )
+        if self.program is ExperimentProgram.BIOLOGICAL_LEARNING and not policy.plasticity_scope:
+            raise ValueError(
+                "biological-learning experiments require an explicit plasticity_scope"
+            )
 
         final = self.final_policy
         if final.topology_null_count < 0:
@@ -227,7 +229,7 @@ class ExperimentSpec:
                 if not self.null_families:
                     raise ValueError("topology claims require at least one null family")
 
-    def _payload_without_hash(self) -> dict[str, Any]:
+    def _payload_without_hash(self) -> dict[str, typing.Any]:
         self.validate()
         return {
             "schema": self.schema,
@@ -249,13 +251,13 @@ class ExperimentSpec:
     def sha256(self) -> str:
         return canonical_sha256(self._payload_without_hash())
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         payload = self._payload_without_hash()
         payload["spec_sha256"] = self.sha256
         return payload
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> ExperimentSpec:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> ExperimentSpec:
         spec = cls(
             experiment_id=str(payload["experiment_id"]),
             program=ExperimentProgram(payload["program"]),
@@ -278,7 +280,7 @@ class ExperimentSpec:
         return spec
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ExperimentLock:
     """Content-addressed experiment contract bound to an exact code/runtime state."""
 
@@ -295,7 +297,7 @@ class ExperimentLock:
             raise ValueError("experiment lock code_ref must be non-empty")
         _validate_sha256(self.runtime_sha256, field="runtime_sha256")
 
-    def _payload_without_hash(self) -> dict[str, Any]:
+    def _payload_without_hash(self) -> dict[str, typing.Any]:
         self.validate()
         return {
             "schema": self.schema,
@@ -308,13 +310,13 @@ class ExperimentLock:
     def sha256(self) -> str:
         return canonical_sha256(self._payload_without_hash())
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         payload = self._payload_without_hash()
         payload["lock_sha256"] = self.sha256
         return payload
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> ExperimentLock:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> ExperimentLock:
         lock = cls(
             spec=ExperimentSpec.from_dict(payload["spec"]),
             code_ref=str(payload["code_ref"]),
@@ -328,7 +330,7 @@ class ExperimentLock:
         return lock
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class RunReceipt:
     """Hash-bound result record tied to one exact experiment lock."""
 
@@ -358,9 +360,9 @@ class RunReceipt:
         if self.status is RunStatus.COMPLETED and not self.result_artifacts:
             raise ValueError("completed runs require at least one content-addressed result artifact")
 
-    def _payload_without_hash(self) -> dict[str, Any]:
+    def _payload_without_hash(self) -> dict[str, typing.Any]:
         self.validate()
-        payload: dict[str, Any] = {
+        payload: dict[str, typing.Any] = {
             "schema": self.schema,
             "run_id": self.run_id,
             "lock_sha256": self.lock_sha256,
@@ -378,13 +380,13 @@ class RunReceipt:
     def sha256(self) -> str:
         return canonical_sha256(self._payload_without_hash())
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         payload = self._payload_without_hash()
         payload["receipt_sha256"] = self.sha256
         return payload
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> RunReceipt:
+    def from_dict(cls, payload: dict[str, typing.Any]) -> RunReceipt:
         metrics = payload.get("metric_summary", {})
         receipt = cls(
             run_id=str(payload["run_id"]),
