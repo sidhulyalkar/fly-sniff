@@ -5,7 +5,6 @@ from pathlib import Path
 
 from fly_sniff.connectome_necessity import validate_protocol
 
-
 CONFIG = Path("configs/connectome_necessity_v1.json")
 
 
