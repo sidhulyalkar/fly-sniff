@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from fly_sniff.evidence import (
     ClaimStatus,
+    EntityRef,
     EvidenceClass,
     EvidenceFact,
     EvidenceLedger,
     EvidenceRecord,
-    EntityRef,
     compile_claim,
 )
 
