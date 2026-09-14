@@ -47,6 +47,7 @@ fly-sniff-r002-graph = "fly_sniff.r002_graph:main"
 fly-sniff-r002-probe = "fly_sniff.r002_probe:main"
 fly-sniff-r002-qualify = "fly_sniff.r002_qualify:main"
 fly-sniff-r002-render = "fly_sniff.r002_render:main"
+fly-sniff-calibration-validate = "fly_sniff.physiology_calibration:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
