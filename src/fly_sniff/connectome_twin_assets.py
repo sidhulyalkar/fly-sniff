@@ -86,9 +86,9 @@ def pack_swc_directory(
             {
                 "body_id": int(body_id),
                 "source_file": path.name,
-                "source_node_count": int(len(nodes)),
-                "source_segment_count": int(len(edges)),
-                "render_segment_count": int(len(shown_edges)),
+                "source_node_count": len(nodes),
+                "source_segment_count": len(edges),
+                "render_segment_count": len(shown_edges),
                 "lod_is_exact": bool(len(shown_edges) == len(edges)),
                 "line_vertices_um": vertices.round(4).tolist(),
             }
