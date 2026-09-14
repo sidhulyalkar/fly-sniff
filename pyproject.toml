@@ -49,6 +49,8 @@ fly-sniff-r002-qualify = "fly_sniff.r002_qualify:main"
 fly-sniff-r002-render = "fly_sniff.r002_render:main"
 fly-sniff-artifact-validate = "fly_sniff.kernel_cli:main"
 fly-sniff-final-entropy = "fly_sniff.final_protocol:main"
+fly-sniff-topology-null = "fly_sniff.topology_nulls:main"
+fly-sniff-topology-inference = "fly_sniff.topology_inference:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
