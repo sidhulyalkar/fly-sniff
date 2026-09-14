@@ -18,7 +18,6 @@ from fly_sniff.experiment import (
 from fly_sniff.final_entropy import FinalEntropyCommitment, FinalSeedReceipt
 from fly_sniff.final_protocol import main, verify_commitment_binding
 
-
 SECRET = b"final-secret-for-tests-32-bytes!!"
 RUNTIME_SHA = "c" * 64
 EVIDENCE_SHA = "d" * 64
