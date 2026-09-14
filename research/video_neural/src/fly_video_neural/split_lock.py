@@ -30,7 +30,7 @@ def load_window_manifests(paths: Iterable[str | Path]) -> list[SampleWindow]:
 
 
 def build_split_lock(windows: Iterable[SampleWindow], *, seed: int = 1701) -> dict[str, Any]:
-    rows = sorted(list(windows), key=lambda row: row.sample_id)
+    rows = sorted(windows, key=lambda row: row.sample_id)
     sample_ids = [row.sample_id for row in rows]
     if len(sample_ids) != len(set(sample_ids)):
         raise ValueError("sample ids must be globally unique before split locking")
@@ -62,7 +62,7 @@ def verify_split_lock(lock: dict[str, Any], windows: Iterable[SampleWindow]) -> 
     claimed = supplied.pop("split_lock_sha256", None)
     if claimed != _sha(supplied):
         raise ValueError("split lock self-hash mismatch")
-    rows = sorted(list(windows), key=lambda row: row.sample_id)
+    rows = sorted(windows, key=lambda row: row.sample_id)
     if lock.get("source_samples_sha256") != _sha([row.to_dict() for row in rows]):
         raise ValueError("split lock does not match synchronized sample windows")
     if lock.get("hyperparameter_selection_may_use_test") is not False:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -36,9 +36,14 @@ def load_safe_alignment(path: str | Path) -> np.ndarray:
     values = np.load(alignment_path, mmap_mode="r", allow_pickle=False)
     if values.ndim != 1 or values.size < 2:
         raise ValueError("alignment must be a one-dimensional array with at least two frames")
-    if not np.issubdtype(values.dtype, np.integer):
-        if not np.issubdtype(values.dtype, np.floating) or not np.all(values == np.floor(values)):
-            raise ValueError("alignment values must be integer neural frame indices")
+    if (
+        not np.issubdtype(values.dtype, np.integer)
+        and (
+            not np.issubdtype(values.dtype, np.floating)
+            or not np.all(values == np.floor(values))
+        )
+    ):
+        raise ValueError("alignment values must be integer neural frame indices")
     alignment = np.asarray(values, dtype=np.int64)
     if (alignment < 0).any():
         raise ValueError("alignment cannot contain negative neural frame indices")
@@ -126,7 +131,7 @@ def materialize_session_windows(
         "dataset_id": "mc2p_v1",
         "session": session.to_dict(),
         "alignment_path": str(Path(alignment_path).resolve()),
-        "alignment_length_behavior_frames": int(len(alignment)),
+        "alignment_length_behavior_frames": len(alignment),
         "history_s": history_s,
         "horizon_s": horizon_s,
         "stride_s": stride_s,
