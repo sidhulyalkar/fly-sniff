@@ -33,6 +33,12 @@ def validate_benchmark(document: dict[str, Any]) -> None:
         raise ValueError("v0 retains rest behavior")
     if document.get("alignment_contract") != "monotonic_behavior_frame_to_neural_frame_index":
         raise ValueError("v0 requires a monotonic behavior-to-neural alignment")
+    if document.get("split_seed") != 1701:
+        raise ValueError("v0 split seed is frozen to 1701")
+    if document.get("expected_primary_dataset_animals") != 8:
+        raise ValueError("v0 expects the eight-animal public MC2P release")
+    if document.get("expected_split_counts_if_eight") != {"train": 5, "validation": 1, "test": 2}:
+        raise ValueError("v0 eight-animal split counts must remain 5/1/2")
     if document.get("split_unit") != "animal_id":
         raise ValueError("v0 split unit must be animal_id")
     if document.get("session_may_cross_split") is not False:

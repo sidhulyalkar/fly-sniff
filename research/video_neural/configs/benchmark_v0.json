@@ -27,5 +27,12 @@
   "test_animals_for_hyperparameter_selection": false,
   "window_stride_s": 0.5,
   "rest_behavior_included": true,
-  "alignment_contract": "monotonic_behavior_frame_to_neural_frame_index"
+  "alignment_contract": "monotonic_behavior_frame_to_neural_frame_index",
+  "split_seed": 1701,
+  "expected_primary_dataset_animals": 8,
+  "expected_split_counts_if_eight": {
+    "train": 5,
+    "validation": 1,
+    "test": 2
+  }
 }

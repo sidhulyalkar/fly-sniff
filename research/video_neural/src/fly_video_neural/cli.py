@@ -12,6 +12,7 @@ from .mc2p import build_manifest
 from .metrics import summarize_metrics
 from .registry import load_registry
 from .schema import SampleWindow
+from .split_lock import build_split_lock, load_window_manifests
 from .splits import validate_animal_disjoint_splits
 
 
@@ -44,6 +45,10 @@ def main() -> None:
     windows.add_argument("alignment")
     windows.add_argument("--output", required=True)
 
+    lock = sub.add_parser("make-split-lock")
+    lock.add_argument("windows", nargs="+")
+    lock.add_argument("--output", required=True)
+
     score = sub.add_parser("score")
     score.add_argument("truth")
     score.add_argument("prediction")
@@ -75,6 +80,12 @@ def main() -> None:
         report = materialize_session_windows(args.session, args.alignment)
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(json.dumps({"status": "valid", "windows": report["window_count"]}, sort_keys=True))
+        return
+    if args.command == "make-split-lock":
+        samples = load_window_manifests(args.windows)
+        report = build_split_lock(samples)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
         return
     truth = np.load(args.truth)
     prediction = np.load(args.prediction)
