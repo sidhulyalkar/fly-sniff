@@ -29,7 +29,7 @@ No public dataset is downloaded in CI.
 
 ## MC2P ingress
 
-`inspect-mc2p` discovers trial directories, groups them by animal identity, and binds behavior video, synchronization, measured dF/F, optional pose/kinematics, rest masks, and optional ROI traces. Discovery never deserializes upstream pickle files.
+`inspect-mc2p` discovers trial directories, groups them by animal identity, and binds behavior video, synchronization, raw/resized measured dF/F, optional pose/kinematics, rest masks, and optional ROI traces. Discovery never deserializes upstream pickle files.
 
 The public release contains legacy pickle synchronization and pose artifacts. Convert only a trusted upstream file explicitly:
 
@@ -49,6 +49,20 @@ fly-video-neural convert-mc2p-legacy SESSION/pose_result.pkl \
 
 The trust flag is deliberately noisy because Python pickle may execute code while loading. Conversion receipts bind source/output hashes and normalized array structure but do not establish biological correctness.
 
-## Baseline protocol
+## Deterministic pose → measured-neural session batch
 
-The next data-gated milestone is deterministic pose-feature extraction and a within-animal ridge baseline on held-out sessions. A video foundation model comes only after that low-complexity baseline exists.
+After making a synchronized window manifest, build a session batch from the safe pose array and measured dF/F file:
+
+```bash
+fly-video-neural build-mc2p-session-batch SESSION/windows.json SESSION/pose3d.npy \
+  SESSION/2p_dff_resized.mm \
+  --dff-side 64 \
+  --output SESSION/pose-neural-v1.npz \
+  --receipt SESSION/pose-neural-v1.json
+```
+
+The pose transform mirrors MC2P's group-root preprocessing and summarizes only the input behavior window using mean, standard deviation, endpoint change, mean absolute velocity, and velocity standard deviation. The target is the mean of the measured dF/F frames mapped into the future interval. The receipt hashes every source and output.
+
+## Next benchmark gate
+
+The next tranche freezes session-level train/validation/test assignments **within each animal** and runs the first ridge baseline. A video foundation model comes only after that low-complexity result exists.

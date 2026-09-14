@@ -19,6 +19,7 @@ class MC2PSession:
     behavior_video: str
     synchronization: str
     neural_dff: str
+    neural_dff_resized: str | None
     pose: str | None
     inverse_kinematics: str | None
     rest_mask: str | None
@@ -53,7 +54,8 @@ def inspect_session(path: str | Path) -> MC2PSession:
     video = _first(root, ("*behData*camera_1.mp4", "*camera_1.mp4"))
     sync = _first(root, ("indices.npy", "sync_indices.pkl", "*sync*indices*.pkl"))
     dff = _first(root, ("2p_dff.mm", "*2p_dff*.mm", "*2p_dff*.npy"))
-    pose = _first(root, ("pose_result.pkl", "*pose_result*.mm", "*pose_result*.pkl"))
+    dff_resized = _first(root, ("2p_dff_resized.mm", "*2p_dff*resized*.mm", "*2p_dff*resized*.npy"))
+    pose = _first(root, ("pose3d.npy", "pose_result.pkl", "*pose_result*.mm", "*pose_result*.pkl"))
     inverse = _first(root, ("pose_result_inverse_kinematics.pkl", "*inverse*kinematics*.pkl"))
     rest = _first(root, ("rest.npy",))
     roi = _first(root, ("*roi_traces*.npy", "*roi_traces*.mm", "*roi_traces*.npz"))
@@ -73,6 +75,7 @@ def inspect_session(path: str | Path) -> MC2PSession:
         behavior_video=str(video.resolve()),
         synchronization=str(sync.resolve()),
         neural_dff=str(dff.resolve()),
+        neural_dff_resized=str(dff_resized.resolve()) if dff_resized else None,
         pose=str(pose.resolve()) if pose else None,
         inverse_kinematics=str(inverse.resolve()) if inverse else None,
         rest_mask=str(rest.resolve()) if rest else None,

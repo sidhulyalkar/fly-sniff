@@ -12,6 +12,7 @@ from .benchmark import load_benchmark
 from .mc2p import build_manifest
 from .mc2p_legacy import convert_legacy_pickle
 from .metrics import summarize_metrics
+from .pose_neural import build_session_pose_neural_batch
 from .registry import load_registry
 from .ridge import load_split_lock, run_ridge_baseline
 from .schema import SampleWindow
@@ -54,6 +55,14 @@ def main() -> None:
     windows.add_argument("session")
     windows.add_argument("alignment")
     windows.add_argument("--output", required=True)
+
+    batch = sub.add_parser("build-mc2p-session-batch")
+    batch.add_argument("windows")
+    batch.add_argument("pose3d")
+    batch.add_argument("dff")
+    batch.add_argument("--dff-side", required=True, type=int)
+    batch.add_argument("--output", required=True)
+    batch.add_argument("--receipt", required=True)
 
     lock = sub.add_parser("make-split-lock")
     lock.add_argument("windows", nargs="+")
@@ -112,6 +121,22 @@ def main() -> None:
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(json.dumps({"status": "valid", "windows": report["window_count"]}, sort_keys=True))
         return
+    if args.command == "build-mc2p-session-batch":
+        report = build_session_pose_neural_batch(
+            args.windows,
+            args.pose3d,
+            args.dff,
+            args.output,
+            args.receipt,
+            dff_side=args.dff_side,
+        )
+        print(
+            json.dumps(
+                {"status": "built", "samples": report["sample_count"], "sha256": report["receipt_sha256"]},
+                sort_keys=True,
+            )
+        )
+        return
     if args.command == "make-split-lock":
         samples = load_window_manifests(args.windows)
         report = build_split_lock(samples)
@@ -119,9 +144,9 @@ def main() -> None:
         print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
         return
     if args.command == "ridge-baseline":
-        batch = load_batch(args.batch)
-        lock = load_split_lock(args.split_lock)
-        report = run_ridge_baseline(batch, lock, consume_test=args.consume_test)
+        batch_data = load_batch(args.batch)
+        lock_data = load_split_lock(args.split_lock)
+        report = run_ridge_baseline(batch_data, lock_data, consume_test=args.consume_test)
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(
             json.dumps(

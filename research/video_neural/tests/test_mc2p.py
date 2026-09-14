@@ -11,7 +11,7 @@ def _touch(root: Path, name: str) -> None:
     (root / name).write_bytes(b"")
 
 
-def _session(root: Path, name: str, *, roi: bool = False) -> Path:
+def _session(root: Path, name: str, *, roi: bool = False, resized: bool = False) -> Path:
     path = root / name
     path.mkdir()
     _touch(path, "behData_images_camera_1.mp4")
@@ -21,6 +21,8 @@ def _session(root: Path, name: str, *, roi: bool = False) -> Path:
     _touch(path, "rest.npy")
     if roi:
         _touch(path, "roi_traces.npy")
+    if resized:
+        _touch(path, "2p_dff_resized.mm")
     return path
 
 
@@ -37,6 +39,12 @@ def test_inspector_prefers_roi_target_only_when_present(tmp_path: Path):
     assert image_session.roi_traces is None
     assert roi_session.neural_representation == "segmented_roi_traces"
     assert roi_session.roi_traces is not None
+
+
+def test_inspector_records_public_resized_dff_when_present(tmp_path: Path):
+    session = inspect_session(_session(tmp_path, "201008_G23xU1_Fly1_001", resized=True))
+    assert session.neural_dff_resized is not None
+    assert session.neural_dff_resized.endswith("2p_dff_resized.mm")
 
 
 def test_manifest_counts_animals_not_trials(tmp_path: Path):
