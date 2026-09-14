@@ -27,6 +27,12 @@ def validate_benchmark(document: dict[str, Any]) -> None:
         raise ValueError("v0 benchmark is frozen to mc2p_v1")
     if document.get("input_history_s") != 3.0 or document.get("prediction_horizon_s") != 0.5:
         raise ValueError("v0 temporal contract is frozen to 3.0 s history -> 0.5 s target")
+    if document.get("window_stride_s") != 0.5:
+        raise ValueError("v0 window stride is frozen to 0.5 s")
+    if document.get("rest_behavior_included") is not True:
+        raise ValueError("v0 retains rest behavior")
+    if document.get("alignment_contract") != "monotonic_behavior_frame_to_neural_frame_index":
+        raise ValueError("v0 requires a monotonic behavior-to-neural alignment")
     if document.get("split_unit") != "animal_id":
         raise ValueError("v0 split unit must be animal_id")
     if document.get("session_may_cross_split") is not False:

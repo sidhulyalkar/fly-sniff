@@ -57,5 +57,5 @@ class SampleWindow:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "SampleWindow":
+    def from_dict(cls, payload: dict[str, Any]) -> SampleWindow:
         return cls(**payload)

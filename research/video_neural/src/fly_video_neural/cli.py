@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .alignment import materialize_session_windows
 from .benchmark import load_benchmark
 from .mc2p import build_manifest
 from .metrics import summarize_metrics
@@ -38,6 +39,11 @@ def main() -> None:
     mc2p.add_argument("root")
     mc2p.add_argument("--output")
 
+    windows = sub.add_parser("make-mc2p-windows")
+    windows.add_argument("session")
+    windows.add_argument("alignment")
+    windows.add_argument("--output", required=True)
+
     score = sub.add_parser("score")
     score.add_argument("truth")
     score.add_argument("prediction")
@@ -64,6 +70,11 @@ def main() -> None:
         if args.output:
             Path(args.output).write_text(text)
         print(text, end="")
+        return
+    if args.command == "make-mc2p-windows":
+        report = materialize_session_windows(args.session, args.alignment)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "valid", "windows": report["window_count"]}, sort_keys=True))
         return
     truth = np.load(args.truth)
     prediction = np.load(args.prediction)

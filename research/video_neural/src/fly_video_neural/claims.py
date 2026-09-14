@@ -22,9 +22,12 @@ def validate_public_label(label: str, evidence: Iterable[EvidenceClass]) -> None
                 raise ValueError(
                     f"modeled latent state cannot be presented as {fragment!r}; use inferred/modeled wording"
                 )
-    if "measured" in normalized and EvidenceClass.MEASURED_NEURAL_ACTIVITY not in classes:
-        if "neural" in normalized or "brain" in normalized:
-            raise ValueError("measured neural wording requires measured_neural_activity evidence")
+    if (
+        "measured" in normalized
+        and EvidenceClass.MEASURED_NEURAL_ACTIVITY not in classes
+        and ("neural" in normalized or "brain" in normalized)
+    ):
+        raise ValueError("measured neural wording requires measured_neural_activity evidence")
 
 
 def milestone_zero_claims() -> dict[str, list[str]]:

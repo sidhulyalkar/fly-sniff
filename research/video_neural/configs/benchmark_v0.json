@@ -9,8 +9,13 @@
   "session_may_cross_split": false,
   "input_target_overlap_allowed": false,
   "target_evidence_class": "measured_neural_activity",
-  "primary_metrics": ["median_pearson_r", "median_r2"],
-  "required_baselines": ["train_mean"],
+  "primary_metrics": [
+    "median_pearson_r",
+    "median_r2"
+  ],
+  "required_baselines": [
+    "train_mean"
+  ],
   "model_lanes": [
     "pose_only",
     "video_only",
@@ -19,5 +24,8 @@
   ],
   "connectome_prior_status": "future_separately_versioned_lane",
   "whole_connectome_reconstruction_claim_allowed": false,
-  "test_animals_for_hyperparameter_selection": false
+  "test_animals_for_hyperparameter_selection": false,
+  "window_stride_s": 0.5,
+  "rest_behavior_included": true,
+  "alignment_contract": "monotonic_behavior_frame_to_neural_frame_index"
 }

@@ -53,7 +53,7 @@ class MeanTargetBaseline:
     def __init__(self) -> None:
         self.mean_: np.ndarray | None = None
 
-    def fit(self, y_train: np.ndarray) -> "MeanTargetBaseline":
+    def fit(self, y_train: np.ndarray) -> MeanTargetBaseline:
         y = np.asarray(y_train, dtype=float)
         if y.ndim != 2 or not np.isfinite(y).all():
             raise ValueError("training targets must be finite [samples, targets]")
