@@ -6,7 +6,6 @@ import typing
 
 from .freeze import canonical_sha256
 
-
 _HEX = frozenset("0123456789abcdef")
 
 
