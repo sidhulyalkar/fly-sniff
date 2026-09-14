@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Fly Sniff · Connectome Twin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">FLY SNIFF · CONNECTOME TWIN</p>
+          <h1>Odor → circuit → action</h1>
+        </div>
+        <div class="status-stack">
+          <span class="status measured">MEASURED CONNECTIVITY</span>
+          <span class="status modeled">MODELED ACTIVITY</span>
+          <span class="status behavior">DEVELOPMENT BEHAVIOR</span>
+        </div>
+      </header>
+
+      <section class="stage-grid">
+        <article class="panel world-panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker">EMBODIED WORLD</p>
+              <h2>What the fly can sense</h2>
+            </div>
+            <span id="behavior-clock" class="clock">0.00 s</span>
+          </div>
+          <canvas id="world-canvas"></canvas>
+          <div class="sensor-strip">
+            <div><span>LEFT ANTENNA</span><strong id="odor-left">0.00</strong></div>
+            <div><span>RIGHT ANTENNA</span><strong id="odor-right">0.00</strong></div>
+            <div><span>TURN</span><strong id="turn-command">0.00</strong></div>
+          </div>
+        </article>
+
+        <article class="panel brain-panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker">MALECNS V1.0</p>
+              <h2>Exact neuron morphology</h2>
+            </div>
+            <span id="brain-status" class="clock">waiting for assets</span>
+          </div>
+          <div id="brain-canvas" class="brain-canvas"></div>
+          <div class="brain-legend">
+            <span><i class="dot structure"></i> measured skeleton</span>
+            <span><i class="dot activity"></i> modeled state</span>
+            <span id="timeline-warning">separate mechanism clock</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="causal-strip">
+        <div class="causal-node"><span>ODOR</span><strong>antennae</strong></div>
+        <div class="arrow">→</div>
+        <div class="causal-node"><span>GOAL</span><strong>FC2 candidate</strong></div>
+        <div class="arrow">+</div>
+        <div class="causal-node"><span>HEADING</span><strong>EPG</strong></div>
+        <div class="arrow">→</div>
+        <div class="causal-node"><span>COMPARE</span><strong>PFL3</strong></div>
+        <div class="arrow">→</div>
+        <div class="causal-node"><span>DESCEND</span><strong>DNa02</strong></div>
+        <div class="arrow">→</div>
+        <div class="causal-node accent"><span>ACTION</span><strong id="action-label">TURN</strong></div>
+      </section>
+
+      <footer class="timeline-bar">
+        <button id="play-button" type="button">Pause</button>
+        <input id="scrubber" type="range" min="0" max="1000" value="0" />
+        <p id="evidence-note">Loading evidence-aware replay…</p>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
