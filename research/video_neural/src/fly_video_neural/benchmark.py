@@ -96,7 +96,7 @@ def _validate_v1(document: dict[str, Any]) -> None:
         raise ValueError("v1 timestamp-alignment authority changed")
     tasks = document.get("tasks")
     if not isinstance(tasks, dict):
-        raise ValueError("v1 requires primary and secondary task contracts")
+        raise TypeError("v1 requires primary and secondary task contracts")
     primary = tasks.get("primary", {})
     if primary.get("name") != "within_animal_session_heldout":
         raise ValueError("v1 primary task must remain within-animal session-heldout")

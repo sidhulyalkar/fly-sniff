@@ -56,7 +56,7 @@ def _trusted_pickle_load(path: Path, *, trust_upstream_pickle: bool) -> Any:
             "pickle can execute code during loading"
         )
     with path.open("rb") as handle:
-        return pickle.load(handle)  # noqa: S301 - explicit trust gate is the converter boundary
+        return pickle.load(handle)
 
 
 def _as_alignment(value: Any) -> np.ndarray:
