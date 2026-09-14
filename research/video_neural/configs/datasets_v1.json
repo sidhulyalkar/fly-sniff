@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "datasets": [
+    {
+      "id": "mc2p_v1",
+      "name": "Motion Capture and Two-photon (MC2P)",
+      "role": "primary_paired_benchmark",
+      "modalities": {"video": true, "pose": true, "neural": true, "sensory_context": true},
+      "synchronized": true,
+      "known_scale": {"animals_released": 8},
+      "sources": ["https://github.com/semihgunel/MC2P"],
+      "access": "public download linked from upstream repository",
+      "license": "see upstream dataset/repository terms before redistribution",
+      "download_in_ci": false,
+      "intended_use": "animal-held-out video/pose to measured two-photon population decoding"
+    },
+    {
+      "id": "flymabe2022_v3",
+      "name": "FlyMABe2022 v3",
+      "role": "behavior_pretraining",
+      "modalities": {"video": false, "pose": true, "neural": false, "sensory_context": true},
+      "synchronized": false,
+      "known_scale": {"videos": 150, "tracked_keypoints": 21, "frame_rate_hz": 150},
+      "sources": ["https://huggingface.co/datasets/kristinbranson/FlyMABe2022"],
+      "access": "public Hugging Face dataset",
+      "license": "CC-BY-4.0",
+      "download_in_ci": false,
+      "intended_use": "pose/social-behavior representation pretraining and intervention-aware auxiliary tasks"
+    },
+    {
+      "id": "sato_behavior_2025",
+      "name": "Multifaceted behavioral trajectories of genomically diverse Drosophila lines",
+      "role": "behavior_pretraining",
+      "modalities": {"video": true, "pose": false, "neural": false, "sensory_context": true},
+      "synchronized": false,
+      "known_scale": {"flies": 36600, "strains": 105, "raw_movie_and_tracking_files": 9600},
+      "sources": ["https://doi.org/10.5061/dryad.ttdz08m60"],
+      "access": "public Dryad dataset; approximately 103.8 GB",
+      "license": "see Dryad record",
+      "download_in_ci": false,
+      "intended_use": "large-scale fly-video representation pretraining across genotype and social context"
+    },
+    {
+      "id": "deepfly3d",
+      "name": "DeepFly3D",
+      "role": "pose_pretraining",
+      "modalities": {"video": true, "pose": true, "neural": false, "sensory_context": false},
+      "synchronized": false,
+      "sources": ["https://github.com/NeLy-EPFL/DeepFly3D", "https://dataverse.harvard.edu/dataverse/DeepFly3D"],
+      "access": "public code and Harvard Dataverse datasets",
+      "license": "see upstream code/data terms",
+      "download_in_ci": false,
+      "intended_use": "multi-view pose/kinematic representation pretraining"
+    },
+    {
+      "id": "flyception2",
+      "name": "Flyception2",
+      "role": "future_neural_validation",
+      "modalities": {"video": true, "pose": false, "neural": true, "sensory_context": true},
+      "synchronized": true,
+      "sources": ["https://github.com/dgrover/flyception2"],
+      "access": "sample/code public; full datasets may require author request",
+      "license": "see upstream repository/publication",
+      "download_in_ci": false,
+      "intended_use": "future external validation on freely walking/social neural-behavior recordings"
+    }
+  ]
+}

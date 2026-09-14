@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "mc2p_future_neural_v0",
+  "dataset_id": "mc2p_v1",
+  "scientific_question": "Can recent observed fly behavior predict future measured neural population activity in a held-out animal?",
+  "input_history_s": 3.0,
+  "prediction_horizon_s": 0.5,
+  "split_unit": "animal_id",
+  "session_may_cross_split": false,
+  "input_target_overlap_allowed": false,
+  "target_evidence_class": "measured_neural_activity",
+  "primary_metrics": ["median_pearson_r", "median_r2"],
+  "required_baselines": ["train_mean"],
+  "model_lanes": [
+    "pose_only",
+    "video_only",
+    "video_plus_pose",
+    "video_pose_plus_measured_context"
+  ],
+  "connectome_prior_status": "future_separately_versioned_lane",
+  "whole_connectome_reconstruction_claim_allowed": false,
+  "test_animals_for_hyperparameter_selection": false
+}
