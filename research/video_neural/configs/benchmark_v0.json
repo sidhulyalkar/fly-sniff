@@ -34,5 +34,14 @@
     "train": 5,
     "validation": 1,
     "test": 2
-  }
+  },
+  "ridge_alpha_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0
+  ],
+  "model_selection_metric": "median_pearson_r",
+  "test_consumption_requires_explicit_flag": true
 }

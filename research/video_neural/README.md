@@ -27,3 +27,7 @@ No public dataset is downloaded in CI.
 ## MC2P ingress
 
 `inspect-mc2p` discovers trial directories, groups them by animal identity, and binds the behavior video, synchronization file, measured dF/F, optional pose/kinematics, rest mask, and optional ROI traces into a hash-addressed manifest. Discovery never deserializes upstream pickle files.
+
+## Baseline protocol
+
+The first executable decoder is a NumPy ridge baseline. Hyperparameters are selected on the locked validation animal only. Test animals remain unread unless `--consume-test` is passed explicitly. This is a procedural guard for v0; stronger commit-reveal test locking can be added before a headline result.

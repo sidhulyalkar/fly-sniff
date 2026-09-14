@@ -53,5 +53,11 @@ def validate_benchmark(document: dict[str, Any]) -> None:
         raise ValueError("connectome prior must remain outside milestone v0")
     if document.get("whole_connectome_reconstruction_claim_allowed") is not False:
         raise ValueError("whole-connectome reconstruction claim is forbidden in v0")
+    if document.get("ridge_alpha_grid") != [0.01, 0.1, 1.0, 10.0, 100.0]:
+        raise ValueError("v0 ridge alpha grid changed")
+    if document.get("model_selection_metric") != "median_pearson_r":
+        raise ValueError("v0 model-selection metric must be median_pearson_r")
+    if document.get("test_consumption_requires_explicit_flag") is not True:
+        raise ValueError("v0 requires explicit acknowledgement before test consumption")
     if document.get("test_animals_for_hyperparameter_selection") is not False:
         raise ValueError("test animals may not be used for hyperparameter selection")

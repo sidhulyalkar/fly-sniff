@@ -7,10 +7,12 @@ from pathlib import Path
 import numpy as np
 
 from .alignment import materialize_session_windows
+from .batch import load_batch
 from .benchmark import load_benchmark
 from .mc2p import build_manifest
 from .metrics import summarize_metrics
 from .registry import load_registry
+from .ridge import load_split_lock, run_ridge_baseline
 from .schema import SampleWindow
 from .split_lock import build_split_lock, load_window_manifests
 from .splits import validate_animal_disjoint_splits
@@ -49,6 +51,12 @@ def main() -> None:
     lock.add_argument("windows", nargs="+")
     lock.add_argument("--output", required=True)
 
+    ridge = sub.add_parser("ridge-baseline")
+    ridge.add_argument("batch")
+    ridge.add_argument("split_lock")
+    ridge.add_argument("--output", required=True)
+    ridge.add_argument("--consume-test", action="store_true")
+
     score = sub.add_parser("score")
     score.add_argument("truth")
     score.add_argument("prediction")
@@ -86,6 +94,13 @@ def main() -> None:
         report = build_split_lock(samples)
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
+        return
+    if args.command == "ridge-baseline":
+        batch = load_batch(args.batch)
+        lock = load_split_lock(args.split_lock)
+        report = run_ridge_baseline(batch, lock, consume_test=args.consume_test)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": report["test_status"], "selected_alpha": report["selected_alpha"]}, sort_keys=True))
         return
     truth = np.load(args.truth)
     prediction = np.load(args.prediction)
