@@ -47,6 +47,8 @@ fly-sniff-r002-graph = "fly_sniff.r002_graph:main"
 fly-sniff-r002-probe = "fly_sniff.r002_probe:main"
 fly-sniff-r002-qualify = "fly_sniff.r002_qualify:main"
 fly-sniff-r002-render = "fly_sniff.r002_render:main"
+fly-sniff-artifact-validate = "fly_sniff.kernel_cli:main"
+fly-sniff-final-entropy = "fly_sniff.final_protocol:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
