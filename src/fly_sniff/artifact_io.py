@@ -10,7 +10,6 @@ from typing import Any
 from .evidence import EvidenceLedger
 from .experiment import ExperimentLock, ExperimentSpec, RunReceipt
 
-
 TypedArtifact = EvidenceLedger | ExperimentSpec | ExperimentLock | RunReceipt
 
 
