@@ -14,7 +14,7 @@ Can 3 s of recent observed behavior predict the next 0.5 s of **measured dF/F** 
 
 The unit of model fitting is the animal. The unit of held-out generalization is session within animal. The unit of final statistical inference is the animal.
 
-At least three sessions are required for an animal to participate. Exactly one session is validation and one is final test; all remaining sessions train. The session split seed is `2701`. Test sessions never select features, architecture, α, temporal-null fraction, metric, or final inferential criterion.
+At least three sessions are required for an animal to participate. Exactly one session is validation and one is final test; all remaining sessions train. The session split seed is `2701`. Test sessions never select features, architecture, α, temporal-null fraction, metric, confirmatory population, or final inferential criterion.
 
 The raw/resized dF/F image is allowed as a target because anatomical coordinates are stable within the same animal. No raw neural-pixel correspondence is assumed across animals.
 
@@ -76,7 +76,9 @@ This is an operational/provenance barrier. It does not cryptographically prove t
 - the median paired validation effect is positive;
 - aligned and null reports remain test-locked and bind the same split.
 
-Animals with non-computable validation median Pearson correlation are ineligible rather than assigned an artificial score. The unlock grants permission for one final evaluation; it is not itself evidence of held-out generalization.
+Animals with non-computable validation median Pearson correlation are ineligible rather than assigned an artificial score. The unlock freezes the exact `eligible_animal_ids` as the confirmatory test population before held-out arrays are reopened. Validation-ineligible animals are permanently excluded from confirmatory inference for this v1 run, even if their held-out metric is later computable.
+
+The unlock grants permission for one final evaluation; it is not itself evidence of held-out generalization.
 
 ## Prespecified final inference
 
@@ -84,15 +86,21 @@ The final confirmatory comparison is animal-level. Pixels and overlapping window
 
 The same acceptance config supplied to DEVELOPMENT and hash-bound in its receipt freezes the final rule before validation scores can be used to rewrite it:
 
-- at least **6 scorable animals** are required;
+- the confirmatory population is exactly the validation-eligible animal IDs frozen in `validation-unlock.json`;
+- at least **6 confirmatory animals** are required;
+- every validation-eligible animal must have a computable held-out paired effect for a supportive result;
 - per-animal effect = aligned test median Pearson r minus the test median Pearson r of that animal's validation-selected null fraction;
+- validation-ineligible animals are descriptive-only and cannot enter the confirmatory statistic;
+- missing or non-computable confirmatory effects cannot reduce the denominator;
 - positive effect means strictly `> 0`; zero counts as non-positive;
 - the median paired effect must be `> 0`;
 - an exact one-sided sign test against positive-effect probability 0.5 must satisfy `p <= 0.05`.
 
-The exact small-sample consequences are intentional. With 8 scorable animals, 7/8 positive effects gives `p = 9/256 ≈ 0.0352`, while 6/8 gives `37/256 ≈ 0.1445`. With 7 scorable animals, 7/7 is required; 6/7 gives `p = 0.0625`. With 6 scorable animals, 6/6 gives `p = 1/64 ≈ 0.0156`.
+The exact small-sample consequences are intentional. With a complete 8-animal confirmatory population, 7/8 positive effects gives `p = 9/256 ≈ 0.0352`, while 6/8 gives `37/256 ≈ 0.1445`. With a frozen 7-animal confirmatory population, 7/7 is required; 6/7 gives `p = 0.0625`. With a frozen 6-animal confirmatory population, 6/6 gives `p = 1/64 ≈ 0.0156`.
 
-A completed final run therefore receives one of three prespecified interpretations: `supports_prespecified_predictive_generalization`, `does_not_meet_prespecified_support_rule`, or `insufficient_scorable_animals`. A valid negative result is not a software failure and must not trigger post-test threshold, metric, null, mask, split, or horizon changes inside v1.
+Critically, an 8-animal confirmatory population with only 6 computable held-out effects is **not** reinterpreted as a new 6/6 experiment. It receives `incomplete_prespecified_test_population`, with no confirmatory sign-test p-value. This closes an attrition path that could otherwise make missing test effects look artificially favorable.
+
+A completed final run therefore receives one of four prespecified interpretations: `supports_prespecified_predictive_generalization`, `does_not_meet_prespecified_support_rule`, `insufficient_prespecified_test_population`, or `incomplete_prespecified_test_population`. A valid negative, insufficient, or incomplete result is not a software failure and must not trigger post-test threshold, metric, null, mask, split, population, or horizon changes inside v1.
 
 ## v1 secondary question
 
@@ -112,7 +120,7 @@ The public release includes legacy Python pickle artifacts. Discovery never dese
 
 If and only if the final support rule passes, v1 may support wording of the form:
 
-> Under the prespecified v1 protocol, recent pose predicted held-out-session measured dF/F better than validation-selected temporal-misalignment controls with consistent direction across animals.
+> Under the prespecified v1 protocol, recent pose predicted held-out-session measured dF/F better than validation-selected temporal-misalignment controls with consistent direction across the frozen confirmatory animals.
 
 It does not support causal influence of behavior on neural activity, spike-level prediction, reconstruction of an unseen fly's brain, whole-connectome firing inference, or a connectome mechanism.
 
