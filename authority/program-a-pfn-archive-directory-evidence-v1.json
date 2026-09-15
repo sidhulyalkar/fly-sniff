@@ -1,0 +1,164 @@
+{
+  "adjudication_boundary": {
+    "automatic_archive_member_map_promotion": false,
+    "automatic_recording_set_promotion": false,
+    "next_allowed_action": "Fetch and authenticate only the tiny published MATLAB analysis scripts needed to adjudicate the Figure 4 recording list without reading neural recording members.",
+    "unresolved": [
+      "which 12 of the 13 WTC recording directories constitute the published Figure 4B-K cohort",
+      "soma-side identity for each selected Figure 4 recording",
+      "individual Figure 4 member-byte hashes"
+    ]
+  },
+  "bounded_probe": {
+    "archive_entry_count": 42708,
+    "archive_format": "zip64",
+    "archive_object_size_bytes": 1067714867,
+    "directory_suffix_sha256": "37e7004db3ede368fa6c80d150ef60b84bfe746e864b242b0adc25c6916c87e6",
+    "ephys_entry_count": 41979,
+    "max_tail_bytes": 16777216,
+    "neural_member_bytes_read": false,
+    "required_suffix_bytes": 4587719
+  },
+  "evidence_id": "program-a-pfn-archive-directory-v1",
+  "evidence_sha256": "0de9287c264c6b49750b469b5a71363476fad4f81f2652adc2ee5306e35eb4ba",
+  "figure4_paper_constraint": {
+    "cell_type": "P-F2N3",
+    "driver_line": "SS02255",
+    "figure_panels": "4B-K",
+    "published_recording_count": 12
+  },
+  "navigation_performance_used": false,
+  "schema": "fly-sniff-pfn-archive-directory-evidence-v1",
+  "scientific_authority": {
+    "doi": "10.5061/dryad.vq83bk3rh",
+    "published_md5": "f2c15c70aec25f00d63282f87aee40d0",
+    "repository": "Dryad",
+    "target_archive_part": "Currier2020.zip.013"
+  },
+  "ss02255_directory_structure": {
+    "analysis_members": [
+      {
+        "compressed_size_32": 1557,
+        "path": "Ephys/analyzeWindTuning.m",
+        "uncompressed_size_32": 4025
+      },
+      {
+        "compressed_size_32": 2591,
+        "path": "Ephys/windTuningPFN.m",
+        "uncompressed_size_32": 13133
+      }
+    ],
+    "pre_column_recording_roots": [
+      "Ephys/SS02255/20190514 PFN54/",
+      "Ephys/SS02255/20190515 PFN56/",
+      "Ephys/SS02255/20190516 PFN57/",
+      "Ephys/SS02255/20190516 PFN58/",
+      "Ephys/SS02255/20190604 PFN61/",
+      "Ephys/SS02255/20190604 PFN62/"
+    ],
+    "wind_tuning_by_column_root": "Ephys/SS02255/Wind Tuning by Column/",
+    "wind_tuning_candidate_count": 13,
+    "wind_tuning_candidates": [
+      {
+        "recording_alias": "WTC02",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190827 WTC02/",
+        "summary_compressed_size_32": 113123806,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC02data.mat",
+        "summary_uncompressed_size_32": 113512935
+      },
+      {
+        "recording_alias": "WTC03",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190827 WTC03/",
+        "summary_compressed_size_32": 132407120,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC03data.mat",
+        "summary_uncompressed_size_32": 132762286
+      },
+      {
+        "recording_alias": "WTC04",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190828 WTC04/",
+        "summary_compressed_size_32": 132720914,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC04data.mat",
+        "summary_uncompressed_size_32": 133059924
+      },
+      {
+        "recording_alias": "WTC05",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190828 WTC05/",
+        "summary_compressed_size_32": 127910430,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC05data.mat",
+        "summary_uncompressed_size_32": 128287650
+      },
+      {
+        "recording_alias": "WTC06",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190829 WTC06/",
+        "summary_compressed_size_32": 105410550,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC06data.mat",
+        "summary_uncompressed_size_32": 105918074
+      },
+      {
+        "recording_alias": "WTC07",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190829 WTC07/",
+        "summary_compressed_size_32": 137341908,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC07data.mat",
+        "summary_uncompressed_size_32": 137631031
+      },
+      {
+        "recording_alias": "WTC08",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190904 WTC08/",
+        "summary_compressed_size_32": 128919523,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC08data.mat",
+        "summary_uncompressed_size_32": 129309113
+      },
+      {
+        "recording_alias": "WTC09",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190910 WTC09/",
+        "summary_compressed_size_32": 65673909,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC09data.mat",
+        "summary_uncompressed_size_32": 65851865
+      },
+      {
+        "recording_alias": "WTC11",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190911 WTC11/",
+        "summary_compressed_size_32": 119288879,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC11data.mat",
+        "summary_uncompressed_size_32": 119639422
+      },
+      {
+        "recording_alias": "WTC12",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190913 WTC12/",
+        "summary_compressed_size_32": 135359403,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC12data.mat",
+        "summary_uncompressed_size_32": 135683649
+      },
+      {
+        "recording_alias": "WTC13",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190918 WTC13/",
+        "summary_compressed_size_32": 136043276,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC13data.mat",
+        "summary_uncompressed_size_32": 136358049
+      },
+      {
+        "recording_alias": "WTC14",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190918 WTC14/",
+        "summary_compressed_size_32": 129007425,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC14data.mat",
+        "summary_uncompressed_size_32": 129388420
+      },
+      {
+        "recording_alias": "WTC15",
+        "recording_directory": "Ephys/SS02255/Wind Tuning by Column/20190924 WTC15/",
+        "summary_compressed_size_32": 136921636,
+        "summary_data_member": "Ephys/SS02255/Wind Tuning by Column/WTC15data.mat",
+        "summary_uncompressed_size_32": 137257632
+      }
+    ]
+  },
+  "status": "CENTRAL_DIRECTORY_RECOVERED_CANDIDATE_SET_ONLY",
+  "transport_evidence": {
+    "github_artifact_digest": "sha256:769ba74f338bf4346aba21e20085f52ea448f7076d4427c794534910d915b301",
+    "github_artifact_id": 10415988800,
+    "github_workflow_run_id": 35017816296,
+    "probe_sha256": "7bc7914f790069db870cf793687e4641b16c432bbb75dae60235c0c1b16cb970",
+    "transport": "checksum_matched_zenodo_copy",
+    "zenodo_record": "https://zenodo.org/records/4407395"
+  }
+}
