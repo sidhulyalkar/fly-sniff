@@ -93,6 +93,19 @@ def bind_probe_authorities(
 
     sealed = [row["id"] for row in probe_reports if row["status"] == "sealed"]
     unresolved = [row["id"] for row in probe_reports if row["status"] != "sealed"]
+    compatibility_bindings = [
+        {
+            "probe_id": row["id"],
+            "authority_status": row["status"],
+            "evidence_classes": sorted(
+                {binding["evidence_class"] for binding in row["bindings"]}
+            ),
+            "authorities": sorted(
+                {binding["authority"] for binding in row["bindings"]}
+            ),
+        }
+        for row in probe_reports
+    ]
     return {
         "protocol": PROTOCOL,
         "calibration_protocol": calibration_config["protocol"],
@@ -103,6 +116,7 @@ def bind_probe_authorities(
         "unresolved_probes": unresolved,
         "ready_to_define_fit_objective": not unresolved,
         "probe_reports": probe_reports,
+        "probe_bindings": compatibility_bindings,
         "claim_boundary": (
             "A sealed binding means an independently sourced physiological or cross-dataset prior "
             "exists for the probe. It does not define a numeric fitting objective, establish "
