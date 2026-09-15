@@ -4,8 +4,7 @@
   "status": "BLOCKED",
   "blockers": [
     "BLOCKED_ARCHIVE_MEMBER_MAP_UNRESOLVED",
-    "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED",
-    "BLOCKED_README_SHA256_UNVERIFIED"
+    "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED"
   ],
   "paper": {
     "doi": "10.7554/eLife.61510",
@@ -25,8 +24,8 @@
       "dryad_file_stream_id": 536042,
       "published_size_bytes": 2550,
       "published_md5": "91e5213503788fcde11c0f5aa3e91f43",
-      "sha256": null,
-      "status": "BLOCKED_README_SHA256_UNVERIFIED"
+      "sha256": "6313f97ff216f29e5457502f80524edbc3ec0801dc0cb3b7fd57d08cebc31692",
+      "status": "READY_FOR_EXTRACTION"
     },
     "multipart_archive": [
       {"filename": "Currier2020.z01", "published_md5": "5c6a96fb9a56c9ca145990b688413d15"},
@@ -97,6 +96,7 @@
   "navigation_performance_used": false,
   "allowed_interpretation": [
     "published ventral P-FN physiology supports a type-level normalized airflow-direction prior organized by cell-body hemisphere",
+    "the Dryad-authorized README bytes are independently content-addressed by SHA-256 while the archive-member and recording maps remain unresolved",
     "the hemisphere-folded preferred-direction geometry is a candidate navigation-independent Program A calibration target"
   ],
   "forbidden_interpretation": [
@@ -105,6 +105,8 @@
     "fan-shaped-body column determines airflow laterality",
     "negative baseline-subtracted responses may be clipped before vector-angle calculation",
     "navigation performance may choose recordings, archive members, normalization, uncertainty, or target statistic",
+    "the Zenodo transport mirror is independent scientific authority rather than a checksum-matched transport copy of the Dryad release",
+    "the README alone identifies the exact 12 Figure 4 recording files or their multipart archive containers",
     "the complete 117.49 GB release must be downloaded before the README/member map is audited"
   ]
 }
