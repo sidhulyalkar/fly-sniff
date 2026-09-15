@@ -50,7 +50,7 @@ def build_calibrated_model_artifact(
     if fit_report.get("final_evaluation_visible_during_fit") is not False:
         raise ValueError("final evaluation must remain hidden during physiology calibration")
 
-    permitted = set(str(x) for x in calibration_config["permitted_parameters"])
+    permitted = {str(x) for x in calibration_config["permitted_parameters"]}
     parameters = {str(key): float(value) for key, value in fit_report["parameters"].items()}
     if set(parameters) != permitted:
         raise ValueError(
@@ -61,7 +61,10 @@ def build_calibrated_model_artifact(
     probe_results = dict(fit_report["probe_results"])
     if set(probe_results) != set(probe_ids):
         raise ValueError("fit report must retain every preregistered physiology probe")
-    if not all(bool(probe_results[probe_id].get("objective_defined_before_fit")) for probe_id in probe_ids):
+    if not all(
+        bool(probe_results[probe_id].get("objective_defined_before_fit"))
+        for probe_id in probe_ids
+    ):
         raise ValueError("every physiology objective must be marked as defined before fitting")
 
     return {
@@ -88,30 +91,27 @@ def build_calibrated_model_artifact(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seal a physiology-calibrated dynamics artifact")
-    parser.add_argument("--config", default="configs/physiology_calibration_v1.json")
-    parser.add_argument("--bindings", default="authority/physiology-probe-bindings-v1.json")
-    parser.add_argument("--fit-report", required=True)
+    parser.add_argument("calibration_config")
+    parser.add_argument("binding_report")
+    parser.add_argument("fit_report")
     parser.add_argument("--output", default="results/calibration/physiology-calibrated-model-v1.json")
     args = parser.parse_args()
 
-    config = json.loads(Path(args.config).read_text())
-    bindings = json.loads(Path(args.bindings).read_text())
-    fit_report = json.loads(Path(args.fit_report).read_text())
+    calibration_path = Path(args.calibration_config)
+    binding_path = Path(args.binding_report)
+    fit_path = Path(args.fit_report)
     artifact = build_calibrated_model_artifact(
-        config,
-        bindings,
-        fit_report,
-        calibration_config_sha256=file_sha256(args.config),
-        binding_report_sha256=file_sha256(args.bindings),
-        fit_report_sha256=file_sha256(args.fit_report),
+        json.loads(calibration_path.read_text()),
+        json.loads(binding_path.read_text()),
+        json.loads(fit_path.read_text()),
+        calibration_config_sha256=file_sha256(calibration_path),
+        binding_report_sha256=file_sha256(binding_path),
+        fit_report_sha256=file_sha256(fit_path),
     )
     output = Path(args.output)
-    if output.exists():
-        raise FileExistsError(f"refusing to overwrite calibrated model artifact: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
-    print(f"{output}")
-    print("status=sealed physiology-calibrated-model-v1")
+    print(output)
 
 
 if __name__ == "__main__":
