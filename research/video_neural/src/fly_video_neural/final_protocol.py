@@ -15,7 +15,6 @@ from .provenance import implementation_fingerprint, runtime_fingerprint
 from .session_benchmark import (
     load_session_batches,
     run_within_animal_ridge,
-    subset_development_batch,
     verify_session_split_lock,
 )
 from .validation_gate import build_validation_unlock, load_acceptance_config
@@ -139,6 +138,65 @@ def _verify_preload_contract(
     return source_batches
 
 
+def _development_paths_from_receipt(
+    receipt: dict[str, Any],
+    batch_paths: list[str | Path],
+) -> tuple[list[str | Path], list[dict[str, str]]]:
+    development_sources = receipt.get("development_deserialized_batches")
+    if not isinstance(development_sources, list) or not development_sources:
+        raise ValueError("development receipt is missing its deserialized train+validation batch identity")
+    path_by_resolved = {str(Path(path).resolve()): path for path in batch_paths}
+    if len(path_by_resolved) != len(batch_paths):
+        raise ValueError("final batch paths contain duplicate resolved paths")
+    selected: list[str | Path] = []
+    seen: set[str] = set()
+    for source in development_sources:
+        if not isinstance(source, dict):
+            raise ValueError("development batch receipt entry is malformed")
+        path = source.get("path")
+        digest = source.get("sha256")
+        if not isinstance(path, str) or not isinstance(digest, str):
+            raise ValueError("development batch receipt entry is incomplete")
+        if path in seen:
+            raise ValueError("development receipt contains duplicate batch paths")
+        seen.add(path)
+        supplied = path_by_resolved.get(path)
+        if supplied is None:
+            raise ValueError("a frozen development batch path is missing from final inputs")
+        selected.append(supplied)
+    return selected, sorted(development_sources, key=lambda row: row["path"])
+
+
+def _reproduce_development_evidence_preconsumption(
+    bundle: dict[str, dict[str, Any]],
+    split_lock: dict[str, Any],
+    batch_paths: list[str | Path],
+) -> None:
+    development_paths, expected_sources = _development_paths_from_receipt(
+        bundle["receipt"],
+        batch_paths,
+    )
+    development_batch, current_sources = load_session_batches(development_paths)
+    if current_sources != expected_sources:
+        raise ValueError("development batch identity changed before final consumption")
+    current_aligned = run_within_animal_ridge(
+        development_batch,
+        split_lock,
+        source_batches=current_sources,
+        consume_test=False,
+    )
+    current_null = run_alignment_null(
+        development_batch,
+        split_lock,
+        source_batches=current_sources,
+        consume_test=False,
+    )
+    if current_aligned != bundle["aligned"]:
+        raise ValueError("aligned development evidence no longer reproduces before final consumption")
+    if current_null != bundle["null"]:
+        raise ValueError("temporal-null development evidence no longer reproduces before final consumption")
+
+
 def _write_consumption_lock(
     development_dir: str | Path,
     *,
@@ -157,6 +215,7 @@ def _write_consumption_lock(
         "validation_unlock_sha256": validation_unlock_sha256,
         "reopen_after_failure_allowed": False,
         "prepared_test_batch_reopen_allowed_after_this_marker_only": True,
+        "development_evidence_reproduced_before_marker": True,
     }
     payload["consumption_lock_sha256"] = _sha(payload)
     try:
@@ -226,6 +285,7 @@ def run_final_protocol(
         batch_paths=batch_paths,
         acceptance_config_path=acceptance_config_path,
     )
+    _reproduce_development_evidence_preconsumption(bundle, split_lock, batch_paths)
 
     consumption_lock = _write_consumption_lock(
         development_dir,
@@ -238,27 +298,6 @@ def run_final_protocol(
     if source_batches != expected_source_batches:
         raise RuntimeError("batch identity changed after final consumption lock")
     verify_session_split_lock(split_lock, batch, source_batches=source_batches)
-
-    development_batch = subset_development_batch(batch, split_lock)
-    development_sources = bundle["receipt"].get("development_deserialized_batches")
-    if not isinstance(development_sources, list) or not development_sources:
-        raise ValueError("development receipt is missing its deserialized train+validation batch identity")
-    current_aligned_development = run_within_animal_ridge(
-        development_batch,
-        split_lock,
-        source_batches=development_sources,
-        consume_test=False,
-    )
-    current_null_development = run_alignment_null(
-        development_batch,
-        split_lock,
-        source_batches=development_sources,
-        consume_test=False,
-    )
-    if current_aligned_development != bundle["aligned"]:
-        raise ValueError("aligned development evidence no longer reproduces after final lock")
-    if current_null_development != bundle["null"]:
-        raise ValueError("temporal-null development evidence no longer reproduces after final lock")
 
     aligned_final = run_within_animal_ridge(
         batch,
@@ -293,6 +332,7 @@ def run_final_protocol(
         "development_receipt_sha256": bundle["receipt"]["receipt_sha256"],
         "validation_unlock_sha256": bundle["unlock"]["report_sha256"],
         "consumption_lock_sha256": consumption_lock["consumption_lock_sha256"],
+        "development_evidence_reproduced_before_consumption_lock": True,
         "test_status": "consumed_once",
         "prepared_test_batches_first_reopened_post_split_after_consumption_lock": True,
         "primary_null_selection": "fraction_selected_on_validation_before_test",
@@ -308,13 +348,14 @@ def run_final_protocol(
         "claim_boundary": (
             "This receipt reports the prespecified held-out evaluation against the null fraction selected "
             "on validation for each animal. PREPARE necessarily materializes all deterministic session "
-            "batches before the split is evaluated; after that split is frozen, DEVELOPMENT authenticates "
-            "held-out batch bytes without reopening their arrays, and FINAL is the first supported post-split "
-            "command to reopen those prepared held-out arrays, only after the one-way consumption marker. "
-            "The confirmatory population is exactly the validation-eligible animal IDs frozen before test. "
-            "Validation-ineligible animals cannot enter final inference, and missing/non-computable effects "
-            "inside the frozen confirmatory population cannot shrink the denominator. Pixels and overlapping "
-            "windows are not treated as independent biological replicates."
+            "batches before the split is evaluated. After that split is frozen, DEVELOPMENT authenticates "
+            "held-out batch bytes without reopening their arrays. FINAL replays the exact train+validation "
+            "development evidence using only its authenticated development batches before writing the one-way "
+            "consumption marker; only then may it reopen prepared held-out arrays. The confirmatory population "
+            "is exactly the validation-eligible animal IDs frozen before test. Validation-ineligible animals "
+            "cannot enter final inference, and missing/non-computable effects inside the frozen confirmatory "
+            "population cannot shrink the denominator. Pixels and overlapping windows are not independent "
+            "biological replicates."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
