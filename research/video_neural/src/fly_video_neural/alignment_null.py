@@ -14,6 +14,7 @@ from .session_benchmark import (
     RIDGE_ALPHAS,
     SessionBenchmarkBatch,
     load_session_batches,
+    verify_development_projection,
     verify_session_split_lock,
 )
 
@@ -135,14 +136,19 @@ def run_alignment_null(
     source_batches: list[dict[str, str]] | None = None,
     consume_test: bool = False,
 ) -> dict[str, Any]:
-    verify_session_split_lock(lock, batch, source_batches=source_batches)
+    if consume_test:
+        verify_session_split_lock(lock, batch, source_batches=source_batches)
+    else:
+        verify_development_projection(lock, batch, source_batches=source_batches)
     rows: list[dict[str, Any]] = []
-    for animal in sorted(set(batch.animal_ids.tolist())):
+    for animal in sorted(lock["animal_sessions"]):
         train = _mask_for(batch, lock, animal, "train")
         validation = _mask_for(batch, lock, animal, "validation")
         test = _mask_for(batch, lock, animal, "test")
-        if min(train.sum(), validation.sum(), test.sum()) < 2:
-            raise ValueError(f"animal {animal!r} needs at least two windows in every split")
+        if min(train.sum(), validation.sum()) < 2:
+            raise ValueError(f"animal {animal!r} needs at least two windows in train and validation")
+        if consume_test and test.sum() < 2:
+            raise ValueError(f"animal {animal!r} needs at least two windows in test")
         variants = [
             _run_fraction(
                 batch,
