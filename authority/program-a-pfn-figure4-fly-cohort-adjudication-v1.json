@@ -1,0 +1,169 @@
+{
+  "adjudication_id": "program-a-pfn-figure4-fly-cohort-v1",
+  "adjudication_sha256": "50c410adc3fa5c66dbde7e8a389d4d4621dfddc3cfa19c297cef04e9c3fecf29",
+  "archive_trial_inventory": {
+    "WTC02": [
+      {
+        "complete_40_trial_experiment": true,
+        "experiment": "E1",
+        "member_type_counts": {
+          "camtrig": 40,
+          "current": 40,
+          "flyvideo.avi": 40,
+          "lighttrig": 40,
+          "metadata": 40,
+          "motorsteps": 40,
+          "potential": 40,
+          "windtrig": 40
+        },
+        "trial_count": 40,
+        "trial_max": 40,
+        "trial_min": 1
+      },
+      {
+        "complete_40_trial_experiment": true,
+        "experiment": "E2",
+        "member_type_counts": {
+          "camtrig": 40,
+          "current": 40,
+          "flyvideo.avi": 40,
+          "lighttrig": 40,
+          "metadata": 40,
+          "motorsteps": 40,
+          "potential": 40,
+          "windtrig": 40
+        },
+        "trial_count": 40,
+        "trial_max": 40,
+        "trial_min": 1
+      }
+    ],
+    "WTC03": [
+      {
+        "complete_40_trial_experiment": true,
+        "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC04": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC05": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC06": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC07": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC08": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC09": [
+      {
+        "complete_40_trial_experiment": false,
+        "experiment": "E1",
+        "member_type_counts": {"camtrig": 21, "current": 21, "flyvideo.avi": 21, "lighttrig": 21, "metadata": 21, "motorsteps": 21, "potential": 21, "windtrig": 21},
+        "trial_count": 21,
+        "trial_max": 21,
+        "trial_min": 1
+      }
+    ],
+    "WTC11": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC12": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC13": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC14": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ],
+    "WTC15": [
+      {
+        "complete_40_trial_experiment": true, "experiment": "E1",
+        "member_type_counts": {"camtrig": 40, "current": 40, "flyvideo.avi": 40, "lighttrig": 40, "metadata": 40, "motorsteps": 40, "potential": 40, "windtrig": 40},
+        "trial_count": 40, "trial_max": 40, "trial_min": 1
+      }
+    ]
+  },
+  "automatic_archive_member_map_promotion": false,
+  "automatic_recording_set_promotion": false,
+  "decision_rule": {
+    "all_conditions_met": true,
+    "navigation_performance_used": false,
+    "required_conditions": [
+      "Figure 4B-K is the SS02255 P-F2N3 patch dataset with N=12 flies",
+      "the publication states all 12 included flies completed all 40 trials",
+      "exactly 12 Wind Tuning by Column fly directories contain at least one experiment with all trial numbers 1 through 40 and all eight expected per-trial member types",
+      "WTC09 contains only trials 1 through 21 and therefore does not satisfy the published all-40-trials inclusion property"
+    ]
+  },
+  "directory_evidence_sha256": "0de9287c264c6b49750b469b5a71363476fad4f81f2652adc2ee5306e35eb4ba",
+  "excluded_candidate": {
+    "fly_alias": "WTC09",
+    "reason": "directory metadata contains only trial numbers 1 through 21 in E1, inconsistent with the publication's statement that all 12 included Figure 4 flies completed all 40 trials"
+  },
+  "navigation_performance_used": false,
+  "paper_authority": {
+    "cell_type": "P-F2N3",
+    "doi": "10.7554/eLife.61510",
+    "driver_line": "SS02255",
+    "figure": "Figure 4B-K",
+    "protocol": {
+      "all_included_flies_completed_all_trials": true,
+      "directions_deg": [-135, -90, -45, 0, 45, 90, 135, 180],
+      "repetitions_per_direction": 5,
+      "total_trials": 40
+    },
+    "published_n_flies": 12
+  },
+  "remaining_blockers": [
+    "WTC02 contains two complete experiments, E1 and E2; published analysis authority is needed to identify the Figure 4 experiment/member mapping",
+    "soma-side identity for each selected fly",
+    "individual Figure 4 member-byte SHA-256 identities"
+  ],
+  "resolved_figure4_fly_aliases": ["WTC02", "WTC03", "WTC04", "WTC05", "WTC06", "WTC07", "WTC08", "WTC11", "WTC12", "WTC13", "WTC14", "WTC15"],
+  "schema": "fly-sniff-pfn-figure4-fly-cohort-adjudication-v1",
+  "status": "RESOLVED_FLY_COHORT_EXPERIMENT_MAP_PENDING"
+}
