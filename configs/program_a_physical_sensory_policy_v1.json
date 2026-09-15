@@ -1,7 +1,7 @@
 {
   "protocol": "program-a-physical-sensory-policy-v1",
   "navigation_performance_used": false,
-  "claim_boundary": "Publication-supported plume scale facts may be recorded before the source archive is fully calibrated, but Program A may not sample the plume until exact source bytes, array orientation/origin, and bilateral anatomical sensor geometry independently pass review.",
+  "claim_boundary": "Publication-supported plume scale facts and independently audited upstream conversion facts may be recorded before the source archive is fully calibrated, but Program A may not sample the plume until exact source bytes, axis signs/source origin, and bilateral anatomical sensor geometry independently pass review.",
   "smooth_plume_evidence": {
     "source_doi": "10.5061/dryad.g27mq71",
     "source_file": "10302017_10cms_bounded_2.h5",
@@ -14,7 +14,14 @@
     "publication_nominal_mm_per_pixel": 0.74,
     "source_sha256": null,
     "source_bytes_verified": false,
-    "array_axis_mapping": null,
+    "array_axis_mapping": {
+      "raw_axis0": "downwind",
+      "raw_axis1": "crosswind",
+      "authority_repository": "emonetlab/GradientMotionMultiplePlumes",
+      "authority_path": "src/gradient_motion_panels/plume_sources.py",
+      "authority_blob_sha": "6efc37b16155622df3986d4dc50fed423173700d",
+      "authority_statement": "Dryad frames arrive downwind-by-crosswind, (406, 216); after transposition the first 351 downwind columns are retained and four zero rows are added to each crosswind edge."
+    },
     "array_axis_positive_directions": null,
     "source_index_in_archive": null,
     "archive_spatial_transform": null,
@@ -22,7 +29,8 @@
     "notes": [
       "The eLife methods report a PLIF imaging region extending up to 30 cm downwind and 8 cm to either side of the centerline.",
       "The acquisition was 15 Hz and the camera was binned to a nominal 0.74 mm/pixel.",
-      "These publication facts do not by themselves prove which archived array axis is downwind/crosswind or where the source lies in the cropped array."
+      "Independent upstream reproduction code resolves raw array axis roles as axis0=downwind and axis1=crosswind.",
+      "Axis role evidence does not establish the positive direction of either raw axis, the source index/origin, or the exact relation between the archived field and the physical source location."
     ]
   },
   "bilateral_sensor_geometry": {
@@ -58,7 +66,7 @@
   },
   "pass_requirements": [
     "exact plume source bytes are SHA-256 verified",
-    "archived spatial axes, signs, source origin, and scale are explicitly resolved",
+    "archived spatial-axis roles, signs, source origin, and scale are explicitly resolved",
     "left and right anatomical sampling landmarks are independently measured from a scale authority",
     "anatomy source bytes are content-addressed",
     "anatomical uncertainty is recorded",
