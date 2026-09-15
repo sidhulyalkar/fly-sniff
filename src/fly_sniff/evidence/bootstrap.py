@@ -49,6 +49,7 @@ def build_ledger(config: dict[str, Any], *, root: str | Path = ".") -> EvidenceL
                 caveat=None if fact.get("caveat") is None else str(fact["caveat"]),
                 authority_sha256=authority_sha,
                 metadata={
+                    **dict(fact.get("metadata", {})),
                     "authority_kind": authority_kind,
                     "bootstrap_protocol": PROTOCOL,
                 },
