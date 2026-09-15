@@ -3,9 +3,9 @@
   "contract_id": "program-a-ventral-pfn-airflow-v1",
   "status": "BLOCKED",
   "blockers": [
-    "BLOCKED_README_SHA256_UNVERIFIED",
     "BLOCKED_ARCHIVE_MEMBER_MAP_UNRESOLVED",
-    "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED"
+    "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED",
+    "BLOCKED_README_SHA256_UNVERIFIED"
   ],
   "paper": {
     "doi": "10.7554/eLife.61510",
@@ -81,6 +81,8 @@
     "per_recording_statistic": "published mean response-vector angle",
     "hemisphere_fold": "multiply angle by +1 for left cell-body hemisphere and -1 for right cell-body hemisphere so ipsilateral is positive",
     "aggregate_statistic": "circular mean of hemisphere-folded preferred-direction angles",
+    "bootstrap_resamples": 10000,
+    "bootstrap_seed": 0,
     "uncertainty_rule": "95% percentile bootstrap confidence interval over recordings with 10000 resamples and deterministic seed 0",
     "absolute_firing_rate_gain_transferred": false,
     "temporal_response_shape_transferred": false,
