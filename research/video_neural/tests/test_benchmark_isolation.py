@@ -37,3 +37,10 @@ def test_research_package_does_not_import_fly_sniff():
             elif isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("fly_sniff"):
                 violations.append(node.module)
     assert not violations, f"parallel research lane imported fly_sniff: {violations}"
+
+
+def test_active_v1_generic_cli_has_no_direct_scoring_shortcut():
+    cli = Path(__file__).resolve().parents[1] / "src" / "fly_video_neural" / "cli.py"
+    source = cli.read_text()
+    assert '"within-animal-ridge"' not in source
+    assert "Historical v0 animal-held-out ridge utility" in source
