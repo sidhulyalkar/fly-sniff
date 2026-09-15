@@ -94,7 +94,7 @@ def _inspect_hdf5(path: Path) -> dict[str, Any]:
     groups: list[str] = []
     skipped_reference_objects = 0
     with h5py.File(path, "r") as handle:
-        top_level = sorted(str(name) for name in handle.keys())
+        top_level = sorted(str(name) for name in handle)
 
         def visit(name: str, obj: Any) -> None:
             nonlocal skipped_reference_objects
@@ -131,9 +131,7 @@ def inspect_mat_schema(path: Path) -> dict[str, Any]:
     return {"mat_format": mat_format, **inventory}
 
 
-def _match_local_paths(
-    paths: list[Path], expected_filenames: set[str]
-) -> dict[str, Path]:
+def _match_local_paths(paths: list[Path], expected_filenames: set[str]) -> dict[str, Path]:
     by_name: dict[str, Path] = {}
     for path in paths:
         if not path.is_file():
