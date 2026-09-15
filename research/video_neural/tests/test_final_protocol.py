@@ -28,7 +28,7 @@ def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dic
     config = load_acceptance_config(
         Path(__file__).resolve().parents[1] / "configs" / "validation_acceptance_v1.json"
     )
-    animals = [f"fly{index}" for index in range(4)]
+    animals = [f"fly{index}" for index in range(6)]
     qc = {
         "schema_version": 1,
         "status": "pass",
@@ -111,6 +111,7 @@ def test_final_authorization_reconstructs_frozen_unlock(tmp_path: Path):
     split, config = _development_bundle(tmp_path)
     bundle = validate_final_authorization(tmp_path, split, config)
     assert bundle["unlock"]["test_consumption_allowed"] is True
+    assert bundle["unlock"]["eligible_animals"] == 6
     assert bundle["receipt"]["test_target_arrays_deserialized"] is False
 
 
@@ -132,7 +133,7 @@ def test_final_authorization_rejects_development_that_deserialized_test_arrays(t
         validate_final_authorization(tmp_path, split, config)
 
 
-def test_consumption_lock_is_one_way_and_precedes_batch_deserialization(tmp_path: Path):
+def test_consumption_lock_is_one_way_and_precedes_prepared_test_batch_reopen(tmp_path: Path):
     first = _write_consumption_lock(
         tmp_path,
         split_lock_sha256="split",
@@ -141,7 +142,7 @@ def test_consumption_lock_is_one_way_and_precedes_batch_deserialization(tmp_path
     )
     assert (tmp_path / FINAL_LOCK_NAME).is_file()
     assert first["reopen_after_failure_allowed"] is False
-    assert first["batch_deserialization_allowed_after_this_marker_only"] is True
+    assert first["prepared_test_batch_reopen_allowed_after_this_marker_only"] is True
     with pytest.raises(ValueError, match="already consumed"):
         _write_consumption_lock(
             tmp_path,
