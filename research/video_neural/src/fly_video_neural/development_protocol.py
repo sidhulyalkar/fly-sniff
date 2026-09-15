@@ -9,6 +9,7 @@ from typing import Any
 from .alignment_null import run_alignment_null
 from .data_qc import audit_development_data, load_qc_config
 from .mc2p_legacy import sha256_file
+from .provenance import implementation_fingerprint, runtime_fingerprint
 from .session_benchmark import load_session_batches, run_within_animal_ridge
 from .validation_gate import build_validation_unlock, load_acceptance_config
 
@@ -76,7 +77,13 @@ def run_development_protocol(
     if any(row["test_metrics"] is not None for row in aligned["animals"]):
         raise RuntimeError("development aligned report contains test metrics")
     if any(row["test_metrics"] is not None for row in null["animals"]):
-        raise RuntimeError("development null report contains test metrics")
+        raise RuntimeError("development null report contains primary test metrics")
+    if any(
+        candidate["test_metrics"] is not None
+        for row in null["animals"]
+        for candidate in row["null_candidates"]
+    ):
+        raise RuntimeError("development null ensemble contains test metrics")
 
     receipt: dict[str, Any] = {
         "schema_version": 1,
@@ -87,11 +94,19 @@ def run_development_protocol(
         "source_batches": source_batches,
         "qc_config_file_sha256": sha256_file(qc_config_path),
         "acceptance_config_file_sha256": sha256_file(acceptance_config_path),
+        "implementation_fingerprint": implementation_fingerprint(),
+        "runtime_fingerprint": runtime_fingerprint(),
         "qc_report_sha256": qc["report_sha256"],
         "validation_unlock_report_sha256": unlock["report_sha256"],
         "validation_status": unlock["status"],
         "test_consumption_capability": False,
         "test_metrics_present": False,
+        "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
+        "primary_metric_limitation": (
+            "The v1 primary median Pearson metric spans the full measured dF/F image rather than a "
+            "neural-support mask. Background or low-information pixels may therefore reduce sensitivity. "
+            "This limitation is frozen for v1 and may motivate a separately versioned v2 metric."
+        ),
         "claim_boundary": (
             "This command is development-only. It cannot consume held-out test sessions. "
             "An unlock status authorizes a separate one-way final action but is not a test result."
@@ -105,7 +120,9 @@ def run_development_protocol(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run MC2P v1 development QC and validation without test consumption")
+    parser = argparse.ArgumentParser(
+        description="Run MC2P v1 development QC and validation without test consumption"
+    )
     parser.add_argument("split_lock")
     parser.add_argument("batches", nargs="+")
     parser.add_argument("--qc-config", required=True)

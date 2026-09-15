@@ -5,11 +5,15 @@ from pathlib import Path
 
 import pytest
 
+from fly_video_neural.alignment_null import NULL_FRACTIONS, NULL_NAME, NULL_SELECTION_RULE
 from fly_video_neural.final_protocol import (
     FINAL_LOCK_NAME,
+    _verify_preload_contract,
     _write_consumption_lock,
     validate_final_authorization,
 )
+from fly_video_neural.mc2p_legacy import sha256_file
+from fly_video_neural.provenance import implementation_fingerprint, runtime_fingerprint
 from fly_video_neural.validation_gate import build_validation_unlock, load_acceptance_config
 
 
@@ -49,6 +53,7 @@ def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dic
         null_rows.append(
             {
                 "animal_id": animal,
+                "selected_null_fraction": NULL_FRACTIONS[index % len(NULL_FRACTIONS)],
                 "selected_alpha": 1.0,
                 "selected_validation_metrics": {"median_pearson_r": null_value},
                 "alpha_candidates": [],
@@ -63,7 +68,9 @@ def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dic
     null = {
         "benchmark_id": "mc2p_future_neural_v1",
         "test_status": "locked_not_consumed",
-        "null_name": "circular_half_session_feature_shift",
+        "null_name": NULL_NAME,
+        "null_fractions": list(NULL_FRACTIONS),
+        "null_selection_rule": NULL_SELECTION_RULE,
         "split_lock_sha256": "split",
         "animals": null_rows,
     }
@@ -108,7 +115,7 @@ def test_final_authorization_rejects_blocked_or_tampered_unlock(tmp_path: Path):
         validate_final_authorization(tmp_path, split, config)
 
 
-def test_consumption_lock_is_one_way(tmp_path: Path):
+def test_consumption_lock_is_one_way_and_precedes_batch_deserialization(tmp_path: Path):
     first = _write_consumption_lock(
         tmp_path,
         split_lock_sha256="split",
@@ -117,10 +124,44 @@ def test_consumption_lock_is_one_way(tmp_path: Path):
     )
     assert (tmp_path / FINAL_LOCK_NAME).is_file()
     assert first["reopen_after_failure_allowed"] is False
+    assert first["batch_deserialization_allowed_after_this_marker_only"] is True
     with pytest.raises(ValueError, match="already consumed"):
         _write_consumption_lock(
             tmp_path,
             split_lock_sha256="split",
             development_receipt_sha256="dev",
             validation_unlock_sha256="unlock",
+        )
+
+
+def test_preload_contract_verifies_bytes_code_and_runtime_without_loading_npz(tmp_path: Path):
+    split = tmp_path / "split.json"
+    acceptance = tmp_path / "acceptance.json"
+    batch = tmp_path / "session.npz"
+    split.write_text("split bytes")
+    acceptance.write_text("acceptance bytes")
+    batch.write_bytes(b"not an npz and must not be deserialized by preload verification")
+    source_batches = [{"path": str(batch.resolve()), "sha256": sha256_file(batch)}]
+    bundle = {
+        "receipt": {
+            "source_batches": source_batches,
+            "split_lock_file_sha256": sha256_file(split),
+            "acceptance_config_file_sha256": sha256_file(acceptance),
+            "implementation_fingerprint": implementation_fingerprint(),
+            "runtime_fingerprint": runtime_fingerprint(),
+        }
+    }
+    assert _verify_preload_contract(
+        bundle,
+        split_lock_path=split,
+        batch_paths=[batch],
+        acceptance_config_path=acceptance,
+    ) == source_batches
+    batch.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="batch bytes"):
+        _verify_preload_contract(
+            bundle,
+            split_lock_path=split,
+            batch_paths=[batch],
+            acceptance_config_path=acceptance,
         )

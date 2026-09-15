@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from fly_video_neural.alignment_null import circular_half_session_shift, run_alignment_null
+from fly_video_neural.alignment_null import (
+    NULL_FRACTIONS,
+    NULL_NAME,
+    NULL_SELECTION_RULE,
+    circular_session_fraction_shift,
+    run_alignment_null,
+)
 from fly_video_neural.session_benchmark import SessionBenchmarkBatch, build_session_split_lock
 
 
@@ -30,20 +36,44 @@ def _batch() -> SessionBenchmarkBatch:
     )
 
 
-def test_half_session_shift_preserves_feature_multiset_but_changes_pairing():
+def test_quartile_session_shifts_preserve_feature_multiset_but_change_pairing():
     batch = _batch()
     mask = batch.session_ids == "flyA_001"
-    shifted = circular_half_session_shift(batch, mask)
     original = batch.features[mask]
-    assert sorted(map(tuple, shifted)) == sorted(map(tuple, original))
-    assert not np.array_equal(shifted, original)
+    for fraction in NULL_FRACTIONS:
+        shifted = circular_session_fraction_shift(batch, mask, fraction)
+        assert sorted(map(tuple, shifted)) == sorted(map(tuple, original))
+        assert not np.array_equal(shifted, original)
 
 
-def test_alignment_null_keeps_test_locked_by_default():
+def test_alignment_null_ensemble_keeps_every_test_score_locked_by_default():
     batch = _batch()
     lock = build_session_split_lock(batch)
     report = run_alignment_null(batch, lock)
     assert report["test_status"] == "locked_not_consumed"
-    assert report["null_name"] == "circular_half_session_feature_shift"
-    assert all(row["test_metrics"] is None for row in report["animals"])
-    assert all("selected_validation_metrics" in row for row in report["animals"])
+    assert report["null_name"] == NULL_NAME
+    assert report["null_fractions"] == list(NULL_FRACTIONS)
+    assert report["null_selection_rule"] == NULL_SELECTION_RULE
+    for row in report["animals"]:
+        assert row["test_metrics"] is None
+        assert len(row["null_candidates"]) == len(NULL_FRACTIONS)
+        assert all(candidate["test_metrics"] is None for candidate in row["null_candidates"])
+        strongest = max(
+            row["null_candidates"],
+            key=lambda candidate: candidate["selected_validation_metrics"]["median_pearson_r"],
+        )
+        assert row["selected_null_fraction"] == strongest["fraction"]
+        assert row["selected_validation_metrics"] == strongest["selected_validation_metrics"]
+
+
+def test_final_primary_null_remains_the_fraction_selected_on_validation():
+    batch = _batch()
+    lock = build_session_split_lock(batch)
+    report = run_alignment_null(batch, lock, consume_test=True)
+    for row in report["animals"]:
+        strongest_validation = max(
+            row["null_candidates"],
+            key=lambda candidate: candidate["selected_validation_metrics"]["median_pearson_r"],
+        )
+        assert row["selected_null_fraction"] == strongest_validation["fraction"]
+        assert row["test_metrics"] == strongest_validation["test_metrics"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from fly_video_neural.alignment_null import NULL_FRACTIONS, NULL_NAME, NULL_SELECTION_RULE
 from fly_video_neural.validation_gate import build_validation_unlock, load_acceptance_config
 
 
@@ -10,13 +11,16 @@ def _config() -> dict:
     return load_acceptance_config(path)
 
 
-def _row(animal: str, value: float) -> dict:
-    return {
+def _row(animal: str, value: float, *, fraction: float | None = None) -> dict:
+    row = {
         "animal_id": animal,
         "selected_alpha": 1.0,
         "selected_validation_metrics": {"median_pearson_r": value},
         "alpha_candidates": [],
     }
+    if fraction is not None:
+        row["selected_null_fraction"] = fraction
+    return row
 
 
 def _reports(aligned_values: list[float], null_values: list[float]):
@@ -36,9 +40,14 @@ def _reports(aligned_values: list[float], null_values: list[float]):
     null = {
         "benchmark_id": "mc2p_future_neural_v1",
         "test_status": "locked_not_consumed",
-        "null_name": "circular_half_session_feature_shift",
+        "null_name": NULL_NAME,
+        "null_fractions": list(NULL_FRACTIONS),
+        "null_selection_rule": NULL_SELECTION_RULE,
         "split_lock_sha256": "split",
-        "animals": [_row(animal, value) for animal, value in zip(animals, null_values, strict=True)],
+        "animals": [
+            _row(animal, value, fraction=NULL_FRACTIONS[index % len(NULL_FRACTIONS)])
+            for index, (animal, value) in enumerate(zip(animals, null_values, strict=True))
+        ],
     }
     return qc, aligned, null
 
@@ -50,6 +59,8 @@ def test_validation_gate_unlocks_only_after_positive_majority_and_median_effect(
     assert report["test_consumption_allowed"] is True
     assert report["positive_effect_animals"] == 4
     assert report["median_paired_effect"] > 0
+    assert report["alignment_null_fractions"] == list(NULL_FRACTIONS)
+    assert all("selected_null_fraction" in row for row in report["animal_effects"])
 
 
 def test_validation_gate_blocks_if_test_was_already_consumed():
@@ -61,8 +72,16 @@ def test_validation_gate_blocks_if_test_was_already_consumed():
     assert any("consumed test" in failure for failure in report["failures"])
 
 
-def test_validation_gate_blocks_nonmajority_effect():
+def test_validation_gate_blocks_nonmajority_effect_against_strongest_null():
     qc, aligned, null = _reports([0.3, 0.3, 0.1, 0.1], [0.2, 0.2, 0.2, 0.2])
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
     assert report["positive_effect_animals"] == 2
+
+
+def test_validation_gate_rejects_null_ensemble_contract_drift():
+    qc, aligned, null = _reports([0.5, 0.4, 0.3, 0.2], [0.1, 0.2, 0.25, 0.1])
+    null["null_fractions"] = [0.5]
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert any("fractions mismatch" in failure for failure in report["failures"])

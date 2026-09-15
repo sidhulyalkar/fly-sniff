@@ -10,6 +10,7 @@ import numpy as np
 
 from .alignment_null import run_alignment_null
 from .mc2p_legacy import sha256_file
+from .provenance import implementation_fingerprint, runtime_fingerprint
 from .session_benchmark import (
     load_session_batches,
     run_within_animal_ridge,
@@ -95,6 +96,38 @@ def validate_final_authorization(
     return bundle
 
 
+def _source_batch_receipts(paths: list[str | Path]) -> list[dict[str, str]]:
+    return sorted(
+        [
+            {"path": str(Path(path).resolve()), "sha256": sha256_file(path)}
+            for path in paths
+        ],
+        key=lambda row: row["path"],
+    )
+
+
+def _verify_preload_contract(
+    bundle: dict[str, dict[str, Any]],
+    *,
+    split_lock_path: str | Path,
+    batch_paths: list[str | Path],
+    acceptance_config_path: str | Path,
+) -> list[dict[str, str]]:
+    receipt = bundle["receipt"]
+    source_batches = _source_batch_receipts(batch_paths)
+    if receipt.get("source_batches") != source_batches:
+        raise ValueError("final batch bytes do not match the frozen development receipt")
+    if receipt.get("split_lock_file_sha256") != sha256_file(split_lock_path):
+        raise ValueError("final split-lock bytes do not match the frozen development receipt")
+    if receipt.get("acceptance_config_file_sha256") != sha256_file(acceptance_config_path):
+        raise ValueError("final acceptance-config bytes do not match the frozen development receipt")
+    if receipt.get("implementation_fingerprint") != implementation_fingerprint():
+        raise ValueError("final implementation bytes do not match the frozen development runtime")
+    if receipt.get("runtime_fingerprint") != runtime_fingerprint():
+        raise ValueError("final Python/NumPy runtime does not match the frozen development runtime")
+    return source_batches
+
+
 def _write_consumption_lock(
     development_dir: str | Path,
     *,
@@ -112,6 +145,7 @@ def _write_consumption_lock(
         "development_receipt_sha256": development_receipt_sha256,
         "validation_unlock_sha256": validation_unlock_sha256,
         "reopen_after_failure_allowed": False,
+        "batch_deserialization_allowed_after_this_marker_only": True,
     }
     payload["consumption_lock_sha256"] = _sha(payload)
     try:
@@ -144,7 +178,8 @@ def _test_effects(
             {
                 "animal_id": animal,
                 "aligned_test_median_pearson_r": aligned_r,
-                "null_test_median_pearson_r": null_r,
+                "validation_selected_null_fraction": null_rows[animal]["selected_null_fraction"],
+                "selected_null_test_median_pearson_r": null_r,
                 "paired_alignment_effect": aligned_r - null_r,
             }
         )
@@ -162,11 +197,25 @@ def run_final_protocol(
     output = _fresh_output_dir(output_dir)
     split_lock = _load_json(split_lock_path)
     acceptance_config = load_acceptance_config(acceptance_config_path)
-    batch, source_batches = load_session_batches(batch_paths)
-    verify_session_split_lock(split_lock, batch, source_batches=source_batches)
     bundle = validate_final_authorization(development_dir, split_lock, acceptance_config)
-    if bundle["receipt"].get("source_batches") != source_batches:
-        raise ValueError("final batch inputs do not match the frozen development receipt")
+    expected_source_batches = _verify_preload_contract(
+        bundle,
+        split_lock_path=split_lock_path,
+        batch_paths=batch_paths,
+        acceptance_config_path=acceptance_config_path,
+    )
+
+    consumption_lock = _write_consumption_lock(
+        development_dir,
+        split_lock_sha256=split_lock["split_lock_sha256"],
+        development_receipt_sha256=bundle["receipt"]["receipt_sha256"],
+        validation_unlock_sha256=bundle["unlock"]["report_sha256"],
+    )
+
+    batch, source_batches = load_session_batches(batch_paths)
+    if source_batches != expected_source_batches:
+        raise RuntimeError("batch identity changed after final consumption lock")
+    verify_session_split_lock(split_lock, batch, source_batches=source_batches)
 
     current_aligned_development = run_within_animal_ridge(
         batch,
@@ -181,16 +230,9 @@ def run_final_protocol(
         consume_test=False,
     )
     if current_aligned_development != bundle["aligned"]:
-        raise ValueError("aligned development evidence no longer reproduces before final")
+        raise ValueError("aligned development evidence no longer reproduces after final lock")
     if current_null_development != bundle["null"]:
-        raise ValueError("temporal-null development evidence no longer reproduces before final")
-
-    consumption_lock = _write_consumption_lock(
-        development_dir,
-        split_lock_sha256=split_lock["split_lock_sha256"],
-        development_receipt_sha256=bundle["receipt"]["receipt_sha256"],
-        validation_unlock_sha256=bundle["unlock"]["report_sha256"],
-    )
+        raise ValueError("temporal-null development evidence no longer reproduces after final lock")
 
     aligned_final = run_within_animal_ridge(
         batch,
@@ -222,13 +264,16 @@ def run_final_protocol(
         "validation_unlock_sha256": bundle["unlock"]["report_sha256"],
         "consumption_lock_sha256": consumption_lock["consumption_lock_sha256"],
         "test_status": "consumed_once",
+        "primary_null_selection": "fraction_selected_on_validation_before_test",
         "animal_effects": effects,
         "median_paired_alignment_effect": float(np.median(paired)),
         "positive_effect_animals": sum(value > 0 for value in paired),
         "eligible_animals": len(paired),
+        "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
         "claim_boundary": (
-            "This receipt reports the prespecified held-out evaluation. No post-test threshold "
-            "is introduced here; interpretation must retain the matched temporal null and per-animal results."
+            "This receipt reports the prespecified held-out evaluation against the null fraction selected "
+            "on validation for each animal. Other null-fraction test scores are secondary diagnostics only. "
+            "No post-test threshold or neural-support mask is introduced here."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)

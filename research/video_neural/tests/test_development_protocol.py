@@ -56,7 +56,7 @@ def _write_batches(root: Path) -> tuple[list[str], dict]:
     return paths, lock
 
 
-def test_development_protocol_never_emits_test_metrics(tmp_path: Path):
+def test_development_protocol_never_emits_test_metrics_and_freezes_runtime(tmp_path: Path):
     batches, lock = _write_batches(tmp_path)
     split = tmp_path / "split.json"
     split.write_text(json.dumps(lock))
@@ -70,9 +70,17 @@ def test_development_protocol_never_emits_test_metrics(tmp_path: Path):
     )
     assert report["test_consumption_capability"] is False
     assert report["test_metrics_present"] is False
+    assert report["implementation_fingerprint"]["sha256"]
+    assert report["runtime_fingerprint"]["sha256"]
+    assert report["primary_metric_scope"] == "all_measured_dff_pixels_with_finite_correlation"
     aligned = json.loads((tmp_path / "development" / "aligned-ridge-development.json").read_text())
     null = json.loads((tmp_path / "development" / "temporal-null-development.json").read_text())
     assert aligned["test_status"] == "locked_not_consumed"
     assert null["test_status"] == "locked_not_consumed"
     assert all(row["test_metrics"] is None for row in aligned["animals"])
     assert all(row["test_metrics"] is None for row in null["animals"])
+    assert all(
+        candidate["test_metrics"] is None
+        for row in null["animals"]
+        for candidate in row["null_candidates"]
+    )
