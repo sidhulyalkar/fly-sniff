@@ -1,0 +1,108 @@
+{
+  "schema": "fly-sniff-pfn-calibration-source-v1",
+  "contract_id": "program-a-ventral-pfn-airflow-v1",
+  "status": "BLOCKED",
+  "blockers": [
+    "BLOCKED_README_SHA256_UNVERIFIED",
+    "BLOCKED_ARCHIVE_MEMBER_MAP_UNRESOLVED",
+    "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED"
+  ],
+  "paper": {
+    "doi": "10.7554/eLife.61510",
+    "title": "Encoding and control of orientation to airflow by a set of Drosophila fan-shaped body neurons",
+    "target_figure": "Figure 4D-E",
+    "published_recording_count": 12,
+    "published_claim": "ventral P-FN airflow tuning is organized by cell-body hemisphere, with preferred directions clustered near approximately 45 degrees ipsilateral rather than by fan-shaped-body column"
+  },
+  "data_authority": {
+    "repository": "Dryad",
+    "doi": "10.5061/dryad.vq83bk3rh",
+    "published_date": "2020-12-31",
+    "published_total_size_gb": 117.49,
+    "license": "CC0-1.0",
+    "readme": {
+      "filename": "Currier2020README.rtf",
+      "dryad_file_stream_id": 536042,
+      "published_size_bytes": 2550,
+      "published_md5": "91e5213503788fcde11c0f5aa3e91f43",
+      "sha256": null,
+      "status": "BLOCKED_README_SHA256_UNVERIFIED"
+    },
+    "multipart_archive": [
+      {"filename": "Currier2020.z01", "published_md5": "5c6a96fb9a56c9ca145990b688413d15"},
+      {"filename": "Currier2020.zip.001", "published_md5": "72aeaa0e96ee557f81c70c8364ca5fb1"},
+      {"filename": "Currier2020.zip.002", "published_md5": "0c73c27f13345a77cce73b83de03fd62"},
+      {"filename": "Currier2020.zip.003", "published_md5": "93d193d66346a2242f1234477fc5b67e"},
+      {"filename": "Currier2020.zip.004", "published_md5": "384561a3ae0acb829e60a8b4552a29d0"},
+      {"filename": "Currier2020.zip.005", "published_md5": "c7acddb8fd23334c6ebce996e9409e8f"},
+      {"filename": "Currier2020.zip.006", "published_md5": "1b88b94cb2cd3774cb57835418bb0a14"},
+      {"filename": "Currier2020.zip.007", "published_md5": "9be635bab9b9571c36e4fa49861d5a59"},
+      {"filename": "Currier2020.zip.008", "published_md5": "2542ab153fff740d62b5dc3c2e6c3e1e"},
+      {"filename": "Currier2020.zip.009", "published_md5": "d0f8cf976694f0a604a1cdc7aa1fa185"},
+      {"filename": "Currier2020.zip.010", "published_md5": "843b567cfaf1e839e0297bfc7a8640d4"},
+      {"filename": "Currier2020.zip.011", "published_md5": "414c7409446b55dc70310f8562d9c672"},
+      {"filename": "Currier2020.zip.012", "published_md5": "c35f9fe0a618640ad995c62dbf2ed9c3"},
+      {"filename": "Currier2020.zip.013", "published_md5": "f2c15c70aec25f00d63282f87aee40d0"}
+    ],
+    "archive_member_map": [],
+    "archive_member_map_status": "BLOCKED_ARCHIVE_MEMBER_MAP_UNRESOLVED",
+    "whole_archive_download_is_default": false
+  },
+  "source_preparation": {
+    "species": "Drosophila melanogaster",
+    "cell_class": "P-F2N3 ventral P-FN whole-cell electrophysiology",
+    "figure4_protocol": {
+      "airflow_speed_cm_per_s": 25,
+      "directions_deg": [-135, -90, -45, 0, 45, 90, 135, 180],
+      "airflow_only": true,
+      "trials_per_recording": 40,
+      "repetitions_per_direction": 5,
+      "published_recording_count": 12,
+      "all_recordings_completed_all_trials": true
+    },
+    "angular_convention": {
+      "zero_deg": "frontal airflow",
+      "positive_90_deg": "left airflow",
+      "negative_90_deg": "right airflow",
+      "laterality_authority": "cell-body hemisphere",
+      "left_soma_ipsilateral_sign": 1,
+      "right_soma_ipsilateral_sign": -1
+    }
+  },
+  "published_response_definition": {
+    "baseline_window_relative_to_stimulus_s": [-1.5, -0.5],
+    "response_window_relative_to_stimulus_s": [0.5, 1.5],
+    "per_trial_response": "mean firing rate during response window minus mean firing rate during baseline window",
+    "repeat_aggregation": "mean across the five repetitions for each airflow direction",
+    "preferred_direction_method": "convert each of the eight mean directional spiking responses into a signed response vector at that airflow angle, then take the angle of their mean vector",
+    "negative_responses_are_clipped": false
+  },
+  "program_a_normalized_target": {
+    "per_recording_statistic": "published mean response-vector angle",
+    "hemisphere_fold": "multiply angle by +1 for left cell-body hemisphere and -1 for right cell-body hemisphere so ipsilateral is positive",
+    "aggregate_statistic": "circular mean of hemisphere-folded preferred-direction angles",
+    "uncertainty_rule": "95% percentile bootstrap confidence interval over recordings with 10000 resamples and deterministic seed 0",
+    "absolute_firing_rate_gain_transferred": false,
+    "temporal_response_shape_transferred": false,
+    "status": "FROZEN_DEFINITION_PENDING_SOURCE_BYTES"
+  },
+  "figure4_recording_set": [],
+  "figure4_recording_set_status": "BLOCKED_FIGURE4_RECORDING_SET_UNRESOLVED",
+  "evidence_ledger_record_ids": [
+    "currier2021-ventral-pfn-airflow-basis",
+    "pfn-malecns-transfer-caveat"
+  ],
+  "navigation_performance_used": false,
+  "allowed_interpretation": [
+    "published ventral P-FN physiology supports a type-level normalized airflow-direction prior organized by cell-body hemisphere",
+    "the hemisphere-folded preferred-direction geometry is a candidate navigation-independent Program A calibration target"
+  ],
+  "forbidden_interpretation": [
+    "absolute firing-rate amplitude transfers unchanged to MaleCNS PFNa/PFNm/PFNp body IDs",
+    "P-F2N3 recordings are exact body-ID homologs of MaleCNS PFNa/PFNm/PFNp",
+    "fan-shaped-body column determines airflow laterality",
+    "negative baseline-subtracted responses may be clipped before vector-angle calculation",
+    "navigation performance may choose recordings, archive members, normalization, uncertainty, or target statistic",
+    "the complete 117.49 GB release must be downloaded before the README/member map is audited"
+  ]
+}
