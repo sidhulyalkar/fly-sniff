@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from fly_video_neural.claims import validate_public_label
-from fly_video_neural.metrics import MeanTargetBaseline, summarize_metrics
+from fly_video_neural.metrics import MeanTargetBaseline, metric_for_selection, summarize_metrics
 from fly_video_neural.schema import EvidenceClass
 
 
@@ -13,6 +13,18 @@ def test_perfect_prediction_scores_one():
     report = summarize_metrics(truth, truth.copy())
     assert report["mean_pearson_r"] == pytest.approx(1.0)
     assert report["mean_r2"] == pytest.approx(1.0)
+
+
+def test_constant_targets_are_serializable_missing_metrics_not_nan():
+    truth = np.ones((4, 3), dtype=float)
+    prediction = np.ones((4, 3), dtype=float)
+    report = summarize_metrics(truth, prediction)
+    assert report["valid_correlation_targets"] == 0
+    assert report["median_pearson_r"] is None
+    assert report["mean_pearson_r"] is None
+    assert report["valid_r2_targets"] == 0
+    assert report["median_r2"] is None
+    assert metric_for_selection(report, "median_pearson_r") == float("-inf")
 
 
 def test_mean_target_baseline_uses_training_targets_only():

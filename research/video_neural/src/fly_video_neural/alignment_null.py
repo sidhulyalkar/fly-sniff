@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 
-from .metrics import summarize_metrics
+from .metrics import metric_for_selection, summarize_metrics
 from .ridge import RidgeDecoder
 from .session_benchmark import (
     RIDGE_ALPHAS,
@@ -100,7 +100,10 @@ def _run_fraction(
         model = RidgeDecoder(alpha).fit(train_x, train_y)
         metrics = summarize_metrics(validation_y, model.predict(validation_x))
         candidates.append({"alpha": alpha, "validation": metrics})
-    selected = max(candidates, key=lambda row: row["validation"]["median_pearson_r"])
+    selected = max(
+        candidates,
+        key=lambda row: metric_for_selection(row["validation"], "median_pearson_r"),
+    )
     row: dict[str, Any] = {
         "fraction": fraction,
         "selected_alpha": selected["alpha"],
@@ -153,7 +156,9 @@ def run_alignment_null(
         ]
         selected = max(
             variants,
-            key=lambda row: row["selected_validation_metrics"]["median_pearson_r"],
+            key=lambda row: metric_for_selection(
+                row["selected_validation_metrics"], "median_pearson_r"
+            ),
         )
         rows.append(
             {

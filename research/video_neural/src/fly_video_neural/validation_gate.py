@@ -10,6 +10,8 @@ import numpy as np
 
 from .alignment_null import NULL_FRACTIONS, NULL_NAME, NULL_SELECTION_RULE
 
+NONFINITE_POLICY = "exclude_animal_and_apply_minimum_eligible_gate"
+
 
 def _sha(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
@@ -35,6 +37,8 @@ def validate_acceptance_config(document: dict[str, Any]) -> None:
         raise ValueError("validation acceptance null fractions changed")
     if document.get("alignment_null_selection") != NULL_SELECTION_RULE:
         raise ValueError("validation acceptance null-selection rule changed")
+    if document.get("nonfinite_validation_metric_policy") != NONFINITE_POLICY:
+        raise ValueError("non-finite validation metric policy changed")
     if document.get("minimum_eligible_animals") != 4:
         raise ValueError("minimum eligible animal count changed")
     if document.get("require_strict_majority_positive_effect") is not True:
@@ -57,6 +61,14 @@ def _selected_validation(row: dict[str, Any]) -> dict[str, Any]:
     if len(matches) != 1:
         raise ValueError("could not reconstruct selected validation metrics")
     return matches[0]["validation"]
+
+
+def _finite_metric(metrics: dict[str, Any], name: str) -> float | None:
+    value = metrics.get(name)
+    if value is None:
+        return None
+    numeric = float(value)
+    return numeric if np.isfinite(numeric) else None
 
 
 def build_validation_unlock(
@@ -95,11 +107,23 @@ def build_validation_unlock(
     if set(aligned) != set(null):
         failures.append("aligned and null reports cover different animals")
     effects: list[dict[str, Any]] = []
+    ineligible: list[dict[str, Any]] = []
     for animal in sorted(set(aligned) & set(null)):
         aligned_metrics = _selected_validation(aligned[animal])
         null_metrics = _selected_validation(null[animal])
-        aligned_r = float(aligned_metrics["median_pearson_r"])
-        null_r = float(null_metrics["median_pearson_r"])
+        aligned_r = _finite_metric(aligned_metrics, "median_pearson_r")
+        null_r = _finite_metric(null_metrics, "median_pearson_r")
+        if aligned_r is None or null_r is None:
+            ineligible.append(
+                {
+                    "animal_id": animal,
+                    "reason": "validation_median_pearson_r_not_computable",
+                    "aligned_metric_computable": aligned_r is not None,
+                    "selected_null_metric_computable": null_r is not None,
+                    "selected_null_fraction": null[animal].get("selected_null_fraction"),
+                }
+            )
+            continue
         effects.append(
             {
                 "animal_id": animal,
@@ -139,7 +163,9 @@ def build_validation_unlock(
         "alignment_null": config["alignment_null"],
         "alignment_null_fractions": config["alignment_null_fractions"],
         "alignment_null_selection": config["alignment_null_selection"],
+        "nonfinite_validation_metric_policy": config["nonfinite_validation_metric_policy"],
         "eligible_animals": eligible,
+        "ineligible_animals": ineligible,
         "positive_effect_animals": positive,
         "positive_effect_fraction": positive / eligible if eligible else 0.0,
         "median_paired_effect": median_effect,
@@ -147,9 +173,10 @@ def build_validation_unlock(
         "failures": failures,
         "test_consumption_allowed": not failures,
         "claim_boundary": (
-            "This development gate only authorizes one explicit test evaluation. It compares aligned "
-            "decoding with the strongest prespecified null selected on validation, not test. It is not "
-            "a test result and cannot establish a neural-decoding claim."
+            "This development gate only authorizes one explicit test evaluation. Animals with a "
+            "non-computable validation median Pearson correlation are ineligible rather than assigned "
+            "a favorable or unfavorable score. The strongest prespecified null is selected on validation, "
+            "not test. This is not a test result and cannot establish a neural-decoding claim."
         ),
     }
     report["report_sha256"] = _sha(report)

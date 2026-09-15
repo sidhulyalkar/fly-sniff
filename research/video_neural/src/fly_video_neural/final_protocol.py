@@ -158,6 +158,14 @@ def _write_consumption_lock(
     return payload
 
 
+def _finite_metric(metrics: dict[str, Any], name: str) -> float | None:
+    value = metrics.get(name)
+    if value is None:
+        return None
+    numeric = float(value)
+    return numeric if np.isfinite(numeric) else None
+
+
 def _test_effects(
     aligned: dict[str, Any],
     null: dict[str, Any],
@@ -172,15 +180,17 @@ def _test_effects(
         null_metrics = null_rows[animal]["test_metrics"]
         if aligned_metrics is None or null_metrics is None:
             raise RuntimeError("final report is missing test metrics after consumption")
-        aligned_r = float(aligned_metrics["median_pearson_r"])
-        null_r = float(null_metrics["median_pearson_r"])
+        aligned_r = _finite_metric(aligned_metrics, "median_pearson_r")
+        null_r = _finite_metric(null_metrics, "median_pearson_r")
+        scorable = aligned_r is not None and null_r is not None
         effects.append(
             {
                 "animal_id": animal,
+                "test_metric_computable": scorable,
                 "aligned_test_median_pearson_r": aligned_r,
                 "validation_selected_null_fraction": null_rows[animal]["selected_null_fraction"],
                 "selected_null_test_median_pearson_r": null_r,
-                "paired_alignment_effect": aligned_r - null_r,
+                "paired_alignment_effect": aligned_r - null_r if scorable else None,
             }
         )
     return effects
@@ -253,7 +263,11 @@ def run_final_protocol(
         json.dumps(null_final, indent=2, sort_keys=True) + "\n"
     )
     effects = _test_effects(aligned_final, null_final)
-    paired = [row["paired_alignment_effect"] for row in effects]
+    paired = [
+        float(row["paired_alignment_effect"])
+        for row in effects
+        if row["paired_alignment_effect"] is not None
+    ]
     receipt: dict[str, Any] = {
         "schema_version": 1,
         "protocol": "mc2p-v1-final-evaluation-v1",
@@ -266,14 +280,16 @@ def run_final_protocol(
         "test_status": "consumed_once",
         "primary_null_selection": "fraction_selected_on_validation_before_test",
         "animal_effects": effects,
-        "median_paired_alignment_effect": float(np.median(paired)),
+        "median_paired_alignment_effect": float(np.median(paired)) if paired else None,
         "positive_effect_animals": sum(value > 0 for value in paired),
-        "eligible_animals": len(paired),
+        "eligible_animals": len(effects),
+        "scorable_test_animals": len(paired),
         "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
         "claim_boundary": (
             "This receipt reports the prespecified held-out evaluation against the null fraction selected "
-            "on validation for each animal. Other null-fraction test scores are secondary diagnostics only. "
-            "No post-test threshold or neural-support mask is introduced here."
+            "on validation for each animal. A non-computable test metric is retained as null rather than "
+            "assigned a score. Other null-fraction test scores are secondary diagnostics only. No post-test "
+            "threshold or neural-support mask is introduced here."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)

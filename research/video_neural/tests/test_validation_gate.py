@@ -11,7 +11,7 @@ def _config() -> dict:
     return load_acceptance_config(path)
 
 
-def _row(animal: str, value: float, *, fraction: float | None = None) -> dict:
+def _row(animal: str, value: float | None, *, fraction: float | None = None) -> dict:
     row = {
         "animal_id": animal,
         "selected_alpha": 1.0,
@@ -23,7 +23,7 @@ def _row(animal: str, value: float, *, fraction: float | None = None) -> dict:
     return row
 
 
-def _reports(aligned_values: list[float], null_values: list[float]):
+def _reports(aligned_values: list[float | None], null_values: list[float | None]):
     animals = [f"fly{index}" for index in range(len(aligned_values))]
     qc = {
         "status": "pass",
@@ -60,6 +60,7 @@ def test_validation_gate_unlocks_only_after_positive_majority_and_median_effect(
     assert report["positive_effect_animals"] == 4
     assert report["median_paired_effect"] > 0
     assert report["alignment_null_fractions"] == list(NULL_FRACTIONS)
+    assert report["ineligible_animals"] == []
     assert all("selected_null_fraction" in row for row in report["animal_effects"])
 
 
@@ -85,3 +86,24 @@ def test_validation_gate_rejects_null_ensemble_contract_drift():
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
     assert any("fractions mismatch" in failure for failure in report["failures"])
+
+
+def test_noncomputable_validation_metric_makes_animal_ineligible_and_can_block():
+    qc, aligned, null = _reports(
+        [0.5, 0.4, 0.3, 0.2],
+        [0.1, 0.2, None, 0.1],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["eligible_animals"] == 3
+    assert report["test_consumption_allowed"] is False
+    assert report["ineligible_animals"] == [
+        {
+            "animal_id": "fly2",
+            "reason": "validation_median_pearson_r_not_computable",
+            "aligned_metric_computable": True,
+            "selected_null_metric_computable": False,
+            "selected_null_fraction": NULL_FRACTIONS[2],
+        }
+    ]
+    assert any("only 3 eligible animals" in failure for failure in report["failures"])

@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 
-from .metrics import MeanTargetBaseline, summarize_metrics
+from .metrics import MeanTargetBaseline, metric_for_selection, summarize_metrics
 from .ridge import RidgeDecoder
 
 SPLIT_SEED = 2701
@@ -197,6 +197,26 @@ def verify_session_split_lock(
         raise ValueError("session split lock does not match batch inputs or assignments")
 
 
+def _finite_values(rows: list[dict[str, Any]], metric: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        metrics = row["test_metrics"]
+        value = None if metrics is None else metrics.get(metric)
+        if value is not None and np.isfinite(float(value)):
+            values.append(float(value))
+    return values
+
+
+def _aggregate(values: list[float], operation: str) -> float | None:
+    if not values:
+        return None
+    if operation == "median":
+        return float(np.median(values))
+    if operation == "mean":
+        return float(np.mean(values))
+    raise ValueError(f"unsupported aggregate operation {operation!r}")
+
+
 def run_within_animal_ridge(
     batch: SessionBenchmarkBatch,
     lock: dict[str, Any],
@@ -232,10 +252,14 @@ def run_within_animal_ridge(
                 batch.targets[validation], model.predict(batch.features[validation])
             )
             candidates.append({"alpha": alpha, "validation": metrics})
-        selected = max(candidates, key=lambda row: row["validation"]["median_pearson_r"])
+        selected = max(
+            candidates,
+            key=lambda row: metric_for_selection(row["validation"], "median_pearson_r"),
+        )
         animal_report: dict[str, Any] = {
             "animal_id": animal,
             "selected_alpha": selected["alpha"],
+            "selected_validation_metrics": selected["validation"],
             "alpha_candidates": candidates,
             "test_status": "locked_not_consumed",
             "test_metrics": None,
@@ -271,13 +295,15 @@ def run_within_animal_ridge(
         ),
     }
     if consume_test:
-        correlations = [row["test_metrics"]["median_pearson_r"] for row in rows]
-        r2_values = [row["test_metrics"]["median_r2"] for row in rows]
+        correlations = _finite_values(rows, "median_pearson_r")
+        r2_values = _finite_values(rows, "median_r2")
         report["aggregate_test_metrics"] = {
             "animal_count": len(rows),
-            "median_of_animal_median_pearson_r": float(np.median(correlations)),
-            "mean_of_animal_median_pearson_r": float(np.mean(correlations)),
-            "median_of_animal_median_r2": float(np.median(r2_values)),
-            "mean_of_animal_median_r2": float(np.mean(r2_values)),
+            "scorable_correlation_animals": len(correlations),
+            "scorable_r2_animals": len(r2_values),
+            "median_of_animal_median_pearson_r": _aggregate(correlations, "median"),
+            "mean_of_animal_median_pearson_r": _aggregate(correlations, "mean"),
+            "median_of_animal_median_r2": _aggregate(r2_values, "median"),
+            "mean_of_animal_median_r2": _aggregate(r2_values, "mean"),
         }
     return report

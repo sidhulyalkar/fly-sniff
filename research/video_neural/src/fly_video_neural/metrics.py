@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 
 
@@ -36,17 +38,38 @@ def r2_per_target(truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
     return out
 
 
-def summarize_metrics(truth: np.ndarray, prediction: np.ndarray) -> dict[str, float | int]:
+def _finite_summary(values: np.ndarray) -> tuple[int, float | None, float | None]:
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return 0, None, None
+    return int(finite.size), float(np.mean(finite)), float(np.median(finite))
+
+
+def summarize_metrics(
+    truth: np.ndarray,
+    prediction: np.ndarray,
+) -> dict[str, float | int | None]:
     corr = pearson_per_target(truth, prediction)
     r2 = r2_per_target(truth, prediction)
+    valid_corr, mean_corr, median_corr = _finite_summary(corr)
+    valid_r2, mean_r2, median_r2 = _finite_summary(r2)
     return {
         "targets": int(corr.size),
-        "valid_correlation_targets": int(np.isfinite(corr).sum()),
-        "mean_pearson_r": float(np.nanmean(corr)),
-        "median_pearson_r": float(np.nanmedian(corr)),
-        "mean_r2": float(np.nanmean(r2)),
-        "median_r2": float(np.nanmedian(r2)),
+        "valid_correlation_targets": valid_corr,
+        "valid_r2_targets": valid_r2,
+        "mean_pearson_r": mean_corr,
+        "median_pearson_r": median_corr,
+        "mean_r2": mean_r2,
+        "median_r2": median_r2,
     }
+
+
+def metric_for_selection(metrics: dict[str, Any], name: str) -> float:
+    value = metrics.get(name)
+    if value is None:
+        return float("-inf")
+    numeric = float(value)
+    return numeric if np.isfinite(numeric) else float("-inf")
 
 
 class MeanTargetBaseline:

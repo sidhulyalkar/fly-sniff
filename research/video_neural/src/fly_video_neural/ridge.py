@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 from .batch import FeatureTargetBatch
-from .metrics import MeanTargetBaseline, summarize_metrics
+from .metrics import MeanTargetBaseline, metric_for_selection, summarize_metrics
 
 
 class RidgeDecoder:
@@ -77,7 +77,10 @@ def run_ridge_baseline(
         model = RidgeDecoder(alpha).fit(batch.features[train], batch.targets[train])
         metrics = summarize_metrics(batch.targets[validation], model.predict(batch.features[validation]))
         candidates.append({"alpha": float(alpha), "validation": metrics})
-    selected = max(candidates, key=lambda row: row["validation"]["median_pearson_r"])
+    selected = max(
+        candidates,
+        key=lambda row: metric_for_selection(row["validation"], "median_pearson_r"),
+    )
     report: dict[str, Any] = {
         "schema_version": 1,
         "benchmark_id": "mc2p_future_neural_v0",
