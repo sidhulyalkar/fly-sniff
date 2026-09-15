@@ -230,7 +230,7 @@ def exact_max_distance_constrained_rewire(
     rewired_frames: list[pd.DataFrame] = []
     for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
         source_rows = edges.loc[edges.source.astype(int) == source].copy()
-        mask = source_rows.target.astype(int).map(metadata).eq(target_class)
+        mask = [metadata[int(target)] == target_class for target in source_rows.target]
         group_rows = source_rows.loc[mask].copy()
         group_rows = group_rows.sort_values(["target"], kind="stable").reset_index(drop=True)
         targets_for_group = new_targets_by_group[(source, target_class)]
