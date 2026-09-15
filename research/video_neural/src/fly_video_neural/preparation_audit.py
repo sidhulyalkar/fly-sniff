@@ -12,6 +12,10 @@ from .prepare_v1 import EXPECTED_PUBLIC_RELEASE_ANIMALS
 from .provenance import preparation_implementation_fingerprint
 from .session_benchmark import SPLIT_SEED
 
+EXPECTED_HISTORY_S = 3.0
+EXPECTED_HORIZON_S = 0.5
+EXPECTED_STRIDE_S = 0.5
+
 
 def _sha(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
@@ -80,6 +84,94 @@ def _validate_conversion_receipt(
     if receipt.get("output_path") != str(output_path.resolve()):
         raise ValueError(f"{kind} conversion output path mismatch for {session_id}")
     _require_file_hash(output_path, receipt.get("output_sha256"), f"prepared {kind} array")
+
+
+def _validate_window_manifest(
+    windows: dict[str, Any],
+    *,
+    session_id: str,
+    animal_id: str,
+    behavior_frame_count: int,
+    alignment_path: Path,
+    seen_sample_ids: set[str],
+) -> list[dict[str, str]]:
+    if windows.get("dataset_id") != "mc2p_v1":
+        raise ValueError(f"window manifest dataset mismatch for {session_id}")
+    session = windows.get("session")
+    if not isinstance(session, dict):
+        raise TypeError(f"window manifest session metadata is missing for {session_id}")
+    if session.get("session_id") != session_id or session.get("animal_id") != animal_id:
+        raise ValueError(f"window manifest session identity changed for {session_id}")
+    if windows.get("alignment_path") != str(alignment_path.resolve()):
+        raise ValueError(f"window manifest alignment path mismatch for {session_id}")
+    if windows.get("alignment_length_behavior_frames") != behavior_frame_count:
+        raise ValueError(f"window manifest behavior-frame count mismatch for {session_id}")
+    if windows.get("target_neural_boundary_policy") != TARGET_NEURAL_BOUNDARY_POLICY:
+        raise ValueError(f"strict-future boundary policy mismatch in {session_id} windows")
+    if windows.get("history_s") != EXPECTED_HISTORY_S:
+        raise ValueError(f"history duration changed in {session_id} windows")
+    if windows.get("horizon_s") != EXPECTED_HORIZON_S:
+        raise ValueError(f"prediction horizon changed in {session_id} windows")
+    if windows.get("stride_s") != EXPECTED_STRIDE_S:
+        raise ValueError(f"window stride changed in {session_id} windows")
+
+    window_rows = windows.get("windows")
+    if not isinstance(window_rows, list) or len(window_rows) != windows.get("window_count"):
+        raise ValueError(f"window manifest rows/count mismatch for {session_id}")
+    if len(window_rows) < 2:
+        raise ValueError(f"prepared session {session_id} has fewer than two prediction windows")
+
+    sample_rows: list[dict[str, str]] = []
+    for window in window_rows:
+        if not isinstance(window, dict) or not isinstance(window.get("sample"), dict):
+            raise TypeError(f"window sample metadata is malformed for {session_id}")
+        sample = window["sample"]
+        sample_id = sample.get("sample_id")
+        if not isinstance(sample_id, str):
+            raise TypeError(f"window sample id is malformed for {session_id}")
+        if sample.get("dataset_id") != "mc2p_v1":
+            raise ValueError(f"window sample dataset changed for {session_id}")
+        if sample.get("session_id") != session_id or sample.get("animal_id") != animal_id:
+            raise ValueError(f"window sample identity changed for {session_id}")
+        if sample_id in seen_sample_ids:
+            raise ValueError(f"prepared window sample id is duplicated: {sample_id}")
+
+        input_frames = window.get("input_behavior_frames")
+        target_frames = window.get("target_behavior_frames")
+        if (
+            not isinstance(input_frames, list)
+            or len(input_frames) != 2
+            or any(not isinstance(value, int) for value in input_frames)
+            or not isinstance(target_frames, list)
+            or len(target_frames) != 2
+            or any(not isinstance(value, int) for value in target_frames)
+        ):
+            raise TypeError(f"behavior-frame bounds are malformed for {sample_id}")
+        input_start, input_end = input_frames
+        target_start, target_end = target_frames
+        if not (0 <= input_start < input_end == target_start < target_end <= behavior_frame_count):
+            raise ValueError(f"behavior-frame boundary changed for {sample_id}")
+
+        last_input_neural_index = window.get("last_input_neural_index")
+        target_neural_indices = window.get("target_neural_indices")
+        if not isinstance(last_input_neural_index, int) or last_input_neural_index < 0:
+            raise TypeError(f"last input neural index is malformed for {sample_id}")
+        if (
+            not isinstance(target_neural_indices, list)
+            or not target_neural_indices
+            or any(not isinstance(value, int) for value in target_neural_indices)
+        ):
+            raise TypeError(f"target neural indices are malformed for {sample_id}")
+        if target_neural_indices != sorted(set(target_neural_indices)):
+            raise ValueError(f"target neural indices are not unique and ordered for {sample_id}")
+        if min(target_neural_indices) <= last_input_neural_index:
+            raise ValueError(f"strict-future neural indices violated for {sample_id}")
+
+        seen_sample_ids.add(sample_id)
+        sample_rows.append(
+            {"sample_id": sample_id, "animal_id": animal_id, "session_id": session_id}
+        )
+    return sample_rows
 
 
 def _validate_split_structure(
@@ -153,7 +245,9 @@ def _validate_split_structure(
         raise ValueError("split-lock sample assignments do not match prepared window manifests")
     if split_lock.get("sample_to_animal") != dict(sorted(expected_sample_to_animal.items())):
         raise ValueError("split-lock sample animal identities do not match prepared window manifests")
-    if split_lock.get("source_samples_sha256") != _sha(sorted(sample_rows, key=lambda row: row["sample_id"])):
+    if split_lock.get("source_samples_sha256") != _sha(
+        sorted(sample_rows, key=lambda row: row["sample_id"])
+    ):
         raise ValueError("split-lock source-sample identity does not match prepared window manifests")
 
 
@@ -176,7 +270,8 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
         raise ValueError("preparation receipt indicates modeling or test consumption")
     if receipt.get("target_neural_boundary_policy") != TARGET_NEURAL_BOUNDARY_POLICY:
         raise ValueError("preparation receipt strict-future neural boundary changed")
-    if receipt.get("preparation_implementation_fingerprint") != preparation_implementation_fingerprint():
+    preparation_fingerprint = preparation_implementation_fingerprint()
+    if receipt.get("preparation_implementation_fingerprint") != preparation_fingerprint:
         raise ValueError("prepared artifacts do not match the current audited ingestion implementation")
 
     manifest_path = root / "mc2p-manifest.json"
@@ -241,6 +336,9 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
     for row in session_rows:
         session_id = row["session_id"]
         animal_id = row["animal_id"]
+        behavior_frame_count = row.get("behavior_frame_count")
+        if not isinstance(behavior_frame_count, int) or behavior_frame_count < 2:
+            raise ValueError(f"prepared behavior-frame count is invalid for {session_id}")
         session_dir = root / "sessions" / session_id
         if not session_dir.is_dir():
             raise ValueError(f"missing prepared session directory: {session_dir}")
@@ -258,6 +356,10 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
             output_path=alignment_path,
             session_id=session_id,
         )
+        if alignment_receipt.get("output_shape") != [behavior_frame_count]:
+            raise ValueError(f"alignment shape does not match behavior-frame count for {session_id}")
+        if alignment_receipt.get("output_dtype") != "int64":
+            raise ValueError(f"prepared alignment dtype changed for {session_id}")
 
         pose_receipt = _load_self_hashed(
             session_dir / "pose-conversion.json",
@@ -272,35 +374,26 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
             output_path=pose_path,
             session_id=session_id,
         )
+        if pose_receipt.get("output_shape") != [behavior_frame_count, 38, 3]:
+            raise ValueError(f"pose shape does not match behavior-frame count for {session_id}")
+        if pose_receipt.get("output_dtype") != "float32":
+            raise ValueError(f"prepared pose dtype changed for {session_id}")
 
         windows_path = session_dir / "windows.json"
         _require_file_hash(windows_path, row.get("windows_sha256"), "prediction windows")
         windows = json.loads(windows_path.read_text())
-        if not isinstance(windows, dict) or windows.get("dataset_id") != "mc2p_v1":
-            raise ValueError(f"window manifest dataset mismatch for {session_id}")
-        if windows.get("target_neural_boundary_policy") != TARGET_NEURAL_BOUNDARY_POLICY:
-            raise ValueError(f"strict-future boundary mismatch in {session_id} windows")
-        window_rows = windows.get("windows")
-        if not isinstance(window_rows, list) or len(window_rows) != windows.get("window_count"):
-            raise ValueError(f"window manifest rows/count mismatch for {session_id}")
-        if len(window_rows) < 2:
-            raise ValueError(f"prepared session {session_id} has fewer than two prediction windows")
-        for window in window_rows:
-            if not isinstance(window, dict) or not isinstance(window.get("sample"), dict):
-                raise TypeError(f"window sample metadata is malformed for {session_id}")
-            sample = window["sample"]
-            sample_id = sample.get("sample_id")
-            if not isinstance(sample_id, str):
-                raise TypeError(f"window sample id is malformed for {session_id}")
-            if sample.get("session_id") != session_id or sample.get("animal_id") != animal_id:
-                raise ValueError(f"window sample identity changed for {session_id}")
-            if sample_id in seen_sample_ids:
-                raise ValueError(f"prepared window sample id is duplicated: {sample_id}")
-            seen_sample_ids.add(sample_id)
-            all_sample_rows.append(
-                {"sample_id": sample_id, "animal_id": animal_id, "session_id": session_id}
-            )
-        verified_windows += len(window_rows)
+        if not isinstance(windows, dict):
+            raise TypeError(f"window manifest must be an object for {session_id}")
+        session_sample_rows = _validate_window_manifest(
+            windows,
+            session_id=session_id,
+            animal_id=animal_id,
+            behavior_frame_count=behavior_frame_count,
+            alignment_path=alignment_path,
+            seen_sample_ids=seen_sample_ids,
+        )
+        all_sample_rows.extend(session_sample_rows)
+        verified_windows += len(session_sample_rows)
 
         batch_receipt = _load_self_hashed(
             session_dir / "pose-neural-batch.json",
@@ -320,7 +413,7 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
             raise ValueError(f"batch/windows provenance mismatch for {session_id}")
         if batch_receipt.get("pose3d_sha256") != pose_receipt.get("output_sha256"):
             raise ValueError(f"batch/pose provenance mismatch for {session_id}")
-        if batch_receipt.get("sample_count") != len(window_rows):
+        if batch_receipt.get("sample_count") != len(session_sample_rows):
             raise ValueError(f"batch/window sample count mismatch for {session_id}")
         feature_shape = batch_receipt.get("feature_shape")
         target_shape = batch_receipt.get("target_shape")
@@ -329,8 +422,8 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
             or not isinstance(target_shape, list)
             or not feature_shape
             or not target_shape
-            or feature_shape[0] != len(window_rows)
-            or target_shape[0] != len(window_rows)
+            or feature_shape[0] != len(session_sample_rows)
+            or target_shape[0] != len(session_sample_rows)
         ):
             raise ValueError(f"batch array shapes do not match sample count for {session_id}")
         pose_contract = batch_receipt.get("pose_feature_contract")
@@ -343,6 +436,13 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
             or target_contract.get("evidence_class") != "measured_neural_activity"
         ):
             raise ValueError(f"measured neural target contract changed for {session_id}")
+        target_kind = row.get("dff_target_kind")
+        expected_side = {
+            "resized_measured_dff_64x64": 64,
+            "measured_dff_128x128": 128,
+        }.get(target_kind)
+        if expected_side is None or target_contract.get("dff_side") != expected_side:
+            raise ValueError(f"measured dF/F target geometry changed for {session_id}")
         batch_path = session_dir / "pose-neural-batch.npz"
         batch_sha = sha256_file(batch_path) if batch_path.is_file() else None
         if batch_sha != row.get("batch_sha256") or batch_sha != batch_receipt.get("output_sha256"):
@@ -367,6 +467,8 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
         "preparation_receipt_sha256": receipt["receipt_sha256"],
         "manifest_sha256": manifest["manifest_sha256"],
         "split_lock_sha256": split_lock["split_lock_sha256"],
+        "preparation_implementation_fingerprint": preparation_fingerprint,
+        "preflight_implementation_sha256": sha256_file(Path(__file__)),
         "animal_count": receipt["animal_count"],
         "session_count": receipt["session_count"],
         "verified_session_batches": verified_batches,
@@ -377,8 +479,8 @@ def audit_preparation_directory(directory: str | Path) -> dict[str, Any]:
         "test_data_consumed": False,
         "claim_boundary": (
             "This preflight verifies preparation provenance, JSON self-hashes, exact session/sample split "
-            "identity, and file SHA-256 values only. It does not deserialize pose-neural NPZ batches, "
-            "inspect model metrics, fit a decoder, or consume a held-out test result."
+            "identity, strict-future window metadata, and file SHA-256 values only. It does not deserialize "
+            "pose-neural NPZ batches, inspect model metrics, fit a decoder, or consume a held-out test result."
         ),
     }
     report["report_sha256"] = _sha(report)
