@@ -1,0 +1,105 @@
+{
+  "schema": "fly-sniff-dna02-calibration-source-v1",
+  "contract_id": "program-a-dna02-bilateral-steering-v1",
+  "status": "BLOCKED",
+  "blockers": [
+    "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED",
+    "BLOCKED_FIGURE3C_COHORT_UNRESOLVED"
+  ],
+  "paper": {
+    "doi": "10.7554/eLife.102230.3",
+    "title": "Neural circuit mechanisms for steering control in walking Drosophila",
+    "figure": "Figure 3C",
+    "published_n_flies": 4,
+    "published_claim": "mean rotational velocity is consistently related to the right-minus-left DNa02 firing-rate difference; the relationship is essentially linear across its dynamic range"
+  },
+  "data_authority": {
+    "repository": "Harvard Dataverse",
+    "doi": "10.7910/DVN/0NCLP1",
+    "exact_file_map": []
+  },
+  "code_authorities": [
+    {
+      "repository": "SashaRayshubskiy/eLife_102230_analysis_code",
+      "commit": "55e30c19b1a18f601df1803295f0c401aec3c167",
+      "path": "A2_dual_patch_analysis_v2.m",
+      "git_blob_sha1": "3dd3d22135bf399d70dc3c41172eef965e1abbf7",
+      "role": "primary historical dual-DNa02 electrophysiology analysis"
+    },
+    {
+      "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+      "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+      "path": "import_preprocess_data.ipynb",
+      "git_blob_sha1": "0da2089b468c172f700881b714bfdda99a6fe424",
+      "role": "Python import/preprocessing contract and dual-recording aliases"
+    },
+    {
+      "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+      "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+      "path": "kv_linrel_scatters.ipynb",
+      "git_blob_sha1": "693bbdd8b60083744239ad049dd39f4d988418a4",
+      "role": "kinematic-variable versus firing-rate relationship analysis"
+    },
+    {
+      "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+      "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+      "path": "physiology_quant_analysis_figures.ipynb",
+      "git_blob_sha1": "384f5d342e089e101600955820fa46306b1c2593",
+      "role": "physiology quality-control context; contains a low-SNR rejection of a2_d_14 for a separate physiology analysis"
+    }
+  ],
+  "candidate_bilateral_aliases": [
+    "a2_d_08",
+    "a2_d_12",
+    "a2_d_13",
+    "a2_d_14"
+  ],
+  "known_raw_session_candidates": {
+    "a2_d_08": ["180410_gfp_3G_ss730_dual_08"],
+    "a2_d_12": ["180430_gfp_3G_ss730_dual_12"],
+    "a2_d_13": [],
+    "a2_d_14": []
+  },
+  "figure3c_cohort": null,
+  "figure3c_cohort_authority": null,
+  "cohort_review_note": "The paper reports n=4 paired DNa02 flies and general secondary-analysis dictionaries list a2_d_08/a2_d_12/a2_d_13/a2_d_14. However, physiology_quant_analysis_figures.ipynb excludes a2_d_14 as low SNR for a separate physiology analysis. The exact Figure 3C inclusion set must therefore be verified from panel-level provenance/data before freezing the cohort.",
+  "source_fields": {
+    "left_neuron": "ephys_A / a2_l",
+    "right_neuron": "ephys_B / a2_r",
+    "rotational_velocity": "yaw",
+    "forward_velocity": "fwd",
+    "lateral_velocity": "lat",
+    "ephys_timebase": "t_ephys",
+    "ball_timebase": "t_ball",
+    "optogenetic_stimulus": "stim"
+  },
+  "published_figure3c_preprocessing": {
+    "spike_detection": "relative-prominence peak detection as described in the version-of-record Methods",
+    "firing_rate_bin_ms": 10,
+    "firing_rate_smoothing": "exponential",
+    "firing_rate_smoothing_window_ms": 30,
+    "neural_to_behavior_alignment_ms": 150,
+    "alignment_interpretation": "publication reproduction alignment only; may reflect biological delay and/or spherical-treadmill inertia and must not be treated as a universal model delay",
+    "figure_average_bin_ms": 50,
+    "primary_predictor": "right_firing_rate_hz - left_firing_rate_hz",
+    "primary_outcome": "rotational_velocity_deg_per_s",
+    "relationship": "essentially linear across the full observed dynamic range",
+    "normalization_policy": "absolute gain is preparation-dependent; Program A should derive a normalized relational target only after exact cohort and source bytes are frozen"
+  },
+  "evidence_ledger_record_ids": [
+    "rayshubskiy2025-dna02-bilateral-steering",
+    "rayshubskiy2025-dna02-temporal-precedence"
+  ],
+  "navigation_performance_used": false,
+  "allowed_interpretation": [
+    "DNa02 bilateral activity has a reproducible lateralized relationship to rotational velocity in the published preparation",
+    "a normalized bilateral steering relation is a candidate navigation-independent calibration target"
+  ],
+  "forbidden_interpretation": [
+    "the 150 ms publication alignment is a universal biological or model delay",
+    "the absolute firing-rate-to-turn gain transfers unchanged to exact MaleCNS DNa02 body IDs",
+    "a2_d_14 is included in Figure 3C merely because four generic dual-recording aliases exist",
+    "unmapped Dataverse files may be substituted by local or guessed session files",
+    "navigation performance may choose the cohort, preprocessing, normalization, or target statistic"
+  ]
+}
