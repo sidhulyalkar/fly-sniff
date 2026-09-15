@@ -22,7 +22,7 @@ The raw/resized dF/F image is allowed as a target because anatomical coordinates
 
 Behavior is sampled faster than two-photon imaging. Under closest-timestamp alignment, the first nominal target behavior frame can map to the same neural frame as the final input behavior frame even when the behavior-frame slices do not overlap.
 
-For v1, every target neural index must therefore be **strictly greater than the neural index aligned to the final input behavior frame**. Windows that contain no neural frame satisfying that rule are dropped. The boundary policy is recorded in PREPARE artifacts and bound into the scored provenance chain.
+For v1, every target neural index must therefore be **strictly greater than the neural index aligned to the final input behavior frame**. Windows that contain no neural frame satisfying that rule are dropped. The boundary policy and the resulting per-window neural indices are recorded in PREPARE artifacts and audited before development scoring.
 
 ## Pose representation boundary
 
@@ -48,13 +48,27 @@ Every null fraction receives the identical ridge α grid `[0.01, 0.1, 1, 10, 100
 
 The aligned model and every null are intentionally low complexity. More powerful video or multimodal models belong to later, separately versioned work only after the v1 measurement-grounded result exists.
 
-## PREPARE → DEVELOP → FINAL provenance boundary
+## PREPARE → PREFLIGHT → DEVELOP → FINAL provenance boundary
 
 PREPARE deterministically discovers the complete eight-animal public release, converts explicitly trusted legacy pickle artifacts to safe NumPy arrays, materializes synchronized windows and session batches, freezes the session split, and hashes the derived artifacts. PREPARE fits no model and reports no performance.
 
 PREPARE necessarily reads raw neural data from all sessions in order to create deterministic session batches before the split is evaluated. Therefore the scientifically accurate post-split firewall claim is not that test values were never physically read.
 
-After the split is frozen, DEVELOPMENT:
+Before DEVELOPMENT, PREFLIGHT performs a byte-and-metadata-only audit of the prepared tree. It verifies:
+
+- preparation, manifest, split-lock, conversion, and batch-receipt self-hashes;
+- exact file SHA-256 values for prepared alignment, pose, windows, and pose-neural session batches;
+- complete eight-animal/session identity agreement across manifest and preparation receipt;
+- one validation and one test session plus at least one train session per animal;
+- exact sample-to-session, sample-to-animal, and sample-to-split identities reconstructed from `windows.json`;
+- the frozen 3.0 s history, 0.5 s horizon, and 0.5 s stride;
+- nonoverlapping input/target behavior-frame bounds;
+- every target neural index is strictly greater than the corresponding `last_input_neural_index`;
+- input-only pose-feature provenance and measured dF/F target geometry.
+
+PREFLIGHT does not deserialize `pose-neural-batch.npz`, fit a model, inspect a model metric, or consume a held-out test result. Its report is self-hashed and records the preflight implementation source SHA-256. A failed preflight blocks the canonical workflow before development scoring.
+
+After PREFLIGHT passes and the split is frozen, DEVELOPMENT independently:
 
 - verifies the PREPARE receipt, ingestion-code fingerprint, split-lock bytes, and every supplied batch SHA;
 - classifies session batches into train/validation/test using authenticated PREPARE metadata plus the frozen split lock;
