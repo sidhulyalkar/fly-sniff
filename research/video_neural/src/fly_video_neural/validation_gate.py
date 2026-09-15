@@ -49,8 +49,12 @@ def validate_acceptance_config(document: dict[str, Any]) -> None:
         raise ValueError("validation unlock criteria cannot change after scores")
     if document.get("final_inference_unit") != "animal":
         raise ValueError("final inference unit must remain animal")
+    if document.get("final_inference_population") != "validation_eligible_animals_only":
+        raise ValueError("final inference population changed")
     if document.get("final_minimum_scorable_animals") != 6:
         raise ValueError("final minimum scorable animal count changed")
+    if document.get("final_require_all_validation_eligible_test_effects_computable") is not True:
+        raise ValueError("all validation-eligible test effects must remain required")
     if document.get("final_test") != "exact_one_sided_sign_test":
         raise ValueError("final inferential test changed")
     if document.get("final_null_positive_probability") != 0.5:
@@ -172,6 +176,7 @@ def build_validation_unlock(
     if median_effect is None or median_effect <= config["require_median_effect_gt"]:
         failures.append("median paired alignment effect against strongest null is not positive")
 
+    eligible_ids = [row["animal_id"] for row in effects]
     report: dict[str, Any] = {
         "schema_version": 1,
         "protocol": config["protocol"],
@@ -185,6 +190,7 @@ def build_validation_unlock(
         "alignment_null_selection": config["alignment_null_selection"],
         "nonfinite_validation_metric_policy": config["nonfinite_validation_metric_policy"],
         "eligible_animals": eligible,
+        "eligible_animal_ids": eligible_ids,
         "ineligible_animals": ineligible,
         "positive_effect_animals": positive,
         "positive_effect_fraction": positive / eligible if eligible else 0.0,
@@ -194,7 +200,11 @@ def build_validation_unlock(
         "test_consumption_allowed": not failures,
         "final_inference_prespecified": {
             "unit": config["final_inference_unit"],
+            "population": config["final_inference_population"],
             "minimum_scorable_animals": config["final_minimum_scorable_animals"],
+            "require_all_validation_eligible_test_effects_computable": config[
+                "final_require_all_validation_eligible_test_effects_computable"
+            ],
             "test": config["final_test"],
             "alpha": config["final_alpha"],
             "alternative": config["final_alternative"],
@@ -204,9 +214,9 @@ def build_validation_unlock(
         "claim_boundary": (
             "This development gate only authorizes one explicit test evaluation. Animals with a "
             "non-computable validation median Pearson correlation are ineligible rather than assigned "
-            "a favorable or unfavorable score. The strongest prespecified null is selected on validation, "
-            "not test. The final animal-level inference rule is already frozen here. This is not a test "
-            "result and cannot establish a neural-decoding claim."
+            "a favorable or unfavorable score. The exact validation-eligible animal IDs are frozen here "
+            "as the confirmatory final population. The strongest prespecified null is selected on validation, "
+            "not test. This is not a test result and cannot establish a neural-decoding claim."
         ),
     }
     report["report_sha256"] = _sha(report)
