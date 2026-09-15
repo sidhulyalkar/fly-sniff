@@ -90,7 +90,11 @@ def test_session_batch_uses_input_pose_and_future_measured_dff(tmp_path: Path):
         assert batch["animal_ids"].tolist() == ["fly1", "fly1"]
         assert batch["session_ids"].tolist() == ["fly1_001", "fly1_001"]
     assert receipt["target_contract"]["evidence_class"] == "measured_neural_activity"
-    assert receipt["pose_feature_contract"]["uses_input_behavior_frames_only"] is True
+    pose_contract = receipt["pose_feature_contract"]
+    assert pose_contract["uses_input_behavior_frames_only"] is True
+    assert pose_contract["root_group_joint_partition_source"] == "MC2P augmentation.RootSet"
+    assert "project-defined" in pose_contract["three_dimensional_application"]
+    assert "project-defined" in pose_contract["statistics_origin"]
 
 
 def test_session_batch_rejects_future_neural_index_beyond_dff(tmp_path: Path):

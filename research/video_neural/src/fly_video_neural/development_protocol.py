@@ -6,12 +6,19 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .alignment import TARGET_NEURAL_BOUNDARY_POLICY
 from .alignment_null import run_alignment_null
 from .data_qc import audit_development_data, load_qc_config
 from .mc2p_legacy import sha256_file
-from .provenance import implementation_fingerprint, runtime_fingerprint
+from .provenance import (
+    implementation_fingerprint,
+    preparation_implementation_fingerprint,
+    runtime_fingerprint,
+)
 from .session_benchmark import load_session_batches, run_within_animal_ridge
 from .validation_gate import build_validation_unlock, load_acceptance_config
+
+EXPECTED_PUBLIC_RELEASE_ANIMALS = 8
 
 
 def _sha(payload: Any) -> str:
@@ -27,17 +34,68 @@ def _fresh_output_dir(path: str | Path) -> Path:
     return output
 
 
+def _source_batch_receipts(paths: list[str | Path]) -> list[dict[str, str]]:
+    return sorted(
+        [
+            {"path": str(Path(path).resolve()), "sha256": sha256_file(path)}
+            for path in paths
+        ],
+        key=lambda row: row["path"],
+    )
+
+
+def _load_and_validate_preparation_receipt(
+    preparation_receipt_path: str | Path,
+    split_lock_path: str | Path,
+    batch_paths: list[str | Path],
+) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
+    receipt = json.loads(Path(preparation_receipt_path).read_text())
+    claimed = receipt.get("receipt_sha256")
+    unsigned = dict(receipt)
+    unsigned.pop("receipt_sha256", None)
+    if not isinstance(claimed, str) or claimed != _sha(unsigned):
+        raise ValueError("preparation receipt self-hash mismatch")
+    if receipt.get("protocol") != "mc2p-v1-preparation-v1":
+        raise ValueError("development requires the frozen MC2P v1 preparation receipt")
+    if receipt.get("benchmark_id") != "mc2p_future_neural_v1":
+        raise ValueError("preparation receipt benchmark mismatch")
+    if receipt.get("animal_count") != EXPECTED_PUBLIC_RELEASE_ANIMALS:
+        raise ValueError("development requires the complete eight-animal prepared release")
+    if receipt.get("models_fit") is not False or receipt.get("test_data_consumed") is not False:
+        raise ValueError("preparation receipt indicates model fitting or test consumption")
+    if receipt.get("target_neural_boundary_policy") != TARGET_NEURAL_BOUNDARY_POLICY:
+        raise ValueError("preparation receipt does not enforce the strict future neural boundary")
+    if receipt.get("preparation_implementation_fingerprint") != preparation_implementation_fingerprint():
+        raise ValueError("preparation implementation bytes do not match the current audited ingestion code")
+    if receipt.get("split_lock_file_sha256") != sha256_file(split_lock_path):
+        raise ValueError("split-lock bytes do not match the preparation receipt")
+    source_batches = _source_batch_receipts(batch_paths)
+    if receipt.get("source_batches") != source_batches:
+        raise ValueError("session-batch bytes do not match the preparation receipt")
+    split_lock = json.loads(Path(split_lock_path).read_text())
+    if receipt.get("split_lock_sha256") != split_lock.get("split_lock_sha256"):
+        raise ValueError("split-lock identity does not match the preparation receipt")
+    return receipt, split_lock, source_batches
+
+
 def run_development_protocol(
     split_lock_path: str | Path,
     batch_paths: list[str | Path],
     output_dir: str | Path,
     *,
+    preparation_receipt_path: str | Path,
     qc_config_path: str | Path,
     acceptance_config_path: str | Path,
 ) -> dict[str, Any]:
     output = _fresh_output_dir(output_dir)
+    preparation_receipt, split_lock, expected_source_batches = _load_and_validate_preparation_receipt(
+        preparation_receipt_path,
+        split_lock_path,
+        batch_paths,
+    )
     batch, source_batches = load_session_batches(batch_paths)
-    split_lock = json.loads(Path(split_lock_path).read_text())
+    if source_batches != expected_source_batches:
+        raise RuntimeError("session-batch identity changed after preparation verification")
     qc_config = load_qc_config(qc_config_path)
     acceptance_config = load_acceptance_config(acceptance_config_path)
 
@@ -89,6 +147,12 @@ def run_development_protocol(
         "schema_version": 1,
         "protocol": "mc2p-v1-development-only-v1",
         "benchmark_id": "mc2p_future_neural_v1",
+        "preparation_receipt_sha256": preparation_receipt["receipt_sha256"],
+        "preparation_receipt_file_sha256": sha256_file(preparation_receipt_path),
+        "preparation_implementation_fingerprint": preparation_receipt[
+            "preparation_implementation_fingerprint"
+        ],
+        "target_neural_boundary_policy": preparation_receipt["target_neural_boundary_policy"],
         "split_lock_sha256": split_lock["split_lock_sha256"],
         "split_lock_file_sha256": sha256_file(split_lock_path),
         "source_batches": source_batches,
@@ -108,8 +172,9 @@ def run_development_protocol(
             "This limitation is frozen for v1 and may motivate a separately versioned v2 metric."
         ),
         "claim_boundary": (
-            "This command is development-only. It cannot consume held-out test sessions. "
-            "An unlock status authorizes a separate one-way final action but is not a test result."
+            "This command is development-only and requires the audited PREPARE receipt and exact derived "
+            "batch bytes. It cannot consume held-out test sessions. An unlock status authorizes a separate "
+            "one-way final action but is not a test result."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
@@ -125,6 +190,7 @@ def main() -> None:
     )
     parser.add_argument("split_lock")
     parser.add_argument("batches", nargs="+")
+    parser.add_argument("--preparation-receipt", required=True)
     parser.add_argument("--qc-config", required=True)
     parser.add_argument("--acceptance-config", required=True)
     parser.add_argument("--output", required=True)
@@ -133,6 +199,7 @@ def main() -> None:
         args.split_lock,
         args.batches,
         args.output,
+        preparation_receipt_path=args.preparation_receipt,
         qc_config_path=args.qc_config,
         acceptance_config_path=args.acceptance_config,
     )

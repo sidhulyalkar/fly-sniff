@@ -8,10 +8,11 @@ from typing import Any
 
 import numpy as np
 
-from .alignment import load_safe_alignment, materialize_session_windows
+from .alignment import TARGET_NEURAL_BOUNDARY_POLICY, load_safe_alignment, materialize_session_windows
 from .mc2p import MC2PSession, build_manifest, discover_sessions
 from .mc2p_legacy import convert_legacy_pickle, sha256_file
 from .pose_neural import build_session_pose_neural_batch, load_pose3d
+from .provenance import preparation_implementation_fingerprint
 from .session_benchmark import build_session_split_lock, load_session_batches
 
 EXPECTED_PUBLIC_RELEASE_ANIMALS = 8
@@ -181,6 +182,8 @@ def prepare_mc2p_v1(
         )
         behavior_frame_count = _validate_behavior_frame_alignment(alignment_path, pose_path)
         windows = materialize_session_windows(session.path, alignment_path)
+        if windows["target_neural_boundary_policy"] != TARGET_NEURAL_BOUNDARY_POLICY:
+            raise RuntimeError("window materialization changed the frozen target neural boundary policy")
         if windows["window_count"] < 2:
             raise ValueError(
                 f"session {session.session_id} has only {windows['window_count']} v1 prediction windows"
@@ -229,7 +232,11 @@ def prepare_mc2p_v1(
         "manifest_file_sha256": sha256_file(manifest_path),
         "animal_count": manifest["animal_count"],
         "session_count": manifest["session_count"],
+        "target_neural_boundary_policy": TARGET_NEURAL_BOUNDARY_POLICY,
+        "preparation_implementation_fingerprint": preparation_implementation_fingerprint(),
+        "source_batches": source_batches,
         "split_lock_sha256": split_lock["split_lock_sha256"],
+        "split_lock_file_sha256": sha256_file(split_path),
         "sessions": sorted(session_receipts, key=lambda row: row["session_id"]),
         "models_fit": False,
         "test_data_consumed": False,

@@ -168,7 +168,13 @@ def build_session_pose_neural_batch(
         "target_shape": list(y.shape),
         "pose_feature_contract": {
             "root_groups": [list(group) for group in POSE_ROOT_GROUPS],
+            "root_group_joint_partition_source": "MC2P augmentation.RootSet",
+            "three_dimensional_application": (
+                "fly-sniff applies the published MC2P joint partition coordinate-wise to released "
+                "points3d; this 3D extension is a project-defined deterministic transform"
+            ),
             "statistics": list(FEATURE_STATISTICS),
+            "statistics_origin": "fly-sniff project-defined deterministic window summaries",
             "uses_input_behavior_frames_only": True,
         },
         "target_contract": {
@@ -177,8 +183,10 @@ def build_session_pose_neural_batch(
             "evidence_class": "measured_neural_activity",
         },
         "claim_boundary": (
-            "This artifact contains deterministic pose features and measured future dF/F targets "
-            "for one animal/session. It is not a decoded result."
+            "This artifact contains deterministic project-defined pose features and measured future dF/F "
+            "targets for one animal/session. The joint grouping follows MC2P RootSet, while its 3D "
+            "application and temporal summary statistics are fly-sniff engineering choices. It is not a "
+            "decoded result."
         ),
     }
     encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()

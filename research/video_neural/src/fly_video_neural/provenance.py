@@ -19,6 +19,14 @@ CRITICAL_SOURCE_FILES = (
     "session_benchmark.py",
     "validation_gate.py",
 )
+PREPARATION_SOURCE_FILES = (
+    "alignment.py",
+    "mc2p.py",
+    "mc2p_legacy.py",
+    "pose_neural.py",
+    "prepare_v1.py",
+    "provenance.py",
+)
 
 
 def _sha(payload: Any) -> str:
@@ -34,15 +42,22 @@ def _file_sha(path: Path) -> str:
     return digest.hexdigest()
 
 
-def implementation_fingerprint() -> dict[str, Any]:
+def _fingerprint(files: tuple[str, ...]) -> dict[str, Any]:
     root = Path(__file__).resolve().parent
-    files = {name: _file_sha(root / name) for name in CRITICAL_SOURCE_FILES}
     payload: dict[str, Any] = {
         "schema_version": 1,
-        "files": files,
+        "files": {name: _file_sha(root / name) for name in files},
     }
     payload["sha256"] = _sha(payload)
     return payload
+
+
+def implementation_fingerprint() -> dict[str, Any]:
+    return _fingerprint(CRITICAL_SOURCE_FILES)
+
+
+def preparation_implementation_fingerprint() -> dict[str, Any]:
+    return _fingerprint(PREPARATION_SOURCE_FILES)
 
 
 def runtime_fingerprint() -> dict[str, Any]:
