@@ -1,0 +1,106 @@
+{
+  "ledger_sha256": "9788f78f033519d105181142d767f3559c89c1045f4fc5b2382e773152b209ec",
+  "records": [
+    {
+      "authority": "Currier, Matheson & Nagel 2021; doi:10.7554/eLife.61510",
+      "dataset": "Dryad doi:10.5061/dryad.vq83bk3rh",
+      "evidence_class": "cross_dataset_prior",
+      "notes": "Behavioral perturbation evidence used as a cross-dataset functional prior, not a quantitative dynamics target.",
+      "predicate": "airflow_orientation_dependency",
+      "record_id": "currier2021-ventral-pfn-airflow-perturbation",
+      "subject": "external:ventral_PFN_population",
+      "value": "silencing impaired appropriate corrective turns following changes in airflow direction"
+    },
+    {
+      "authority": "Currier, Matheson & Nagel 2021; doi:10.7554/eLife.61510",
+      "dataset": "Dryad doi:10.5061/dryad.vq83bk3rh",
+      "evidence_class": "measured_physiology",
+      "notes": "Direct physiology in the published preparation. Does not establish exact MaleCNS v1.0 body-ID physiology or absolute amplitude transfer.",
+      "predicate": "airflow_tuning_geometry",
+      "record_id": "currier2021-ventral-pfn-airflow-basis",
+      "subject": "external:ventral_PFN_population",
+      "value": {
+        "laterality_authority": "cell-body hemisphere",
+        "preferred_direction": "approximately 45 degrees ipsilateral",
+        "representation": "paired approximately orthogonal airflow basis"
+      }
+    },
+    {
+      "authority": "Matheson et al. Addendum 2024; doi:10.1038/s41467-024-46225-8",
+      "dataset": "publication addendum to doi:10.1038/s41467-022-32247-7",
+      "evidence_class": "cross_dataset_prior",
+      "notes": "Blocks hDeltaC-specific quantitative physiology calibration under Program A unless independent unconfounded evidence is supplied.",
+      "predicate": "functional_attribution_caveat",
+      "record_id": "matheson2024-hdelta-attribution-confound",
+      "subject": "external:hDeltaC_hDeltaK_driver_context",
+      "value": "VT062617 labels hDeltaK in addition to hDeltaC, so the original line's sensory responses cannot be cleanly attributed specifically to hDeltaC"
+    },
+    {
+      "authority": "Currier, Matheson & Nagel 2021 plus MaleCNS v1.0 annotation mapping",
+      "dataset": "cross-dataset",
+      "evidence_class": "cross_dataset_prior",
+      "notes": "Any Program A target must keep the direct physiology record separate from the MaleCNS structural/type mapping.",
+      "predicate": "physiology_transfer_scope",
+      "record_id": "pfn-malecns-transfer-caveat",
+      "subject": "MaleCNS:PFNa_PFNm_PFNp_candidates",
+      "value": "ventral P-FN physiology is a cross-dataset/type-level prior, not exact MaleCNS body-ID physiology"
+    },
+    {
+      "authority": "Rayshubskiy et al. 2025; doi:10.7554/eLife.102230.3",
+      "dataset": "walking Drosophila electrophysiology",
+      "evidence_class": "measured_physiology",
+      "notes": "Strong candidate for a normalized bilateral readout constraint; absolute gain transfer remains preparation-dependent.",
+      "predicate": "bilateral_difference_to_rotational_velocity",
+      "record_id": "rayshubskiy2025-dna02-bilateral-steering",
+      "subject": "external:DNa02_bilateral_pair",
+      "value": "right-left firing-rate difference is consistently and approximately linearly related to rotational velocity across the observed dynamic range"
+    },
+    {
+      "authority": "Rayshubskiy et al. 2025; doi:10.7554/eLife.102230.3",
+      "dataset": "walking Drosophila electrophysiology",
+      "evidence_class": "measured_physiology",
+      "notes": "Do not freeze 150 ms as a universal model delay without an independent transfer justification.",
+      "predicate": "neural_to_turn_lag",
+      "record_id": "rayshubskiy2025-dna02-temporal-precedence",
+      "subject": "external:DNa02",
+      "value": {
+        "interpretation_caveat": "may reflect biological delay and/or spherical-treadmill inertia",
+        "reported_average_lag_ms": 150
+      }
+    },
+    {
+      "authority": "Rayshubskiy et al. 2025; doi:10.7554/eLife.102230.3",
+      "dataset": "FAFB/FlyWire connectomic analysis",
+      "evidence_class": "measured_structure",
+      "notes": "Structural support only. Exact MaleCNS v1.0 edges remain independently audited structure.",
+      "predicate": "direct_and_indirect_structural_input",
+      "record_id": "rayshubskiy2025-pfl3-to-dna02-structure",
+      "subject": "external:PFL3_to_DNa02_paths",
+      "value": "DNa02 receives direct PFL3 input plus strong indirect routes including DNa03 and LAL010"
+    },
+    {
+      "authority": "Westeinde et al. 2024; doi:10.1038/s41586-024-07039-2",
+      "dataset": "published navigation physiology/perturbation preparation",
+      "evidence_class": "measured_physiology",
+      "notes": "Use as a relational steering constraint. Do not infer PFL3 steering side from MaleCNS soma/root/bridge side.",
+      "predicate": "lateralized_steering_relationship",
+      "record_id": "westeinde2024-pfl3-steering-laterality",
+      "subject": "external:PFL3L_PFL3R_populations",
+      "value": {
+        "PFL3L": "reverse lateralized relationship",
+        "PFL3R": "recruited when fly is left of goal and drives rightward turning"
+      }
+    },
+    {
+      "authority": "Westeinde et al. Author Correction 2025; doi:10.1038/s41586-024-08245-8",
+      "dataset": "publication correction",
+      "evidence_class": "cross_dataset_prior",
+      "notes": "Retained so downstream evidence review knows the source article has an author correction.",
+      "predicate": "author_correction_scope",
+      "record_id": "westeinde2025-author-correction-scope",
+      "subject": "external:PFL2_driver_metadata",
+      "value": "2025 author correction changes a PFL2 split-Gal4 genotype/figure heading, not the PFL3 steering relationship used here"
+    }
+  ],
+  "schema": "fly-sniff-evidence-ledger-v1"
+}
