@@ -7,10 +7,21 @@
       "role": "primary_paired_benchmark",
       "modalities": {"video": true, "pose": true, "neural": true, "sensory_context": true},
       "synchronized": true,
-      "known_scale": {"animals_released": 8},
-      "sources": ["https://github.com/semihgunel/MC2P"],
-      "access": "public download linked from upstream repository",
-      "license": "see upstream dataset/repository terms before redistribution",
+      "known_scale": {
+        "animals_released": 8,
+        "sessions_released": 133,
+        "recording_hours": 8.2,
+        "behavior_frames": 2975000,
+        "neural_frames": 476000,
+        "behavior_frame_rate_hz": 100,
+        "neural_frame_rate_hz": 16
+      },
+      "sources": [
+        "https://github.com/semihgunel/MC2P",
+        "https://sslneurips21.github.io/files/CameraReady/ContrastiveNeuralAction_SSLNeurIPS21.pdf"
+      ],
+      "access": "public eight-animal download linked from the upstream repository",
+      "license": "upstream MC2P repository uses CC BY-NC-SA 4.0; verify public data-folder terms before redistribution",
       "download_in_ci": false,
       "intended_use": "within-animal held-out-session pose/video to measured two-photon decoding for mc2p_future_neural_v1"
     },
