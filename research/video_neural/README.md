@@ -16,11 +16,12 @@ The first paired benchmark is the eight-animal public MC2P release. Large behavi
 
 ## Canonical v1 workflow
 
-The scored v1 workflow has exactly three phases:
+The scored v1 workflow has four operational stages:
 
 1. **PREPARE** deterministic measured-data artifacts and freeze the split.
-2. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, freeze the confirmatory animal population, and decide whether the one-way final evaluation is allowed.
-3. **FINAL** verify all frozen evidence, exactly replay train+validation development evidence without opening test batches, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
+2. **PREFLIGHT** verify the complete prepared provenance chain, exact sample/session split, strict-future window metadata, and artifact hashes without deserializing any pose-neural NPZ batch.
+3. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, freeze the confirmatory animal population, and decide whether the one-way final evaluation is allowed.
+4. **FINAL** verify all frozen evidence, exactly replay train+validation development evidence without opening test batches, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
 
 Low-level conversion, window, batch, and split commands remain useful for inspection and tests, but they are not an alternative scored v1 workflow.
 
@@ -43,7 +44,20 @@ The measured neural target is the mean dF/F image over the strictly future mappe
 
 PREPARE also writes the exact batch hashes, split-lock bytes, per-session provenance, strict-future boundary policy, and ingestion-code fingerprint. A non-empty destination is rejected.
 
-### Phase 2: DEVELOP
+### Phase 2: PREFLIGHT
+
+```bash
+fly-video-neural-preflight "$RUN/prepared" \
+  --output "$RUN/preflight.json"
+```
+
+PREFLIGHT is a provenance-only audit performed before DEVELOPMENT. It verifies the preparation, manifest, split-lock, conversion, window, and session-batch receipt chains; exact file SHA-256 values; the complete eight-animal/session inventory; per-animal train/validation/test partition structure; exact sample-to-split identities reconstructed from `windows.json`; frozen 3.0 s / 0.5 s / 0.5 s timing; input/target behavior-frame boundaries; strict-future target neural indices; input-only pose features; and the measured dF/F target geometry.
+
+PREFLIGHT deliberately does **not** deserialize `pose-neural-batch.npz`, fit a model, inspect a model metric, or consume a held-out test result. Its report is self-hashed and records the auditor source SHA-256. Adversarial tests cover raw byte tampering plus rehashed split, window, conversion, and modeling-claim tampering.
+
+If PREFLIGHT fails, stop. Do not run DEVELOPMENT on that prepared tree. Repairing a software/provenance defect is allowed only by producing a new clean PREPARE directory; do not mutate a partially audited prepared run in place.
+
+### Phase 3: DEVELOP
 
 ```bash
 fly-video-neural-develop \
@@ -59,6 +73,8 @@ The split seed is `2701`. Each animal contributes exactly one validation session
 
 After the split is frozen, DEVELOPMENT SHA-authenticates every prepared session batch but **does not deserialize the held-out test-session NPZ arrays**. It loads exactly the train+validation projection. Tests fail if even one test sample contaminates that projection, and a monkeypatched regression fails if NumPy attempts to open any frozen test batch during DEVELOPMENT.
 
+DEVELOPMENT independently rechecks the PREPARE receipt, split bytes, strict-future policy, ingestion fingerprint, and exact supplied batch hashes. PREFLIGHT is therefore an additional provenance audit, not a substitute for the development firewall.
+
 The aligned model is ridge regression with α in `[0.01, 0.1, 1, 10, 100]`, selected independently per animal using validation median Pearson correlation. The primary score is deliberately simple: median per-pixel Pearson correlation over the measured dF/F image. No neural-support mask is introduced in v1, so background or low-information pixels may reduce sensitivity. That limitation is frozen rather than repaired after seeing scores.
 
 The temporal control is an ensemble of deterministic within-session circular pose shifts at **25%, 50%, and 75%** of each session. Each shift receives the same α grid. For each animal, the null fraction with the strongest validation median Pearson correlation is frozen as that animal's primary final comparator. FINAL may not choose a comparator from test performance.
@@ -69,7 +85,7 @@ Crucially, `validation-unlock.json` freezes the **exact validation-eligible anim
 
 Stop unless `development/validation-unlock.json` reports `unlocked_for_single_test_consumption`.
 
-### Phase 3: FINAL
+### Phase 4: FINAL
 
 ```bash
 fly-video-neural-final \
@@ -84,7 +100,7 @@ Before reopening any prepared held-out batch arrays, FINAL verifies the developm
 
 Only after all test-free checks succeed does FINAL create `FINAL_TEST_CONSUMED.json` using exclusive-create semantics, with reopening after failure forbidden. Only after that marker does the supported workflow reopen the full prepared batch set and evaluate held-out sessions.
 
-PREPARE necessarily reads the raw data to deterministically create every session batch before the split is evaluated. The stronger post-split claim is therefore precise: DEVELOPMENT does not reopen held-out target arrays, and FINAL does not reopen them until the pre-consumption development replay has succeeded and the one-way marker has been written.
+PREPARE necessarily reads the raw data to deterministically create every session batch before the split is evaluated. The stronger post-split claim is therefore precise: PREFLIGHT never opens NPZ arrays, DEVELOPMENT does not reopen held-out target arrays, and FINAL does not reopen them until the pre-consumption development replay has succeeded and the one-way marker has been written.
 
 ## Prespecified final inference
 
