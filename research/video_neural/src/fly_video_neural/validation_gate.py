@@ -110,9 +110,12 @@ def build_validation_unlock(
         failures.append(
             f"only {eligible} eligible animals; need at least {config['minimum_eligible_animals']}"
         )
-    if config["require_strict_majority_positive_effect"] and eligible:
-        if positive <= eligible / 2:
-            failures.append("aligned decoder does not beat null in a strict majority of animals")
+    if (
+        config["require_strict_majority_positive_effect"]
+        and eligible
+        and positive <= eligible / 2
+    ):
+        failures.append("aligned decoder does not beat null in a strict majority of animals")
     if median_effect is None or median_effect <= config["require_median_effect_gt"]:
         failures.append("median paired alignment effect is not positive")
 
