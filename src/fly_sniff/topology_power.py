@@ -98,7 +98,7 @@ def main() -> None:
     else:
         values = pilot_payload
     if not isinstance(values, list):
-        raise ValueError("pilot file must be a JSON list or contain null_values")
+        raise TypeError("pilot file must be a JSON list or contain null_values")
     counts = [int(x) for x in args.null_counts.split(",") if x.strip()]
     report = estimate_power(
         [float(x) for x in values],
