@@ -19,7 +19,7 @@ The first paired benchmark is the eight-animal public MC2P release. Large behavi
 The scored v1 workflow has exactly three phases:
 
 1. **PREPARE** deterministic measured-data artifacts and freeze the split.
-2. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, and decide whether the one-way final evaluation is allowed.
+2. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, freeze the confirmatory animal population, and decide whether the one-way final evaluation is allowed.
 3. **FINAL** verify all frozen evidence, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
 
 Low-level conversion, window, batch, and split commands remain useful for inspection and tests, but they are not an alternative scored v1 workflow.
@@ -65,6 +65,8 @@ The temporal control is an ensemble of deterministic within-session circular pos
 
 The validation unlock requires all structural/QC contracts to pass, at least **six eligible animals**, a strict majority of positive aligned-minus-selected-null validation effects, and a positive median paired validation effect. A non-computable validation metric makes that animal ineligible rather than assigning it an artificial score.
 
+Crucially, `validation-unlock.json` freezes the **exact validation-eligible animal IDs** as the final confirmatory population before any test batch is reopened. Validation-ineligible animals can later be reported descriptively but can never enter the confirmatory statistic.
+
 Stop unless `development/validation-unlock.json` reports `unlocked_for_single_test_consumption`.
 
 ### Phase 3: FINAL
@@ -86,18 +88,24 @@ PREPARE necessarily reads the raw data to deterministically create every session
 
 The biological inferential unit is the **animal**, not the 4,096 image pixels and not the overlapping time windows. `configs/validation_acceptance_v1.json` is supplied to DEVELOPMENT and hash-bound into its receipt before validation results are available. It freezes the final rule:
 
-- at least 6 animals must have computable paired held-out effects;
+- the confirmatory population is exactly the animal IDs that were validation-eligible at unlock time;
+- at least 6 confirmatory animals are required;
+- every validation-eligible animal must have a computable paired held-out effect for a supportive result;
 - effect = aligned test median Pearson r minus the validation-selected null's test median Pearson r;
+- validation-ineligible animals are descriptive-only and cannot enter the final statistic;
+- missing or non-computable confirmatory effects cannot shrink the denominator;
 - zero effects count as non-positive;
 - median paired test effect must be positive;
 - an exact one-sided sign test against positive-effect probability 0.5 must satisfy `p <= 0.05`.
 
-For eight scorable animals, this requires at least 7/8 positive effects (`p = 9/256 ≈ 0.0352`). Six of eight is not close enough (`p = 37/256 ≈ 0.1445`). With six scorable animals, all 6/6 must be positive (`p = 1/64 ≈ 0.0156`). A valid run can therefore finish as `supports_prespecified_predictive_generalization`, `does_not_meet_prespecified_support_rule`, or `insufficient_scorable_animals` without changing any threshold after test inspection.
+For a complete eight-animal confirmatory population, this requires at least 7/8 positive effects (`p = 9/256 ≈ 0.0352`). Six of eight is not close enough (`p = 37/256 ≈ 0.1445`). For a frozen six-animal confirmatory population, all 6/6 must be positive (`p = 1/64 ≈ 0.0156`). If an eight-animal confirmatory population later has only six computable test effects, it is **incomplete**, not a new 6/6 experiment.
+
+A valid run can therefore finish as `supports_prespecified_predictive_generalization`, `does_not_meet_prespecified_support_rule`, `insufficient_prespecified_test_population`, or `incomplete_prespecified_test_population` without changing any threshold after test inspection.
 
 ## Claim boundary
 
-A supportive v1 result would mean that this prespecified pose decoder predicts held-out-session measured dF/F better than its validation-selected temporal-misalignment control with consistent direction across animals under the frozen animal-level rule.
+A supportive v1 result would mean that this prespecified pose decoder predicts held-out-session measured dF/F better than its validation-selected temporal-misalignment control with consistent direction across the frozen confirmatory animals under the prespecified rule.
 
-It would **not** establish behavior causing the neural activity, spike-level prediction, whole-brain reconstruction, an unseen-animal raw-pixel decoder, or a connectome mechanism. A negative or insufficient result is preserved as a scientific result, not repaired by changing the metric, null, split, horizon, support mask, or significance rule.
+It would **not** establish behavior causing the neural activity, spike-level prediction, whole-brain reconstruction, an unseen-animal raw-pixel decoder, or a connectome mechanism. A negative, insufficient, or incomplete result is preserved as a scientific result, not repaired by changing the metric, null, split, horizon, support mask, population, or significance rule.
 
 No real MC2P benchmark result has been consumed yet. A video foundation model remains intentionally deferred until this measurement-grounded baseline has produced an auditable outcome.
