@@ -44,11 +44,82 @@ def _source_batch_receipts(paths: list[str | Path]) -> list[dict[str, str]]:
     )
 
 
+def _session_split(lock: dict[str, Any], animal_id: str, session_id: str) -> str:
+    assignments = lock["animal_sessions"].get(animal_id)
+    if assignments is None:
+        raise ValueError(f"prepared session {session_id!r} has unknown animal {animal_id!r}")
+    matches = [name for name in ("train", "validation", "test") if session_id in assignments[name]]
+    if len(matches) != 1:
+        raise ValueError(f"prepared session {session_id!r} does not have one frozen split assignment")
+    return matches[0]
+
+
+def _partition_authenticated_batch_paths(
+    receipt: dict[str, Any],
+    split_lock: dict[str, Any],
+    batch_paths: list[str | Path],
+) -> tuple[list[dict[str, str]], list[str | Path], list[str | Path]]:
+    source_batches = _source_batch_receipts(batch_paths)
+    if receipt.get("source_batches") != source_batches:
+        raise ValueError("session-batch bytes do not match the preparation receipt")
+
+    sessions = receipt.get("sessions")
+    if not isinstance(sessions, list) or len(sessions) != receipt.get("session_count"):
+        raise ValueError("preparation receipt is missing complete per-session batch provenance")
+    by_sha: dict[str, dict[str, Any]] = {}
+    for row in sessions:
+        batch_sha = row.get("batch_sha256")
+        session_id = row.get("session_id")
+        animal_id = row.get("animal_id")
+        if not all(isinstance(value, str) and value for value in (batch_sha, session_id, animal_id)):
+            raise ValueError("preparation session provenance is incomplete")
+        if batch_sha in by_sha:
+            raise ValueError("preparation receipt has ambiguous duplicate session-batch hashes")
+        by_sha[batch_sha] = row
+        _session_split(split_lock, animal_id, session_id)
+
+    path_by_resolved = {str(Path(path).resolve()): path for path in batch_paths}
+    development_paths: list[str | Path] = []
+    test_paths: list[str | Path] = []
+    matched_sessions: set[str] = set()
+    for source in source_batches:
+        row = by_sha.get(source["sha256"])
+        if row is None:
+            raise ValueError("authenticated session batch is not represented in preparation sessions")
+        session_id = row["session_id"]
+        if session_id in matched_sessions:
+            raise ValueError(f"prepared session {session_id!r} was matched more than once")
+        matched_sessions.add(session_id)
+        split_name = _session_split(split_lock, row["animal_id"], session_id)
+        path = path_by_resolved[source["path"]]
+        if split_name == "test":
+            test_paths.append(path)
+        else:
+            development_paths.append(path)
+
+    if len(matched_sessions) != len(sessions):
+        raise ValueError("not every prepared session batch was supplied to development")
+    expected_test_sessions = sum(
+        len(assignments["test"]) for assignments in split_lock["animal_sessions"].values()
+    )
+    if len(test_paths) != expected_test_sessions:
+        raise ValueError("authenticated held-out test batch count does not match the frozen split")
+    if not development_paths:
+        raise ValueError("no train/validation session batches remain after frozen split partition")
+    return source_batches, development_paths, test_paths
+
+
 def _load_and_validate_preparation_receipt(
     preparation_receipt_path: str | Path,
     split_lock_path: str | Path,
     batch_paths: list[str | Path],
-) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
+) -> tuple[
+    dict[str, Any],
+    dict[str, Any],
+    list[dict[str, str]],
+    list[str | Path],
+    list[str | Path],
+]:
     receipt = json.loads(Path(preparation_receipt_path).read_text())
     claimed = receipt.get("receipt_sha256")
     unsigned = dict(receipt)
@@ -69,13 +140,15 @@ def _load_and_validate_preparation_receipt(
         raise ValueError("preparation implementation bytes do not match the current audited ingestion code")
     if receipt.get("split_lock_file_sha256") != sha256_file(split_lock_path):
         raise ValueError("split-lock bytes do not match the preparation receipt")
-    source_batches = _source_batch_receipts(batch_paths)
-    if receipt.get("source_batches") != source_batches:
-        raise ValueError("session-batch bytes do not match the preparation receipt")
     split_lock = json.loads(Path(split_lock_path).read_text())
     if receipt.get("split_lock_sha256") != split_lock.get("split_lock_sha256"):
         raise ValueError("split-lock identity does not match the preparation receipt")
-    return receipt, split_lock, source_batches
+    source_batches, development_paths, test_paths = _partition_authenticated_batch_paths(
+        receipt,
+        split_lock,
+        batch_paths,
+    )
+    return receipt, split_lock, source_batches, development_paths, test_paths
 
 
 def run_development_protocol(
@@ -88,14 +161,22 @@ def run_development_protocol(
     acceptance_config_path: str | Path,
 ) -> dict[str, Any]:
     output = _fresh_output_dir(output_dir)
-    preparation_receipt, split_lock, expected_source_batches = _load_and_validate_preparation_receipt(
+    (
+        preparation_receipt,
+        split_lock,
+        all_source_batches,
+        development_paths,
+        test_paths,
+    ) = _load_and_validate_preparation_receipt(
         preparation_receipt_path,
         split_lock_path,
         batch_paths,
     )
-    batch, source_batches = load_session_batches(batch_paths)
-    if source_batches != expected_source_batches:
-        raise RuntimeError("session-batch identity changed after preparation verification")
+    batch, development_source_batches = load_session_batches(development_paths)
+    expected_development_sources = _source_batch_receipts(development_paths)
+    if development_source_batches != expected_development_sources:
+        raise RuntimeError("development batch identity changed after preparation verification")
+    authenticated_test_batches = _source_batch_receipts(test_paths)
     qc_config = load_qc_config(qc_config_path)
     acceptance_config = load_acceptance_config(acceptance_config_path)
 
@@ -103,18 +184,18 @@ def run_development_protocol(
         batch,
         split_lock,
         qc_config,
-        source_batches=source_batches,
+        source_batches=development_source_batches,
     )
     aligned = run_within_animal_ridge(
         batch,
         split_lock,
-        source_batches=source_batches,
+        source_batches=development_source_batches,
         consume_test=False,
     )
     null = run_alignment_null(
         batch,
         split_lock,
-        source_batches=source_batches,
+        source_batches=development_source_batches,
         consume_test=False,
     )
     unlock = build_validation_unlock(qc, aligned, null, acceptance_config)
@@ -155,7 +236,10 @@ def run_development_protocol(
         "target_neural_boundary_policy": preparation_receipt["target_neural_boundary_policy"],
         "split_lock_sha256": split_lock["split_lock_sha256"],
         "split_lock_file_sha256": sha256_file(split_lock_path),
-        "source_batches": source_batches,
+        "source_batches": all_source_batches,
+        "development_deserialized_batches": development_source_batches,
+        "held_out_test_batches_authenticated_not_deserialized": authenticated_test_batches,
+        "test_target_arrays_deserialized": False,
         "qc_config_file_sha256": sha256_file(qc_config_path),
         "acceptance_config_file_sha256": sha256_file(acceptance_config_path),
         "implementation_fingerprint": implementation_fingerprint(),
@@ -173,8 +257,8 @@ def run_development_protocol(
         ),
         "claim_boundary": (
             "This command is development-only and requires the audited PREPARE receipt and exact derived "
-            "batch bytes. It cannot consume held-out test sessions. An unlock status authorizes a separate "
-            "one-way final action but is not a test result."
+            "batch bytes. Held-out test batches are authenticated by byte hash but their arrays are not "
+            "deserialized. An unlock status authorizes a separate one-way final action but is not a test result."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
@@ -186,7 +270,7 @@ def run_development_protocol(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run MC2P v1 development QC and validation without test consumption"
+        description="Run MC2P v1 development QC and validation without test-target deserialization"
     )
     parser.add_argument("split_lock")
     parser.add_argument("batches", nargs="+")
