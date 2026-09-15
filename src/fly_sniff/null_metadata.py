@@ -6,8 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-
 from .graph import GraphBundle
 from .rewire import save_bundle
 
@@ -62,8 +60,8 @@ def attach_null_metadata(bundle: GraphBundle) -> tuple[GraphBundle, dict[str, An
     report = {
         "protocol": PROTOCOL,
         "dataset": (bundle.manifest or {}).get("dataset", "male-cns:v1.0"),
-        "node_count": int(len(nodes)),
-        "connected_node_count": int(len(connected_nodes)),
+        "node_count": len(nodes),
+        "connected_node_count": len(connected_nodes),
         "cell_type_count": int(nodes["cell_type"].nunique()),
         "hemisphere_counts": {
             str(key): int(value)
