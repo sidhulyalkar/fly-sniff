@@ -1,0 +1,41 @@
+name: pfn-analysis-script-probe
+
+on:
+  pull_request:
+    paths:
+      - "src/fly_sniff/pfn_archive_probe.py"
+      - "src/fly_sniff/pfn_analysis_script_probe.py"
+      - "tests/test_pfn_analysis_script_probe.py"
+      - "pyproject.toml"
+      - ".github/workflows/pfn-analysis-script-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e .
+      - name: Fetch only the two allowlisted MATLAB analysis scripts
+        shell: bash
+        run: |
+          mkdir -p results/pfn-analysis-script-probe
+          set +e
+          fly-sniff-pfn-analysis-script-probe \
+            --out results/pfn-analysis-script-probe/analysis-scripts-v1.json \
+            > results/pfn-analysis-script-probe/stdout.txt \
+            2> results/pfn-analysis-script-probe/stderr.txt
+          echo "$?" > results/pfn-analysis-script-probe/exit-code.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pfn-analysis-script-probe-${{ github.sha }}
+          path: results/pfn-analysis-script-probe
+          if-no-files-found: error
+          retention-days: 30
