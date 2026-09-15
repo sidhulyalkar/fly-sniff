@@ -23,35 +23,35 @@
       "name": "degree_preserving",
       "preserve": ["in_degree", "out_degree", "weight_multiset", "sign_multiset"],
       "required_node_metadata": [],
-      "implementation_status": "existing-kernel-needs-confirmatory-distance-generator"
+      "implementation_status": "implemented-confirmatory-exact-minimum-overlap"
     },
     {
       "level": 2,
       "name": "degree_sign_preserving",
       "preserve": ["in_degree", "out_degree", "weight_multiset", "presynaptic_sign_assignment"],
       "required_node_metadata": [],
-      "implementation_status": "not-implemented"
+      "implementation_status": "implemented-confirmatory-exact-source-attribute-preserving"
     },
     {
       "level": 3,
       "name": "degree_sign_hemisphere_preserving",
       "preserve": ["in_degree", "out_degree", "weight_multiset", "presynaptic_sign_assignment", "hemisphere_class"],
       "required_node_metadata": ["hemisphere_class"],
-      "implementation_status": "not-implemented"
+      "implementation_status": "kernel-implemented-awaiting-frozen-MaleCNS-hemisphere-metadata-mapping"
     },
     {
       "level": 4,
       "name": "within_cell_type_rewire",
       "preserve": ["in_degree", "out_degree", "weight_multiset", "presynaptic_sign_assignment", "cell_type"],
       "required_node_metadata": ["cell_type"],
-      "implementation_status": "not-implemented"
+      "implementation_status": "kernel-implemented-awaiting-frozen-MaleCNS-cell-type-metadata-mapping"
     },
     {
       "level": 5,
       "name": "spatially_constrained_rewire",
       "preserve": ["in_degree", "out_degree", "weight_multiset", "presynaptic_sign_assignment", "cell_type", "spatial_bin"],
       "required_node_metadata": ["cell_type", "spatial_bin"],
-      "implementation_status": "not-implemented"
+      "implementation_status": "blocked-spatial-bin-definition-not-frozen"
     }
   ],
   "required_reports": [
@@ -67,5 +67,5 @@
     "changed_edge_fraction",
     "intact_overlap_fraction"
   ],
-  "claim_boundary": "NullFactory v2 defines progressively stricter topology controls. A generated null is valid only if every family-specific invariant and global invariant passes. Null generation alone cannot support a navigation or topology-dependence claim."
+  "claim_boundary": "NullFactory v2 defines progressively stricter topology controls. A generated null is valid only if every family-specific invariant and global invariant passes. An implemented kernel is not a confirmatory-ready family until metadata mappings and distance criteria are frozen. Null generation alone cannot support a navigation or topology-dependence claim."
 }
