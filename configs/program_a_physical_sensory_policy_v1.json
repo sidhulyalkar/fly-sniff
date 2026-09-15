@@ -1,0 +1,67 @@
+{
+  "protocol": "program-a-physical-sensory-policy-v1",
+  "navigation_performance_used": false,
+  "claim_boundary": "Publication-supported plume scale facts may be recorded before the source archive is fully calibrated, but Program A may not sample the plume until exact source bytes, array orientation/origin, and bilateral anatomical sensor geometry independently pass review.",
+  "smooth_plume_evidence": {
+    "source_doi": "10.5061/dryad.g27mq71",
+    "source_file": "10302017_10cms_bounded_2.h5",
+    "source_dataset_path": "/dataset2",
+    "expected_shape": [3600, 406, 216],
+    "publication_authority": "Alvarez-Salvado et al. 2018, eLife 7:e37815, doi:10.7554/eLife.37815",
+    "native_fps": 15.0,
+    "publication_field_downwind_mm_max": 300.0,
+    "publication_field_crosswind_halfspan_mm_max": 80.0,
+    "publication_nominal_mm_per_pixel": 0.74,
+    "source_sha256": null,
+    "source_bytes_verified": false,
+    "array_axis_mapping": null,
+    "array_axis_positive_directions": null,
+    "source_index_in_archive": null,
+    "archive_spatial_transform": null,
+    "status": "BLOCKED_SOURCE_BYTES_UNVERIFIED",
+    "notes": [
+      "The eLife methods report a PLIF imaging region extending up to 30 cm downwind and 8 cm to either side of the centerline.",
+      "The acquisition was 15 Hz and the camera was binned to a nominal 0.74 mm/pixel.",
+      "These publication facts do not by themselves prove which archived array axis is downwind/crosswind or where the source lies in the cropped array."
+    ]
+  },
+  "bilateral_sensor_geometry": {
+    "species": "Drosophila melanogaster",
+    "candidate_anatomy_authority": "Jurgens, Drechsler & Paululat 2024, Genetics, doi:10.1093/genetics/iyae129",
+    "candidate_landmark_definition": "centroid of the olfactory third antennal segment (funiculus) on each side in a scale-calibrated frontal/body-centered projection",
+    "measurement_source_sha256": null,
+    "left_offset_mm": null,
+    "right_offset_mm": null,
+    "uncertainty_mm": null,
+    "status": "BLOCKED_REQUIRES_ANATOMY_MEASUREMENT",
+    "forbidden_authority": [
+      "ArenaConfig.antenna_separation = 0.12",
+      "visual convenience",
+      "navigation performance",
+      "assuming exact bilateral symmetry without measurement"
+    ]
+  },
+  "physical_sampling_policy": {
+    "body_frame": {
+      "forward_axis": "+forward",
+      "lateral_axis": "+left"
+    },
+    "world_frame": {
+      "primary_axis": "downwind_mm",
+      "secondary_axis": "crosswind_mm"
+    },
+    "spatial_interpolation": "bilinear",
+    "temporal_sampling": "causal_native_frame_hold",
+    "future_frame_interpolation_allowed": false,
+    "source_coordinates_visible_to_controller": false,
+    "out_of_bounds_rule": "error"
+  },
+  "pass_requirements": [
+    "exact plume source bytes are SHA-256 verified",
+    "archived spatial axes, signs, source origin, and scale are explicitly resolved",
+    "left and right anatomical sampling landmarks are independently measured from a scale authority",
+    "anatomy source bytes are content-addressed",
+    "anatomical uncertainty is recorded",
+    "physical plume and bilateral geometry hashes are frozen before any navigation performance"
+  ]
+}
