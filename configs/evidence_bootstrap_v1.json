@@ -91,6 +91,90 @@
       ],
       "allowed_claims": ["structural recurrent candidate"],
       "forbidden_claims": ["measured persistent activity", "memory circuit established"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-wind-odor-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent Drosophila experiments support directional wind tuning in PFN pathways that provide wind information to the fan-shaped body.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology",
+          "caveat": "Measured in another Drosophila preparation, not the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "Matheson2022",
+            "probe_ids": ["PFN_airflow_tuning_geometry", "PFN_mirrored_directional_response"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured physiology"
+          }
+        },
+        {
+          "statement": "Independent Drosophila experiments show hDeltaC activity is odor-gated and wind-direction tuned after convergence of odor and wind pathways.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology",
+          "caveat": "Measured in another Drosophila preparation and cannot be promoted to MaleCNS-specific physiology.",
+          "metadata": {
+            "source_key": "Matheson2022",
+            "probe_ids": ["odor_context_gating"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured physiology"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for PFN wind tuning and odor-context gating"],
+      "forbidden_claims": ["measured MaleCNS PFN physiology", "measured MaleCNS hDeltaC physiology"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-PFL3-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent Drosophila experiments show individual PFL3 neurons have conjunctive spike-rate tuning to heading and goal angle and support an egocentric steering computation.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology-and-intervention",
+          "caveat": "Measured in another Drosophila preparation and not on the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "MussellsPires2024",
+            "probe_ids": ["PFL3_lateralized_steering_relationship"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured spike-rate physiology and optogenetic intervention"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for PFL3 heading-goal steering computation"],
+      "forbidden_claims": ["measured MaleCNS PFL3 activity"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-DNa02-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent bilateral DNa02 recordings show fly rotational velocity is approximately linearly related to right-left DNa02 firing-rate difference over the measured dynamic range.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-targeted-electrophysiology",
+          "caveat": "Measured in walking Drosophila, not the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "SteeringControl2025",
+            "probe_ids": ["DNa02_turn_relationship"],
+            "calibration_eligible": true,
+            "underlying_evidence": "targeted in vivo electrophysiology"
+          }
+        },
+        {
+          "statement": "The DNa02 steering study compares neural activity with behavior about 150 ms later, while explicitly noting that the lag may reflect biological delay and/or spherical-treadmill inertia.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-neural-behavior-lag",
+          "caveat": "This observation is not a direct neural time-constant measurement and is therefore not eligible to calibrate the model time constant.",
+          "metadata": {
+            "source_key": "SteeringControl2025",
+            "probe_ids": ["temporal_response_scale"],
+            "calibration_eligible": false,
+            "underlying_evidence": "neural-to-behavior lag with explicit mechanical confound"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for bilateral DNa02 steering"],
+      "forbidden_claims": ["150 ms is the DNa02 neural time constant", "measured MaleCNS DNa02 firing"]
     }
   ]
 }
