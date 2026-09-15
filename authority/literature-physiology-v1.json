@@ -3,6 +3,19 @@
   "scope": "Independent published Drosophila physiology used to constrain model calibration. These data are not MaleCNS v1.0 body-ID-resolved physiology and remain cross-dataset priors.",
   "sources": [
     {
+      "key": "Currier2020",
+      "title": "Encoding and control of orientation to airflow by a set of Drosophila fan-shaped body neurons",
+      "journal": "eLife",
+      "year": 2020,
+      "doi": "10.7554/eLife.61510",
+      "url": "https://elifesciences.org/articles/61510",
+      "evidence": [
+        "Genetically identified ventral P-FNs are robustly tuned for airflow direction.",
+        "Cells in each hemisphere prefer airflow approximately 45 degrees ipsilateral, forming left/right directional bases.",
+        "The ventral P-FN category includes PFNa, PFNm, and PFNp cell types in connectomic nomenclature."
+      ]
+    },
+    {
       "key": "Matheson2022",
       "title": "A neural circuit for wind-guided olfactory navigation",
       "journal": "Nature Communications",
