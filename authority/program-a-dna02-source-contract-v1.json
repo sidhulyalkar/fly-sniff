@@ -3,8 +3,7 @@
   "contract_id": "program-a-dna02-bilateral-steering-v1",
   "status": "BLOCKED",
   "blockers": [
-    "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED",
-    "BLOCKED_FIGURE3C_COHORT_UNRESOLVED"
+    "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED"
   ],
   "paper": {
     "doi": "10.7554/eLife.102230.3",
@@ -57,12 +56,17 @@
   "known_raw_session_candidates": {
     "a2_d_08": ["180410_gfp_3G_ss730_dual_08"],
     "a2_d_12": ["180430_gfp_3G_ss730_dual_12"],
-    "a2_d_13": [],
-    "a2_d_14": []
+    "a2_d_13": ["180501_gfp_3G_ss730_dual_13"],
+    "a2_d_14": ["180517_gfp_3G_ss730_dual_14"]
   },
-  "figure3c_cohort": null,
-  "figure3c_cohort_authority": null,
-  "cohort_review_note": "The paper reports n=4 paired DNa02 flies and general secondary-analysis dictionaries list a2_d_08/a2_d_12/a2_d_13/a2_d_14. However, physiology_quant_analysis_figures.ipynb excludes a2_d_14 as low SNR for a separate physiology analysis. The exact Figure 3C inclusion set must therefore be verified from panel-level provenance/data before freezing the cohort.",
+  "figure3c_cohort": [
+    "a2_d_08",
+    "a2_d_12",
+    "a2_d_13",
+    "a2_d_14"
+  ],
+  "figure3c_cohort_authority": "sha256:a7262fe9e82c1898a4ac6dc753aa38a854e05de558d64e466ffdde884dfdde53",
+  "cohort_review_note": "Resolved by the frozen cohort adjudication: Figure 3C reports four bilateral right/left DNa02 flies; released Dataverse v1.2 contains exactly four ephys_data_a2_d_* raw folders; pinned secondary-analysis code declares the same four aliases as completed bilateral DNa02 datasets. The a2_d_14 low-SNR rejection remains a scoped caveat from a separate physiology-quantification analysis, not panel-level exclusion evidence for Figure 3C.",
   "source_fields": {
     "left_neuron": "ephys_A / a2_l",
     "right_neuron": "ephys_B / a2_r",
@@ -93,13 +97,15 @@
   "navigation_performance_used": false,
   "allowed_interpretation": [
     "DNa02 bilateral activity has a reproducible lateralized relationship to rotational velocity in the published preparation",
+    "the Figure 3C cohort is resolved to a2_d_08/a2_d_12/a2_d_13/a2_d_14 by cross-source set identity",
     "a normalized bilateral steering relation is a candidate navigation-independent calibration target"
   ],
   "forbidden_interpretation": [
     "the 150 ms publication alignment is a universal biological or model delay",
     "the absolute firing-rate-to-turn gain transfers unchanged to exact MaleCNS DNa02 body IDs",
-    "a2_d_14 is included in Figure 3C merely because four generic dual-recording aliases exist",
-    "unmapped Dataverse files may be substituted by local or guessed session files",
+    "cohort inclusion means a2_d_14 passes every secondary quality-control analysis",
+    "Dataverse MD5 values substitute for the required SHA-256 byte identity",
+    "unmapped or unhashed Dataverse files may be used for calibration extraction",
     "navigation performance may choose the cohort, preprocessing, normalization, or target statistic"
   ]
 }

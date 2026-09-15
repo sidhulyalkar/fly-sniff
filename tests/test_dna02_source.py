@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from fly_sniff.dna02_source import (
-    BLOCKED_COHORT,
     BLOCKED_FILE_MAP,
     READY,
     DataverseFileRef,
@@ -16,6 +15,7 @@ from fly_sniff.dna02_source import (
 )
 
 AUTHORITY_PATH = Path("authority/program-a-dna02-source-contract-v1.json")
+EXPECTED_COHORT = ("a2_d_08", "a2_d_12", "a2_d_13", "a2_d_14")
 
 
 def _real_contract() -> DNa02SourceContract:
@@ -33,24 +33,20 @@ def _file(alias: str, index: int) -> DataverseFileRef:
 
 def _resolved_contract() -> DNa02SourceContract:
     contract = _real_contract()
-    cohort = tuple(contract.candidate_bilateral_aliases)
     return dataclasses.replace(
         contract,
-        figure3c_cohort=cohort,
-        figure3c_cohort_authority=(
-            "synthetic test authority proving the exact Figure 3C cohort; not real evidence"
-        ),
-        data_file_map=tuple(_file(alias, index) for index, alias in enumerate(cohort)),
+        data_file_map=tuple(_file(alias, index) for index, alias in enumerate(EXPECTED_COHORT)),
     )
 
 
-def test_real_contract_is_fail_closed_on_both_unresolved_inputs() -> None:
+def test_real_contract_has_resolved_cohort_but_unresolved_file_map() -> None:
     contract = _real_contract()
     contract.validate()
 
     assert contract.status == "BLOCKED"
-    assert contract.blockers == (BLOCKED_FILE_MAP, BLOCKED_COHORT)
-    assert contract.figure3c_cohort is None
+    assert contract.blockers == (BLOCKED_FILE_MAP,)
+    assert contract.figure3c_cohort == EXPECTED_COHORT
+    assert contract.figure3c_cohort_authority is not None
     assert contract.data_file_map == ()
     assert contract.navigation_performance_used is False
 
@@ -76,25 +72,16 @@ def test_code_authorities_are_immutable_and_include_primary_and_secondary_paths(
     assert secondary.git_blob_sha1 == "0da2089b468c172f700881b714bfdda99a6fe424"
 
 
-def test_candidate_aliases_do_not_silently_become_figure3c_cohort() -> None:
+def test_candidate_aliases_equal_adjudicated_figure3c_cohort() -> None:
     contract = _real_contract()
-    assert set(contract.candidate_bilateral_aliases) == {
-        "a2_d_08",
-        "a2_d_12",
-        "a2_d_13",
-        "a2_d_14",
-    }
-    assert contract.figure3c_cohort is None
-    assert BLOCKED_COHORT in contract.blockers
+    assert tuple(contract.candidate_bilateral_aliases) == EXPECTED_COHORT
+    assert contract.figure3c_cohort == EXPECTED_COHORT
 
 
 def test_cohort_resolution_requires_explicit_authority() -> None:
     contract = _real_contract()
     with pytest.raises(ValueError, match="requires explicit authority"):
-        dataclasses.replace(
-            contract,
-            figure3c_cohort=tuple(contract.candidate_bilateral_aliases),
-        ).validate()
+        dataclasses.replace(contract, figure3c_cohort_authority=None).validate()
 
 
 def test_cohort_must_match_published_n_four() -> None:
@@ -102,23 +89,15 @@ def test_cohort_must_match_published_n_four() -> None:
     with pytest.raises(ValueError, match="exactly four"):
         dataclasses.replace(
             contract,
-            figure3c_cohort=tuple(contract.candidate_bilateral_aliases[:3]),
+            figure3c_cohort=EXPECTED_COHORT[:3],
             figure3c_cohort_authority="synthetic authority",
         ).validate()
 
 
-def test_resolved_cohort_without_dataverse_map_stays_blocked() -> None:
+def test_resolved_cohort_without_dataverse_sha_map_stays_blocked() -> None:
     contract = _real_contract()
-    cohort = tuple(contract.candidate_bilateral_aliases)
-    resolved = dataclasses.replace(
-        contract,
-        figure3c_cohort=cohort,
-        figure3c_cohort_authority="synthetic authority",
-    )
-    resolved.validate()
-
-    assert resolved.blockers == (BLOCKED_FILE_MAP,)
-    assert resolved.status == "BLOCKED"
+    assert contract.blockers == (BLOCKED_FILE_MAP,)
+    assert contract.status == "BLOCKED"
 
 
 def test_dataverse_map_may_not_be_frozen_before_cohort() -> None:
@@ -126,18 +105,17 @@ def test_dataverse_map_may_not_be_frozen_before_cohort() -> None:
     with pytest.raises(ValueError, match="before the Figure 3C cohort is resolved"):
         dataclasses.replace(
             contract,
+            figure3c_cohort=None,
+            figure3c_cohort_authority=None,
             data_file_map=(_file("a2_d_08", 0),),
         ).validate()
 
 
 def test_incomplete_dataverse_map_stays_blocked() -> None:
     contract = _real_contract()
-    cohort = tuple(contract.candidate_bilateral_aliases)
     partial = dataclasses.replace(
         contract,
-        figure3c_cohort=cohort,
-        figure3c_cohort_authority="synthetic authority",
-        data_file_map=tuple(_file(alias, i) for i, alias in enumerate(cohort[:-1])),
+        data_file_map=tuple(_file(alias, i) for i, alias in enumerate(EXPECTED_COHORT[:-1])),
     )
     partial.validate()
     assert partial.blockers == (BLOCKED_FILE_MAP,)
@@ -235,3 +213,13 @@ def test_source_fields_preserve_left_right_and_timebases() -> None:
     assert fields["rotational_velocity"] == "yaw"
     assert fields["ephys_timebase"] == "t_ephys"
     assert fields["ball_timebase"] == "t_ball"
+
+
+def test_all_four_raw_session_names_are_now_resolved() -> None:
+    raw = dict(_real_contract().known_raw_session_candidates)
+    assert raw == {
+        "a2_d_08": ("180410_gfp_3G_ss730_dual_08",),
+        "a2_d_12": ("180430_gfp_3G_ss730_dual_12",),
+        "a2_d_13": ("180501_gfp_3G_ss730_dual_13",),
+        "a2_d_14": ("180517_gfp_3G_ss730_dual_14",),
+    }
