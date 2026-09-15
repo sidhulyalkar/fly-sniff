@@ -134,11 +134,12 @@ def run_alignment_null(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the frozen within-session alignment null")
+    parser = argparse.ArgumentParser(
+        description="Run the development-only frozen within-session alignment null"
+    )
     parser.add_argument("split_lock")
     parser.add_argument("batches", nargs="+")
     parser.add_argument("--output", required=True)
-    parser.add_argument("--consume-test", action="store_true")
     args = parser.parse_args()
     batch, source_batches = load_session_batches(args.batches)
     lock = json.loads(Path(args.split_lock).read_text())
@@ -146,7 +147,7 @@ def main() -> None:
         batch,
         lock,
         source_batches=source_batches,
-        consume_test=args.consume_test,
+        consume_test=False,
     )
     Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(

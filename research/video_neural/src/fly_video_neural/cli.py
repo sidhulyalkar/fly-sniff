@@ -73,11 +73,13 @@ def main() -> None:
     v1_split.add_argument("batches", nargs="+")
     v1_split.add_argument("--output", required=True)
 
-    v1_ridge = sub.add_parser("within-animal-ridge")
+    v1_ridge = sub.add_parser(
+        "within-animal-ridge",
+        description="Development-only v1 ridge evaluation; held-out test consumption is not exposed here.",
+    )
     v1_ridge.add_argument("split_lock")
     v1_ridge.add_argument("batches", nargs="+")
     v1_ridge.add_argument("--output", required=True)
-    v1_ridge.add_argument("--consume-test", action="store_true")
 
     lock = sub.add_parser("make-split-lock")
     lock.add_argument("windows", nargs="+")
@@ -165,7 +167,7 @@ def main() -> None:
             batch_data,
             lock_data,
             source_batches=source_files,
-            consume_test=args.consume_test,
+            consume_test=False,
         )
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(json.dumps({"status": report["test_status"], "animals": len(report["animals"])}, sort_keys=True))
