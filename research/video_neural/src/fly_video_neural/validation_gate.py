@@ -39,7 +39,7 @@ def validate_acceptance_config(document: dict[str, Any]) -> None:
         raise ValueError("validation acceptance null-selection rule changed")
     if document.get("nonfinite_validation_metric_policy") != NONFINITE_POLICY:
         raise ValueError("non-finite validation metric policy changed")
-    if document.get("minimum_eligible_animals") != 4:
+    if document.get("minimum_eligible_animals") != 6:
         raise ValueError("minimum eligible animal count changed")
     if document.get("require_strict_majority_positive_effect") is not True:
         raise ValueError("strict-majority rule changed")
@@ -47,6 +47,24 @@ def validate_acceptance_config(document: dict[str, Any]) -> None:
         raise ValueError("median alignment-effect threshold changed")
     if document.get("may_change_after_validation_scores") is not False:
         raise ValueError("validation unlock criteria cannot change after scores")
+    if document.get("final_inference_unit") != "animal":
+        raise ValueError("final inference unit must remain animal")
+    if document.get("final_minimum_scorable_animals") != 6:
+        raise ValueError("final minimum scorable animal count changed")
+    if document.get("final_test") != "exact_one_sided_sign_test":
+        raise ValueError("final inferential test changed")
+    if document.get("final_null_positive_probability") != 0.5:
+        raise ValueError("final sign-test null probability changed")
+    if document.get("final_alternative") != "aligned_minus_validation_selected_null_gt_zero":
+        raise ValueError("final directional alternative changed")
+    if document.get("final_zero_effect_policy") != "count_as_nonpositive":
+        raise ValueError("final zero-effect policy changed")
+    if document.get("final_alpha") != 0.05:
+        raise ValueError("final alpha changed")
+    if document.get("final_require_median_effect_gt") != 0.0:
+        raise ValueError("final median-effect threshold changed")
+    if document.get("final_criteria_may_change_after_development_scores") is not False:
+        raise ValueError("final inference criteria cannot change after development scores")
 
 
 def _selected_validation(row: dict[str, Any]) -> dict[str, Any]:
@@ -81,6 +99,8 @@ def build_validation_unlock(
     failures: list[str] = []
     if qc_report.get("status") != "pass":
         failures.append("development data QC did not pass")
+    if qc_report.get("test_target_arrays_deserialized") is not False:
+        failures.append("development QC deserialized held-out test target arrays")
     if qc_report.get("test_target_values_summarized") is not False:
         failures.append("development QC summarized test target values")
     for name, report in (("aligned", aligned_report), ("null", null_report)):
@@ -172,11 +192,21 @@ def build_validation_unlock(
         "animal_effects": effects,
         "failures": failures,
         "test_consumption_allowed": not failures,
+        "final_inference_prespecified": {
+            "unit": config["final_inference_unit"],
+            "minimum_scorable_animals": config["final_minimum_scorable_animals"],
+            "test": config["final_test"],
+            "alpha": config["final_alpha"],
+            "alternative": config["final_alternative"],
+            "zero_effect_policy": config["final_zero_effect_policy"],
+            "require_median_effect_gt": config["final_require_median_effect_gt"],
+        },
         "claim_boundary": (
             "This development gate only authorizes one explicit test evaluation. Animals with a "
             "non-computable validation median Pearson correlation are ineligible rather than assigned "
             "a favorable or unfavorable score. The strongest prespecified null is selected on validation, "
-            "not test. This is not a test result and cannot establish a neural-decoding claim."
+            "not test. The final animal-level inference rule is already frozen here. This is not a test "
+            "result and cannot establish a neural-decoding claim."
         ),
     }
     report["report_sha256"] = _sha(report)
