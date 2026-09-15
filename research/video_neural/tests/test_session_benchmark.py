@@ -98,7 +98,7 @@ def test_development_projection_rejects_even_one_test_sample():
         features=np.concatenate([development.features, full_batch.features[[test_index]]]),
         targets=np.concatenate([development.targets, full_batch.targets[[test_index]]]),
     )
-    with pytest.raises(ValueError, match="train\+validation samples"):
+    with pytest.raises(ValueError, match=r"train\+validation samples"):
         verify_development_projection(lock, contaminated)
 
 
