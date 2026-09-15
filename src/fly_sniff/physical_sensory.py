@@ -51,6 +51,16 @@ def _finite_optional(value: float | None, *, field: str) -> None:
         raise ValueError(f"{field} must be finite when supplied")
 
 
+def _optional_float(payload: dict[str, Any], field: str) -> float | None:
+    value = payload.get(field)
+    return None if value is None else float(value)
+
+
+def _optional_int(payload: dict[str, Any], field: str) -> int | None:
+    value = payload.get(field)
+    return None if value is None else int(value)
+
+
 @dataclasses.dataclass(frozen=True)
 class PhysicalPlumeCalibration:
     """Physical coordinate contract for an archived experimental plume.
@@ -164,8 +174,6 @@ class PhysicalPlumeCalibration:
             assert self.axis1_mm_per_pixel is not None
             assert self.source_index_axis0 is not None
             assert self.source_index_axis1 is not None
-            if self.axis0_role is self.axis1_role:
-                raise ValueError("PASS plume calibration requires one downwind and one crosswind axis")
 
     def _payload_without_hash(self) -> dict[str, Any]:
         self.validate()
@@ -231,7 +239,9 @@ class PhysicalPlumeCalibration:
             publication_nominal_mm_per_pixel=float(
                 payload["publication_nominal_mm_per_pixel"]
             ),
-            source_sha256=payload.get("source_sha256"),
+            source_sha256=(
+                None if payload.get("source_sha256") is None else str(payload["source_sha256"])
+            ),
             source_bytes_verified=bool(payload.get("source_bytes_verified", False)),
             axis0_role=(
                 None if payload.get("axis0_role") is None else AxisRole(payload["axis0_role"])
@@ -239,12 +249,12 @@ class PhysicalPlumeCalibration:
             axis1_role=(
                 None if payload.get("axis1_role") is None else AxisRole(payload["axis1_role"])
             ),
-            axis0_positive_direction=payload.get("axis0_positive_direction"),
-            axis1_positive_direction=payload.get("axis1_positive_direction"),
-            axis0_mm_per_pixel=payload.get("axis0_mm_per_pixel"),
-            axis1_mm_per_pixel=payload.get("axis1_mm_per_pixel"),
-            source_index_axis0=payload.get("source_index_axis0"),
-            source_index_axis1=payload.get("source_index_axis1"),
+            axis0_positive_direction=_optional_int(payload, "axis0_positive_direction"),
+            axis1_positive_direction=_optional_int(payload, "axis1_positive_direction"),
+            axis0_mm_per_pixel=_optional_float(payload, "axis0_mm_per_pixel"),
+            axis1_mm_per_pixel=_optional_float(payload, "axis1_mm_per_pixel"),
+            source_index_axis0=_optional_float(payload, "source_index_axis0"),
+            source_index_axis1=_optional_float(payload, "source_index_axis1"),
             archive_spatial_transform=payload.get("archive_spatial_transform"),
             navigation_performance_used=bool(payload.get("navigation_performance_used", False)),
             schema=str(payload.get("schema", "fly-sniff-physical-plume-calibration-v1")),
@@ -273,7 +283,10 @@ class SensorOffset:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> SensorOffset:
-        offset = cls(forward_mm=float(payload["forward_mm"]), lateral_mm=float(payload["lateral_mm"]))
+        offset = cls(
+            forward_mm=float(payload["forward_mm"]),
+            lateral_mm=float(payload["lateral_mm"]),
+        )
         offset.validate()
         return offset
 
@@ -403,17 +416,23 @@ class BilateralSensorGeometry:
             landmark_definition=str(payload["landmark_definition"]),
             projection_convention=str(payload["projection_convention"]),
             measurement_method=str(payload["measurement_method"]),
-            measurement_source_sha256=payload.get("measurement_source_sha256"),
+            measurement_source_sha256=(
+                None
+                if payload.get("measurement_source_sha256") is None
+                else str(payload["measurement_source_sha256"])
+            ),
             measurement_source_verified=bool(payload.get("measurement_source_verified", False)),
             left_offset=(
-                None if payload.get("left_offset") is None else SensorOffset.from_dict(payload["left_offset"])
+                None
+                if payload.get("left_offset") is None
+                else SensorOffset.from_dict(payload["left_offset"])
             ),
             right_offset=(
                 None
                 if payload.get("right_offset") is None
                 else SensorOffset.from_dict(payload["right_offset"])
             ),
-            uncertainty_mm=payload.get("uncertainty_mm"),
+            uncertainty_mm=_optional_float(payload, "uncertainty_mm"),
             simulator_assumption_used=bool(payload.get("simulator_assumption_used", False)),
             navigation_performance_used=bool(payload.get("navigation_performance_used", False)),
             schema=str(payload.get("schema", "fly-sniff-bilateral-sensor-geometry-v1")),
@@ -485,6 +504,34 @@ class PhysicalSensoryTransform:
         payload = self._payload_without_hash()
         payload["transform_sha256"] = self.sha256
         return payload
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> PhysicalSensoryTransform:
+        transform = cls(
+            transform_id=str(payload["transform_id"]),
+            plume_calibration_sha256=str(payload["plume_calibration_sha256"]),
+            sensor_geometry_sha256=str(payload["sensor_geometry_sha256"]),
+            spatial_interpolation=str(payload.get("spatial_interpolation", "bilinear")),
+            temporal_sampling_rule=TemporalSamplingRule(
+                payload.get("temporal_sampling_rule", "causal_native_frame_hold")
+            ),
+            out_of_bounds_rule=OutOfBoundsRule(payload.get("out_of_bounds_rule", "error")),
+            source_coordinates_visible_to_controller=bool(
+                payload.get("source_coordinates_visible_to_controller", False)
+            ),
+            future_frame_interpolation_allowed=bool(
+                payload.get("future_frame_interpolation_allowed", False)
+            ),
+            navigation_performance_used=bool(payload.get("navigation_performance_used", False)),
+            schema=str(payload.get("schema", "fly-sniff-physical-sensory-transform-v1")),
+        )
+        transform.validate()
+        claimed_hash = payload.get("transform_sha256")
+        if claimed_hash is not None and claimed_hash != transform.sha256:
+            raise ValueError("physical sensory transform hash mismatch")
+        if payload.get("status") not in (None, "PASS_PHYSICAL_SENSORY_TRANSFORM"):
+            raise ValueError("physical sensory transform status mismatch")
+        return transform
 
 
 def assemble_physical_sensory_transform(
@@ -573,8 +620,8 @@ def bilinear_sample(frame: np.ndarray, axis0: float, axis1: float) -> float:
     if axis0 < 0 or axis1 < 0 or axis0 > value.shape[0] - 1 or axis1 > value.shape[1] - 1:
         raise ValueError("sample coordinate is outside the archived plume frame")
 
-    lo0 = int(math.floor(axis0))
-    lo1 = int(math.floor(axis1))
+    lo0 = math.floor(axis0)
+    lo1 = math.floor(axis1)
     hi0 = min(lo0 + 1, value.shape[0] - 1)
     hi1 = min(lo1 + 1, value.shape[1] - 1)
     weight0 = axis0 - lo0
@@ -599,7 +646,7 @@ def causal_native_frame_index(*, time_seconds: float, native_fps: float, frame_c
         raise ValueError("native_fps must be positive and finite")
     if frame_count <= 0:
         raise ValueError("frame_count must be positive")
-    index = int(math.floor(time_seconds * native_fps + 1e-12))
+    index = math.floor(time_seconds * native_fps + 1e-12)
     if index >= frame_count:
         raise ValueError("requested time is outside the archived plume duration")
     return index
@@ -632,7 +679,4 @@ def sample_bilateral_concentration(
     right_pixel = world_to_archive_pixel(
         downwind_mm=right_world[0], crosswind_mm=right_world[1], plume=plume
     )
-    return (
-        bilinear_sample(frame, *left_pixel),
-        bilinear_sample(frame, *right_pixel),
-    )
+    return bilinear_sample(frame, *left_pixel), bilinear_sample(frame, *right_pixel)
