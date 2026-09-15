@@ -1,0 +1,104 @@
+{
+  "protocol": "fly-sniff-experiment-spec-v1",
+  "experiment_id": "male-cns-zero-shot-odor-navigation-v1",
+  "dataset": {
+    "connectome": "male-cns:v1.0",
+    "snapshot_must_be_hash_bound": true
+  },
+  "circuit": {
+    "hypothesis": "odor-navigation-v1",
+    "body_id_selection_from_navigation_performance_allowed": false,
+    "structural_and_functional_qualification_must_remain_separate": true
+  },
+  "evidence": {
+    "ledger_path": "authority/evidence-ledger-v1.json",
+    "measured_anatomy_must_remain_distinct_from_modeled_state": true,
+    "cross_dataset_priors_must_remain_labeled": true
+  },
+  "dynamics": {
+    "model_artifact": "results/calibration/physiology-calibrated-model-v1.json",
+    "calibration_protocol": "physiology-calibration-v1",
+    "navigation_reward_used_during_calibration": false,
+    "same_parameters_for_intact_and_nulls": true,
+    "same_parameters_for_acute_lesions": true,
+    "dynamics_family_sensitivity_required": true
+  },
+  "environment": {
+    "sensory_source": "experimental-plume-v1",
+    "environment_validated_before_neural_evaluation": true,
+    "controller_forbidden_inputs": [
+      "source_coordinates",
+      "distance_to_source",
+      "viewer_plume_image",
+      "episode_success",
+      "future_sensory_state"
+    ]
+  },
+  "interventions": [
+    {"name": "intact", "mode": "reference"},
+    {"name": "PFN_lesion", "mode": "acute"},
+    {"name": "FB5AB_input_lesion", "mode": "acute"},
+    {"name": "PFL_DN_lesion", "mode": "acute"},
+    {"name": "odor_removed", "mode": "acute_sensory_ablation"},
+    {"name": "wind_removed", "mode": "acute_sensory_ablation"},
+    {"name": "sensory_temporal_shuffle", "mode": "acute_sensory_control"}
+  ],
+  "nulls": {
+    "protocol": "null-factory-v2",
+    "minimum_confirmatory_topologies_per_family": 63,
+    "families": [
+      "degree_preserving",
+      "degree_sign_preserving",
+      "degree_sign_hemisphere_preserving",
+      "within_cell_type_rewire",
+      "spatially_constrained_rewire"
+    ],
+    "generic_random_reservoir_required": true,
+    "nulls_may_not_be_selected_or_discarded_by_behavior": true
+  },
+  "metrics": {
+    "primary": "SPL",
+    "primary_estimand": "SPL(intact)-mean_topology_null_SPL",
+    "secondary": [
+      "success_rate",
+      "time_to_source",
+      "path_efficiency",
+      "reacquisition_latency",
+      "upwind_alignment_after_odor_encounter"
+    ],
+    "topology_is_unit_of_randomization": true,
+    "episode_count_must_not_be_treated_as_connectome_count": true,
+    "empirical_randomization_p_required": true,
+    "power_analysis_required_before_final": true
+  },
+  "training": {
+    "program": "latent-wiring",
+    "navigation_reward_allowed": false,
+    "topology_specific_fit_allowed": false,
+    "whole_graph_backprop_allowed": false,
+    "calibration_targets": ["independent_neural_constraints_only"]
+  },
+  "final": {
+    "phase": "confirmatory",
+    "blinded": true,
+    "hidden_final_entropy": "commit-reveal",
+    "one_way_final": true,
+    "negative_results_retained": true,
+    "paired_episode_conditions": true,
+    "final_results_may_not_trigger_refit": true
+  },
+  "metadata": {
+    "required_artifacts": [
+      "evidence_ledger",
+      "physiology_calibrated_model",
+      "experimental_plume_receipt",
+      "olfactory_motion_structural_audit",
+      "null_factory_protocol",
+      "connectome_necessity_protocol"
+    ],
+    "claim_boundary": [
+      "A sealed run may test whether measured MaleCNS topology outperforms the specified null ensemble under independently calibrated dynamics.",
+      "It does not establish measured neural firing, universal fly behavior, or biological generalization without independent physiological/behavioral replication."
+    ]
+  }
+}
