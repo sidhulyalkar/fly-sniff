@@ -61,7 +61,7 @@ def test_full_archive_download_cannot_become_default_policy() -> None:
 
 def test_nested_readiness_labels_cannot_disagree_with_evidence() -> None:
     payload = copy.deepcopy(_payload())
-    payload["data_authority"]["readme"]["status"] = "READY_FOR_EXTRACTION"
+    payload["data_authority"]["readme"]["status"] = "BLOCKED_README_SHA256_UNVERIFIED"
     with pytest.raises(ValueError, match="README status"):
         PFNSourceContract.from_dict(payload)
 
