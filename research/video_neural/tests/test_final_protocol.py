@@ -32,6 +32,7 @@ def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dic
     qc = {
         "schema_version": 1,
         "status": "pass",
+        "test_target_arrays_deserialized": False,
         "test_target_values_summarized": False,
         "split_lock_sha256": "split",
     }
@@ -87,6 +88,9 @@ def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dic
         "benchmark_id": "mc2p_future_neural_v1",
         "split_lock_sha256": "split",
         "source_batches": [],
+        "development_deserialized_batches": [{"path": "dev", "sha256": "dev"}],
+        "held_out_test_batches_authenticated_not_deserialized": [{"path": "test", "sha256": "test"}],
+        "test_target_arrays_deserialized": False,
         "validation_unlock_report_sha256": unlock["report_sha256"],
         "test_consumption_capability": False,
         "test_metrics_present": False,
@@ -107,11 +111,24 @@ def test_final_authorization_reconstructs_frozen_unlock(tmp_path: Path):
     split, config = _development_bundle(tmp_path)
     bundle = validate_final_authorization(tmp_path, split, config)
     assert bundle["unlock"]["test_consumption_allowed"] is True
+    assert bundle["receipt"]["test_target_arrays_deserialized"] is False
 
 
 def test_final_authorization_rejects_blocked_or_tampered_unlock(tmp_path: Path):
     split, config = _development_bundle(tmp_path, unlocked=False)
     with pytest.raises(ValueError, match="does not reconstruct"):
+        validate_final_authorization(tmp_path, split, config)
+
+
+def test_final_authorization_rejects_development_that_deserialized_test_arrays(tmp_path: Path):
+    split, config = _development_bundle(tmp_path)
+    path = tmp_path / "development-receipt.json"
+    receipt = json.loads(path.read_text())
+    receipt["test_target_arrays_deserialized"] = True
+    receipt.pop("receipt_sha256")
+    receipt["receipt_sha256"] = _sha(receipt)
+    path.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError, match="no-test-deserialization"):
         validate_final_authorization(tmp_path, split, config)
 
 
