@@ -161,7 +161,7 @@ def audit_development_data(
         "split_lock_sha256": lock["split_lock_sha256"],
         "qc_config_sha256": _sha(config),
         "source_batches": sorted(source_batches or [], key=lambda row: row["path"]),
-        "development_sample_count": int(len(batch.sample_ids)),
+        "development_sample_count": len(batch.sample_ids),
         "test_sample_count_metadata_only": int(test_sample_count),
         "test_session_count_metadata_only": int(test_session_count),
         "test_target_arrays_deserialized": False,
