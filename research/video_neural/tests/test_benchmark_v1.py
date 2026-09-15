@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from fly_video_neural.benchmark import load_benchmark, validate_benchmark
+from fly_video_neural.benchmark import (
+    V1_TARGET_NEURAL_BOUNDARY_POLICY,
+    load_benchmark,
+    validate_benchmark,
+)
 
 
 def _path() -> Path:
@@ -32,6 +36,7 @@ def test_v1_primary_is_within_animal_session_heldout():
     assert primary["validation_sessions_per_animal"] == 1
     assert primary["test_sessions_per_animal"] == 1
     assert primary["target"] == "future_mean_dff_image"
+    assert primary["target_neural_boundary_policy"] == V1_TARGET_NEURAL_BOUNDARY_POLICY
     assert primary["raw_neural_pixel_target_allowed"] is True
     assert document["test_consumption_policy"] == "one_way_validation_unlock_then_final_runner"
     assert document["test_consumption_requires_validation_unlock"] is True
@@ -63,4 +68,11 @@ def test_v1_rejects_partial_public_release_contract():
     document = json.loads(_path().read_text())
     document["expected_public_release_animals"] = 7
     with pytest.raises(ValueError, match="eight-animal"):
+        validate_benchmark(document)
+
+
+def test_v1_rejects_shared_input_target_neural_boundary_policy():
+    document = json.loads(_path().read_text())
+    document["tasks"]["primary"]["target_neural_boundary_policy"] = "allow_shared_boundary_index"
+    with pytest.raises(ValueError, match="strictly after"):
         validate_benchmark(document)

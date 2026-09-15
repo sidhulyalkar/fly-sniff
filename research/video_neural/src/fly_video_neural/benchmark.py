@@ -15,6 +15,7 @@ EXPECTED_MODEL_LANES = [
 
 V0_ID = "mc2p_future_neural_v0"
 V1_ID = "mc2p_future_neural_v1"
+V1_TARGET_NEURAL_BOUNDARY_POLICY = "strictly_after_last_input_aligned_neural_index"
 
 
 def load_benchmark(path: str | Path) -> dict[str, Any]:
@@ -108,6 +109,8 @@ def _validate_v1(document: dict[str, Any]) -> None:
         or primary.get("window_stride_s") != 0.5
     ):
         raise ValueError("v1 primary temporal contract is frozen to 3.0/0.5/0.5 s")
+    if primary.get("target_neural_boundary_policy") != V1_TARGET_NEURAL_BOUNDARY_POLICY:
+        raise ValueError("v1 target neural boundary must remain strictly after the final input-aligned neural frame")
     if primary.get("split_unit") != "session_id_within_animal":
         raise ValueError("v1 primary split unit must be session within animal")
     if primary.get("session_split_seed") != 2701:

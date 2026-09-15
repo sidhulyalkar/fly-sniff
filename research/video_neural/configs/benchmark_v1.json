@@ -16,10 +16,11 @@
   "tasks": {
     "primary": {
       "name": "within_animal_session_heldout",
-      "scientific_question": "Can recent behavior predict future measured neural activity within the same animal on held-out sessions?",
+      "scientific_question": "Can recent behavior predict future measured neural activity within the same animal on a held-out session?",
       "input_history_s": 3.0,
       "prediction_horizon_s": 0.5,
       "window_stride_s": 0.5,
+      "target_neural_boundary_policy": "strictly_after_last_input_aligned_neural_index",
       "split_unit": "session_id_within_animal",
       "session_split_seed": 2701,
       "validation_sessions_per_animal": 1,

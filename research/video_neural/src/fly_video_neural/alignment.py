@@ -9,12 +9,15 @@ import numpy as np
 from .mc2p import MC2PSession, inspect_session
 from .schema import SampleWindow
 
+TARGET_NEURAL_BOUNDARY_POLICY = "strictly_after_last_input_aligned_neural_index"
+
 
 @dataclass(frozen=True)
 class AlignedWindow:
     sample: SampleWindow
     input_behavior_frames: tuple[int, int]
     target_behavior_frames: tuple[int, int]
+    last_input_neural_index: int
     target_neural_indices: tuple[int, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -22,6 +25,7 @@ class AlignedWindow:
             "sample": self.sample.to_dict(),
             "input_behavior_frames": list(self.input_behavior_frames),
             "target_behavior_frames": list(self.target_behavior_frames),
+            "last_input_neural_index": self.last_input_neural_index,
             "target_neural_indices": list(self.target_neural_indices),
         }
 
@@ -77,8 +81,11 @@ def materialize_windows(
         input_start = current_target_start - history_frames
         input_end = current_target_start
         target_end = current_target_start + horizon_frames
+        last_input_neural_index = int(alignment[input_end - 1])
         neural_indices = tuple(
-            int(index) for index in np.unique(alignment[current_target_start:target_end])
+            int(index)
+            for index in np.unique(alignment[current_target_start:target_end])
+            if int(index) > last_input_neural_index
         )
         if not neural_indices:
             continue
@@ -101,6 +108,7 @@ def materialize_windows(
                 sample=sample,
                 input_behavior_frames=(input_start, input_end),
                 target_behavior_frames=(current_target_start, target_end),
+                last_input_neural_index=last_input_neural_index,
                 target_neural_indices=neural_indices,
             )
         )
@@ -132,6 +140,7 @@ def materialize_session_windows(
         "session": session.to_dict(),
         "alignment_path": str(Path(alignment_path).resolve()),
         "alignment_length_behavior_frames": len(alignment),
+        "target_neural_boundary_policy": TARGET_NEURAL_BOUNDARY_POLICY,
         "history_s": history_s,
         "horizon_s": horizon_s,
         "stride_s": stride_s,
