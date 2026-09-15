@@ -1,0 +1,63 @@
+{
+  "schema": "fly-sniff-physiology-calibration-policy-v1",
+  "program": "latent_wiring",
+  "navigation_reward_allowed": false,
+  "topology_specific_fit_allowed": false,
+  "whole_graph_backprop_allowed": false,
+  "navigation_performance_selection_allowed": false,
+  "individual_edge_weight_fit_allowed": false,
+  "body_membership_fit_allowed": false,
+  "role_assignment_fit_allowed": false,
+  "allowed_parameter_scopes": [
+    "global_dynamics",
+    "sensory_gain",
+    "population_gain",
+    "population_timescale"
+  ],
+  "evidence_rules": {
+    "quantitative_fit_requires_measured_physiology": true,
+    "qualitative_sensitivity_may_use_cross_dataset_prior": true,
+    "measured_structure_alone_may_not_calibrate_dynamics": true,
+    "predicted_annotation_alone_may_not_calibrate_dynamics": true,
+    "modeled_state_may_not_become_calibration_authority": true
+  },
+  "candidate_target_families": [
+    {
+      "id": "pfn_airflow_tuning",
+      "status": "requires_evidence_audit",
+      "intended_use": "constrain airflow-response geometry and/or sensitivity"
+    },
+    {
+      "id": "pfl3_steering_relationship",
+      "status": "requires_evidence_audit",
+      "intended_use": "constrain lateralized steering readout relationships"
+    },
+    {
+      "id": "dna02_turning_relationship",
+      "status": "requires_evidence_audit",
+      "intended_use": "constrain descending turning readout directionality"
+    },
+    {
+      "id": "odor_context_gating",
+      "status": "requires_evidence_audit_and_hdelta_attribution_review",
+      "intended_use": "sensitivity analysis only unless an unconfounded quantitative target is established"
+    },
+    {
+      "id": "response_timescale",
+      "status": "requires_direct_measurement_review",
+      "intended_use": "constrain global or population time constants only where directly supported"
+    },
+    {
+      "id": "independent_intervention_directionality",
+      "status": "requires_perturbation_evidence_review",
+      "intended_use": "qualitative sensitivity or quantitative fit according to evidence class"
+    }
+  ],
+  "selection_rule": "No target, model family, parameter scope, uncertainty range, or acceptance rule may be selected because it improves navigation performance.",
+  "claim_boundary": [
+    "Calibration constrains modeled dynamics and does not establish source-finding ability.",
+    "Cross-dataset priors must remain labeled as cross-dataset evidence.",
+    "Predicted neurotransmitter does not establish receptor-specific functional sign.",
+    "hDeltaC-specific functional calibration must not ignore the published hDeltaK attribution confound."
+  ]
+}
