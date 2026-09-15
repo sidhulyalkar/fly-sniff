@@ -19,5 +19,6 @@ jobs:
       - run: fly-sniff-dna02-readme-fetch --help
       - run: fly-sniff-dna02-cohort-validate --help
       - run: fly-sniff-dna02-cohort-validate authority/program-a-dna02-cohort-adjudication-v1.json
+      - run: fly-sniff-pfn-readme-fetch --help
       - run: ruff check src tests
       - run: pytest -q
