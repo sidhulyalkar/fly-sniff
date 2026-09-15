@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "protocol": "mc2p-validation-unlock-v1",
+  "benchmark_id": "mc2p_future_neural_v1",
+  "alignment_null": "circular_half_session_feature_shift",
+  "minimum_eligible_animals": 4,
+  "require_strict_majority_positive_effect": true,
+  "require_median_effect_gt": 0.0,
+  "may_change_after_validation_scores": false,
+  "test_consumption_policy": "single_explicit_consumption_only_after_qc_and_validation_unlock",
+  "interpretation": "Aligned pose decoding must outperform the matched within-session temporal misalignment null in a strict majority of eligible animals and have positive median paired validation effect before test consumption is allowed. No minimum absolute correlation threshold is introduced."
+}
