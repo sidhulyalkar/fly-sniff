@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 malecns = ["neuprint-python>=0.5"]
+source = ["h5py>=3.10"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -56,6 +57,7 @@ fly-sniff-program-a = "fly_sniff.program_a_preflight:main"
 fly-sniff-source-fetch = "fly_sniff.physiology_source_fetch:main"
 fly-sniff-dna02-readme-fetch = "fly_sniff.dna02_dataset_readme:main"
 fly-sniff-dna02-cohort-validate = "fly_sniff.dna02_cohort_adjudication:main"
+fly-sniff-dna02-inspect = "fly_sniff.dna02_source_inspect:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
