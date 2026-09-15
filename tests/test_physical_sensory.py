@@ -86,12 +86,19 @@ def _pass_geometry() -> BilateralSensorGeometry:
     )
 
 
-def test_committed_policy_preserves_real_blockers() -> None:
+def test_committed_policy_preserves_real_blockers_and_resolved_axis_roles() -> None:
     policy = json.loads(POLICY_PATH.read_text())
     assert policy["navigation_performance_used"] is False
-    assert policy["smooth_plume_evidence"]["status"] == "BLOCKED_SOURCE_BYTES_UNVERIFIED"
-    assert policy["smooth_plume_evidence"]["source_sha256"] is None
-    assert policy["smooth_plume_evidence"]["array_axis_mapping"] is None
+    plume = policy["smooth_plume_evidence"]
+    assert plume["status"] == "BLOCKED_SOURCE_BYTES_UNVERIFIED"
+    assert plume["source_sha256"] is None
+    assert plume["array_axis_mapping"]["raw_axis0"] == "downwind"
+    assert plume["array_axis_mapping"]["raw_axis1"] == "crosswind"
+    assert plume["array_axis_mapping"]["authority_blob_sha"] == (
+        "6efc37b16155622df3986d4dc50fed423173700d"
+    )
+    assert plume["array_axis_positive_directions"] is None
+    assert plume["source_index_in_archive"] is None
     geometry = policy["bilateral_sensor_geometry"]
     assert geometry["status"] == "BLOCKED_REQUIRES_ANATOMY_MEASUREMENT"
     assert geometry["left_offset_mm"] is None
