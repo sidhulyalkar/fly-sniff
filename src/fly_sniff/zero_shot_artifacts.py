@@ -6,6 +6,7 @@ from typing import Any
 
 from .connectome_necessity import validate_protocol as validate_connectome_necessity
 from .evidence import EvidenceLedger
+from .final_seed_commitment import COMMIT_PROTOCOL
 from .null_factory_v2 import validate_protocol as validate_null_factory
 
 PLUME_ENVELOPE_PROTOCOL = "zero-shot-experimental-plume-evidence-v1"
@@ -123,6 +124,32 @@ def validate_structural_evidence_envelope(payload: dict[str, Any]) -> dict[str, 
     }
 
 
+def validate_seed_commitment(payload: dict[str, Any]) -> dict[str, Any]:
+    commitment_ok = True
+    try:
+        _require_sha256(payload.get("commitment_sha256"), field="commitment_sha256")
+    except ValueError:
+        commitment_ok = False
+    gates = [
+        {"name": "protocol", "passed": payload.get("protocol") == COMMIT_PROTOCOL},
+        {"name": "sha256_commitment", "passed": payload.get("hash") == "sha256"},
+        {
+            "name": "minimum_entropy_256_bits",
+            "passed": int(payload.get("secret_bytes", 0)) >= 32,
+        },
+        {"name": "commitment_digest_valid", "passed": commitment_ok},
+        {
+            "name": "secret_not_present",
+            "passed": "revealed_secret_hex" not in payload and "secret" not in payload,
+        },
+    ]
+    return {
+        "artifact": "final_seed_commitment",
+        "valid": all(bool(row["passed"]) for row in gates),
+        "gates": gates,
+    }
+
+
 def validate_zero_shot_artifact(name: str, path: str | Path) -> dict[str, Any]:
     artifact_path = Path(path)
     if not artifact_path.exists():
@@ -162,4 +189,6 @@ def validate_zero_shot_artifact(name: str, path: str | Path) -> dict[str, Any]:
         report = validate_connectome_necessity(payload)
         valid = bool(report["valid_for_preregistration"])
         return {"artifact": name, "valid": valid, "summary": report}
+    if name == "final_seed_commitment":
+        return validate_seed_commitment(payload)
     raise ValueError(f"unknown zero-shot artifact role: {name}")
