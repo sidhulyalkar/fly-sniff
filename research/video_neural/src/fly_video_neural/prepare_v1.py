@@ -20,6 +20,7 @@ from .provenance import preparation_implementation_fingerprint
 from .session_benchmark import build_session_split_lock, load_session_batches
 
 EXPECTED_PUBLIC_RELEASE_ANIMALS = 8
+EXPECTED_PUBLIC_RELEASE_SESSIONS = 133
 
 
 def _sha(payload: Any) -> str:
@@ -166,6 +167,11 @@ def prepare_mc2p_v1(
             "v1 expects the complete eight-animal public MC2P release; "
             f"discovered {manifest['animal_count']} animals"
         )
+    if manifest["session_count"] != EXPECTED_PUBLIC_RELEASE_SESSIONS:
+        raise ValueError(
+            "v1 expects all 133 trials in the eight-animal public MC2P release; "
+            f"discovered {manifest['session_count']} sessions"
+        )
     manifest_path = output / "mc2p-manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
@@ -232,6 +238,7 @@ def prepare_mc2p_v1(
         "benchmark_id": "mc2p_future_neural_v1",
         "dataset_id": "mc2p_v1",
         "expected_public_release_animals": EXPECTED_PUBLIC_RELEASE_ANIMALS,
+        "expected_public_release_sessions": EXPECTED_PUBLIC_RELEASE_SESSIONS,
         "manifest_sha256": manifest["manifest_sha256"],
         "manifest_file_sha256": sha256_file(manifest_path),
         "animal_count": manifest["animal_count"],
@@ -245,8 +252,8 @@ def prepare_mc2p_v1(
         "models_fit": False,
         "test_data_consumed": False,
         "claim_boundary": (
-            "This preparation run converts and packages measured MC2P data only. "
-            "It fits no decoder and reports no performance result."
+            "This preparation run converts and packages the complete eight-animal, 133-trial public "
+            "MC2P release only. It fits no decoder and reports no performance result."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
