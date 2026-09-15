@@ -1,74 +1,103 @@
 # Fly Video → Neural State research lane
 
-This directory is an intentionally isolated research prototype. It is **not** part of the current `fly-sniff` odor-navigation controller or any sealed MaleCNS experiment.
+This directory is an intentionally isolated research prototype. It is **not** part of the active `fly-sniff` odor-navigation controller or any sealed MaleCNS experiment.
 
 ## Concrete first goal
 
-> Given recent Drosophila behavior, predict future **measured** neural population activity.
+> Given 3.0 s of recent Drosophila behavior, can a low-complexity pose decoder predict the next 0.5 s of **measured dF/F** in the same animal on a held-out session better than prespecified temporal-misalignment controls?
 
-The first paired benchmark is MC2P. Large behavior-only datasets are registered for representation pretraining, not treated as neural ground truth.
+The first paired benchmark is the eight-animal public MC2P release. Large behavior-only datasets are registered for possible representation pretraining; they are never treated as neural ground truth.
 
-## v1 correction before scoring
+## Why v1 is within animal
 
-The original `benchmark_v0.json` proposed raw neural prediction in held-out animals. It is preserved rather than edited.
+`benchmark_v0.json` preserves the original proposal to predict raw future neural pixels in unseen animals. Before any real benchmark score was inspected, that design was rejected as the active primary task because raw two-photon image coordinates are subject-specific. An unseen-animal raw-pixel model would confound neural-dynamics prediction with unobserved anatomy.
 
-Before any real benchmark score was consumed, we identified a confound: raw two-photon image coordinates differ across animals, so held-out-animal raw-pixel regression mixes neural-dynamics prediction with unseen anatomy. `benchmark_v1.json` therefore makes the primary task **within-animal, held-out-session** future-neural prediction. The unseen-animal task remains a secondary lane that is blocked until a subject-invariant measured-neural representation is frozen.
+`benchmark_v1.json` therefore freezes the active primary task as **within-animal, held-out-session** prediction. The unseen-animal question remains blocked until a measured, subject-invariant neural representation is frozen independently of held-out task performance.
 
-## MC2P ingress and safe conversion
+## Canonical v1 workflow
 
-`inspect-mc2p` discovers trial directories, groups them by animal identity, and binds behavior video, synchronization, raw/resized measured dF/F, optional pose/kinematics, rest masks, and optional ROI traces. Discovery never deserializes upstream pickle files.
+The scored v1 workflow has exactly three phases:
 
-Convert only a trusted upstream pickle explicitly:
+1. **PREPARE** deterministic measured-data artifacts and freeze the split.
+2. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, and decide whether the one-way final evaluation is allowed.
+3. **FINAL** verify all frozen evidence, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
 
-```bash
-fly-video-neural convert-mc2p-legacy SESSION/sync_indices.pkl \
-  --kind alignment --output SESSION/indices.npy \
-  --receipt SESSION/indices.conversion.json --trust-upstream-pickle
-fly-video-neural convert-mc2p-legacy SESSION/pose_result.pkl \
-  --kind pose3d --output SESSION/pose3d.npy \
-  --receipt SESSION/pose3d.conversion.json --trust-upstream-pickle
-```
+Low-level conversion, window, batch, and split commands remain useful for inspection and tests, but they are not an alternative scored v1 workflow.
 
-The trust flag is deliberately noisy because Python pickle may execute code while loading. Conversion receipts bind source/output hashes and normalized array structure but do not establish biological correctness.
-
-## Deterministic pose → measured-neural session batch
+### Phase 1: PREPARE
 
 ```bash
-fly-video-neural build-mc2p-session-batch SESSION/windows.json SESSION/pose3d.npy \
-  SESSION/2p_dff_resized.mm --dff-side 64 \
-  --output SESSION/pose-neural-v1.npz --receipt SESSION/pose-neural-v1.json
+MC2P_ROOT=/path/to/MC2P
+RUN=/path/to/mc2p-v1-run
+
+fly-video-neural-prepare "$MC2P_ROOT" \
+  --output "$RUN/prepared" \
+  --trust-upstream-pickle
 ```
 
-The pose transform mirrors MC2P's group-root preprocessing and summarizes only the input behavior window. The target is the mean of measured dF/F frames mapped into the future interval.
+PREPARE requires the complete eight-animal release, discovers every session, converts trusted legacy synchronization and 3D-pose pickle artifacts to safe NumPy arrays, checks behavior-frame agreement, and creates deterministic 3.0 s input / 0.5 s target windows. Because nearest-timestamp alignment can map adjacent behavior frames to the same slower neural frame, every target neural index is required to be **strictly later than the neural index aligned to the final input behavior frame**.
 
-## Freeze v1 session assignments
+The pose representation uses MC2P's published six group-root joint partition as its grouping convention. Applying that grouping coordinate-wise to released 3D pose and summarizing each input window with mean, standard deviation, first/last displacement, and mean velocity is a `fly-sniff` engineering transform, not an upstream MC2P method.
 
-Build every eligible session batch first, then freeze the exact batch bytes and within-animal session assignments:
+The measured neural target is the mean dF/F image over the strictly future mapped neural frames. PREPARE prefers the released 64×64 resized measured dF/F when available, otherwise the 128×128 measured dF/F. It fits no model and reports no score.
+
+PREPARE also writes the exact batch hashes, split-lock bytes, per-session provenance, strict-future boundary policy, and ingestion-code fingerprint. A non-empty destination is rejected.
+
+### Phase 2: DEVELOP
 
 ```bash
-fly-video-neural make-v1-session-split data/batches/*.npz --output data/v1-session-split.json
+fly-video-neural-develop \
+  "$RUN/prepared/session-split-lock.json" \
+  "$RUN"/prepared/sessions/*/pose-neural-batch.npz \
+  --preparation-receipt "$RUN/prepared/preparation-receipt.json" \
+  --qc-config configs/data_qc_v1.json \
+  --acceptance-config configs/validation_acceptance_v1.json \
+  --output "$RUN/development"
 ```
 
-For every animal with at least three sessions, seed `2701` assigns one validation session, one test session, and all remaining sessions to training. The split lock contains the SHA-256 of every source batch.
+The split seed is `2701`. Each animal contributes exactly one validation session and one test session; all remaining sessions train. At least three sessions are required per animal.
 
-## Run the low-complexity baseline
+After the split is frozen, DEVELOPMENT SHA-authenticates every prepared session batch but **does not deserialize the held-out test-session NPZ arrays**. It loads exactly the train+validation projection. Tests fail if even one test sample contaminates that projection, and a monkeypatched regression fails if NumPy attempts to open any frozen test batch during DEVELOPMENT.
 
-Development mode never reads test metrics:
+The aligned model is ridge regression with α in `[0.01, 0.1, 1, 10, 100]`, selected independently per animal using validation median Pearson correlation. The primary score is deliberately simple: median per-pixel Pearson correlation over the measured dF/F image. No neural-support mask is introduced in v1, so background or low-information pixels may reduce sensitivity. That limitation is frozen rather than repaired after seeing scores.
+
+The temporal control is an ensemble of deterministic within-session circular pose shifts at **25%, 50%, and 75%** of each session. Each shift receives the same α grid. For each animal, the null fraction with the strongest validation median Pearson correlation is frozen as that animal's primary final comparator. FINAL may not choose a comparator from test performance.
+
+The validation unlock requires all structural/QC contracts to pass, at least **six eligible animals**, a strict majority of positive aligned-minus-selected-null validation effects, and a positive median paired validation effect. A non-computable validation metric makes that animal ineligible rather than assigning it an artificial score.
+
+Stop unless `development/validation-unlock.json` reports `unlocked_for_single_test_consumption`.
+
+### Phase 3: FINAL
 
 ```bash
-fly-video-neural within-animal-ridge data/v1-session-split.json data/batches/*.npz \
-  --output data/ridge-development.json
+fly-video-neural-final \
+  "$RUN/prepared/session-split-lock.json" \
+  "$RUN/development" \
+  "$RUN"/prepared/sessions/*/pose-neural-batch.npz \
+  --acceptance-config configs/validation_acceptance_v1.json \
+  --output "$RUN/final"
 ```
 
-Only after the feature/target/split/model-selection contract is frozen should test be explicitly consumed:
+Before reopening any prepared held-out batch arrays, FINAL verifies the development receipt, QC and validation-unlock self-hashes, exact source-batch hashes, split-lock bytes, acceptance-config bytes, critical implementation fingerprint, and Python/NumPy runtime. It then creates `FINAL_TEST_CONSUMED.json` using exclusive-create semantics with reopening after failure forbidden. Only after that marker does the supported workflow reopen the full prepared batch set.
 
-```bash
-fly-video-neural within-animal-ridge data/v1-session-split.json data/batches/*.npz \
-  --output data/ridge-final.json --consume-test
-```
+PREPARE necessarily reads the raw data to deterministically create every session batch before the split is evaluated. The stronger post-split claim is therefore precise: DEVELOPMENT does not reopen held-out target arrays, and FINAL is the first supported post-split command that does so.
 
-A separate ridge model is selected and fit inside each animal. Aggregate metrics are summaries of per-animal test results, never one cross-animal raw-pixel model.
+## Prespecified final inference
 
-## Current gate
+The biological inferential unit is the **animal**, not the 4,096 image pixels and not the overlapping time windows. `configs/validation_acceptance_v1.json` is supplied to DEVELOPMENT and hash-bound into its receipt before validation results are available. It freezes the final rule:
 
-Once the public MC2P bytes are locally available, the code path is now complete from trusted conversion → synchronized windows → deterministic session batches → frozen within-animal splits → ridge development evaluation. A video foundation model is intentionally deferred until that baseline produces an auditable real-data result.
+- at least 6 animals must have computable paired held-out effects;
+- effect = aligned test median Pearson r minus the validation-selected null's test median Pearson r;
+- zero effects count as non-positive;
+- median paired test effect must be positive;
+- an exact one-sided sign test against positive-effect probability 0.5 must satisfy `p <= 0.05`.
+
+For eight scorable animals, this requires at least 7/8 positive effects (`p = 9/256 ≈ 0.0352`). Six of eight is not close enough (`p = 37/256 ≈ 0.1445`). With six scorable animals, all 6/6 must be positive (`p = 1/64 ≈ 0.0156`). A valid run can therefore finish as `supports_prespecified_predictive_generalization`, `does_not_meet_prespecified_support_rule`, or `insufficient_scorable_animals` without changing any threshold after test inspection.
+
+## Claim boundary
+
+A supportive v1 result would mean that this prespecified pose decoder predicts held-out-session measured dF/F better than its validation-selected temporal-misalignment control with consistent direction across animals under the frozen animal-level rule.
+
+It would **not** establish behavior causing the neural activity, spike-level prediction, whole-brain reconstruction, an unseen-animal raw-pixel decoder, or a connectome mechanism. A negative or insufficient result is preserved as a scientific result, not repaired by changing the metric, null, split, horizon, support mask, or significance rule.
+
+No real MC2P benchmark result has been consumed yet. A video foundation model remains intentionally deferred until this measurement-grounded baseline has produced an auditable outcome.
