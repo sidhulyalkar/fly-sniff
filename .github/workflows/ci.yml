@@ -16,5 +16,6 @@ jobs:
           cache: pip
       - run: python -m pip install -e '.[dev]'
       - run: fly-sniff-source-fetch --help
+      - run: fly-sniff-dna02-readme-fetch --help
       - run: ruff check src tests
       - run: pytest -q
