@@ -22,5 +22,7 @@ jobs:
       - run: fly-sniff-pfn-readme-fetch --help
       - run: fly-sniff-dna02-download --help
       - run: fly-sniff-dna02-inspect --help
+      - run: fly-sniff-dna02-field-map --help
+      - run: fly-sniff-dna02-field-map > /tmp/dna02-field-map-authority.json
       - run: ruff check src tests
       - run: pytest -q
