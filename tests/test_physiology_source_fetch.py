@@ -135,11 +135,12 @@ def test_pfn_readme_mismatch_refuses_to_publish_receipt(tmp_path, monkeypatch) -
 
 def test_dataverse_inventory_normalizes_ids_names_checksums_and_restriction() -> None:
     inventory = source_fetch.normalize_dataverse_inventory(_dataverse_payload())
-    assert [item["file_id"] for item in inventory] == [77, 88, 99]
-    assert inventory[0]["filename"] == "180410_gfp_3G_ss730_dual_08.mat"
-    assert inventory[0]["checksum_type"] == "MD5"
-    assert inventory[0]["checksum_value"] == "a" * 32
-    assert inventory[0]["restricted"] is False
+    assert [item["file_id"] for item in inventory] == [99, 77, 88]
+    by_id = {item["file_id"]: item for item in inventory}
+    assert by_id[77]["filename"] == "180410_gfp_3G_ss730_dual_08.mat"
+    assert by_id[77]["checksum_type"] == "MD5"
+    assert by_id[77]["checksum_value"] == "a" * 32
+    assert by_id[77]["restricted"] is False
 
 
 def test_duplicate_dataverse_file_id_fails_closed() -> None:
