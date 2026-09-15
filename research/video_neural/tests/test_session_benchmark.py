@@ -9,6 +9,8 @@ from fly_video_neural.session_benchmark import (
     SessionBenchmarkBatch,
     build_session_split_lock,
     run_within_animal_ridge,
+    subset_development_batch,
+    verify_development_projection,
     verify_session_split_lock,
 )
 
@@ -71,10 +73,40 @@ def test_semantic_split_tamper_fails_even_after_rehash():
         verify_session_split_lock(tampered, batch)
 
 
+def test_development_projection_excludes_every_test_sample():
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    verify_development_projection(lock, development)
+    assert all(lock["sample_to_split"][sample] != "test" for sample in development.sample_ids)
+    assert len(development.sample_ids) < len(full_batch.sample_ids)
+
+
+def test_development_projection_rejects_even_one_test_sample():
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    test_index = next(
+        index
+        for index, sample in enumerate(full_batch.sample_ids)
+        if lock["sample_to_split"][sample] == "test"
+    )
+    contaminated = SessionBenchmarkBatch(
+        sample_ids=np.concatenate([development.sample_ids, full_batch.sample_ids[[test_index]]]),
+        animal_ids=np.concatenate([development.animal_ids, full_batch.animal_ids[[test_index]]]),
+        session_ids=np.concatenate([development.session_ids, full_batch.session_ids[[test_index]]]),
+        features=np.concatenate([development.features, full_batch.features[[test_index]]]),
+        targets=np.concatenate([development.targets, full_batch.targets[[test_index]]]),
+    )
+    with pytest.raises(ValueError, match="train\+validation samples"):
+        verify_development_projection(lock, contaminated)
+
+
 def test_within_animal_ridge_keeps_test_locked_by_default():
-    batch = _batch()
-    lock = build_session_split_lock(batch)
-    report = run_within_animal_ridge(batch, lock)
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    report = run_within_animal_ridge(development, lock)
     assert report["test_status"] == "locked_not_consumed"
     assert report["aggregate_test_metrics"] is None
     assert all(row["test_metrics"] is None for row in report["animals"])
