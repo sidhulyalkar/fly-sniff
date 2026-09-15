@@ -12,7 +12,7 @@
       "access": "public download linked from upstream repository",
       "license": "see upstream dataset/repository terms before redistribution",
       "download_in_ci": false,
-      "intended_use": "animal-held-out video/pose to measured two-photon population decoding"
+      "intended_use": "within-animal held-out-session pose/video to measured two-photon decoding for mc2p_future_neural_v1"
     },
     {
       "id": "flymabe2022_v3",
