@@ -165,10 +165,10 @@ class DNa02SourceContract:
                 raise ValueError(f"duplicate code authority: {key}")
             code_keys.add(key)
 
-        if len(self.candidate_bilateral_aliases) != len(set(self.candidate_bilateral_aliases)):
-            raise ValueError("candidate bilateral aliases must be unique")
         if not self.candidate_bilateral_aliases:
             raise ValueError("candidate bilateral aliases may not be empty")
+        if len(self.candidate_bilateral_aliases) != len(set(self.candidate_bilateral_aliases)):
+            raise ValueError("candidate bilateral aliases must be unique")
         aliases = set(self.candidate_bilateral_aliases)
 
         raw_aliases = [alias for alias, _ in self.known_raw_session_candidates]
@@ -239,6 +239,8 @@ class DNa02SourceContract:
             raise ValueError(f"published preprocessing is missing fields: {sorted(missing)}")
         if int(preprocessing["firing_rate_bin_ms"]) != 10:
             raise ValueError("Figure 3B-C firing-rate bin is frozen to 10 ms")
+        if str(preprocessing["firing_rate_smoothing"]).lower() != "exponential":
+            raise ValueError("Figure 3B-C firing-rate smoothing must remain exponential")
         if int(preprocessing["firing_rate_smoothing_window_ms"]) != 30:
             raise ValueError("Figure 3B-C firing-rate smoothing is frozen to 30 ms")
         if int(preprocessing["neural_to_behavior_alignment_ms"]) != 150:
@@ -249,8 +251,11 @@ class DNa02SourceContract:
             "right_firing_rate_hz - left_firing_rate_hz"
         ):
             raise ValueError("Figure 3C predictor must remain right-minus-left firing rate")
-        if "universal" not in str(preprocessing["alignment_interpretation"]).lower():
+        interpretation = str(preprocessing["alignment_interpretation"]).lower()
+        if "universal" not in interpretation or "must not" not in interpretation:
             raise ValueError("150 ms alignment must explicitly reject universal-delay interpretation")
+        if "treadmill inertia" not in interpretation:
+            raise ValueError("150 ms alignment must preserve the spherical-treadmill inertia caveat")
 
         required_evidence = {
             "rayshubskiy2025-dna02-bilateral-steering",
