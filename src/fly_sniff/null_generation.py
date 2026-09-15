@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import copy
-from collections import Counter, defaultdict
-from collections.abc import Callable
+import json
+from collections import Counter
+from pathlib import Path
 from typing import Any
 
 import networkx as nx
@@ -10,231 +12,198 @@ import numpy as np
 import pandas as pd
 
 from .graph import GraphBundle
+from .rewire import save_bundle
+
+GENERATOR = "exact-minimum-overlap-constrained-rewire-v1"
 
 
-def _edge_pairs(edges: pd.DataFrame) -> set[tuple[int, int]]:
-    return {
-        (int(source), int(target))
-        for source, target in zip(edges.source, edges.target, strict=True)
-    }
-
-
-def _body_id_column(nodes: pd.DataFrame) -> str:
-    if "bodyId" in nodes.columns:
-        return "bodyId"
-    if "body_id" in nodes.columns:
-        return "body_id"
-    raise ValueError("constrained rewiring requires nodes.bodyId (or legacy body_id)")
-
-
-def _seeded_tie_ranks(
-    candidates: list[tuple[tuple[Any, ...], int]],
-    *,
-    seed: int,
-) -> dict[tuple[tuple[Any, ...], int], int]:
-    """Assign unique deterministic seed-specific ranks to otherwise equivalent edges."""
-    if not candidates:
-        return {}
-    rng = np.random.default_rng(int(seed))
-    permutation = rng.permutation(len(candidates))
-    return {
-        candidate: int(permutation[index])
-        for index, candidate in enumerate(candidates)
-    }
-
-
-def changed_edge_fraction(original: GraphBundle, rewired: GraphBundle) -> float:
-    original_pairs = _edge_pairs(original.edges)
-    rewired_pairs = _edge_pairs(rewired.edges)
-    if len(original_pairs) != len(rewired_pairs):
-        raise ValueError("changed-edge comparison requires equal edge counts")
-    if not original_pairs:
-        return 0.0
-    return float(len(original_pairs - rewired_pairs) / len(original_pairs))
-
-
-def _edge_invariants(bundle: GraphBundle) -> dict[str, Any]:
-    edges = bundle.edges
-    return {
-        "edge_count": int(len(edges)),
-        "out_degree": Counter(int(x) for x in edges.source),
-        "in_degree": Counter(int(x) for x in edges.target),
-        "weight_multiset": Counter(float(x) for x in edges.weight),
-        "sign_multiset": Counter(int(x) for x in edges.sign) if "sign" in edges.columns else None,
-    }
-
-
-def validate_rewire(original: GraphBundle, rewired: GraphBundle) -> dict[str, Any]:
-    before = _edge_invariants(original)
-    after = _edge_invariants(rewired)
-    pairs = list(zip(rewired.edges.source.astype(int), rewired.edges.target.astype(int), strict=True))
-    duplicate_count = len(pairs) - len(set(pairs))
-    self_loop_count = sum(int(source == target) for source, target in pairs)
-    checks = {
-        "edge_count_preserved": before["edge_count"] == after["edge_count"],
-        "out_degree_preserved": before["out_degree"] == after["out_degree"],
-        "in_degree_preserved": before["in_degree"] == after["in_degree"],
-        "weight_multiset_preserved": before["weight_multiset"] == after["weight_multiset"],
-        "sign_multiset_preserved": before["sign_multiset"] == after["sign_multiset"],
-        "no_duplicate_edges": duplicate_count == 0,
-        "no_self_loops": self_loop_count == 0,
-    }
-    return {
-        "passed": all(checks.values()),
-        "checks": checks,
-        "changed_edge_fraction": changed_edge_fraction(original, rewired),
-        "duplicate_edge_count": int(duplicate_count),
-        "self_loop_count": int(self_loop_count),
-    }
-
-
-def degree_preserving_rewire(
-    bundle: GraphBundle,
-    *,
-    seed: int,
-    swaps_per_edge: int = 8,
-) -> GraphBundle:
-    """Directed simple-graph endpoint swaps preserving exact in/out degree.
-
-    This is an engineering kernel. Confirmatory use must separately verify final graph
-    distance, invariants, frozen seed provenance and the relevant NullFactory contract.
-    """
-    rng = np.random.default_rng(seed)
-    edges = bundle.edges.copy().reset_index(drop=True)
-    pairs = [(int(s), int(t)) for s, t in zip(edges.source, edges.target, strict=True)]
-    occupied = set(pairs)
-    target_swaps = int(swaps_per_edge) * len(edges)
-    accepted = 0
-    attempts = 0
-    max_attempts = max(1000, target_swaps * 100)
-    while accepted < target_swaps and attempts < max_attempts:
-        attempts += 1
-        i, j = rng.choice(len(edges), size=2, replace=False)
-        source_a, target_a = pairs[int(i)]
-        source_b, target_b = pairs[int(j)]
-        if source_a == source_b or target_a == target_b:
-            continue
-        new_a = (source_a, target_b)
-        new_b = (source_b, target_a)
-        if source_a == target_b or source_b == target_a:
-            continue
-        if new_a in occupied or new_b in occupied:
-            continue
-        occupied.remove((source_a, target_a))
-        occupied.remove((source_b, target_b))
-        occupied.add(new_a)
-        occupied.add(new_b)
-        pairs[int(i)] = new_a
-        pairs[int(j)] = new_b
-        accepted += 1
-    if accepted != target_swaps:
-        raise RuntimeError(
-            f"degree-preserving rewire under-mixed during generation: "
-            f"accepted={accepted} requested={target_swaps}"
+def _edge_pairs(bundle: GraphBundle) -> set[tuple[int, int]]:
+    return set(
+        zip(
+            bundle.edges.source.astype(int),
+            bundle.edges.target.astype(int),
+            strict=True,
         )
-    edges.loc[:, "target"] = [target for _, target in pairs]
-    manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
-    manifest.update(
-        {
-            "rewire_family": "degree_preserving-engineering-swap-chain",
-            "rewire_seed": int(seed),
-            "rewire_swaps_per_edge": int(swaps_per_edge),
-            "rewire_accepted_swaps": int(accepted),
-            "qualification_status": "candidate",
-        }
-    )
-    return GraphBundle(
-        nodes=bundle.nodes.copy(),
-        edges=edges,
-        roles={key: list(values) for key, values in bundle.roles.items()},
-        manifest=manifest,
     )
 
 
-def _metadata_lookup(
+def changed_edge_fraction(intact: GraphBundle, rewired: GraphBundle) -> float:
+    intact_pairs = _edge_pairs(intact)
+    rewired_pairs = _edge_pairs(rewired)
+    if not intact_pairs:
+        return 0.0
+    return float(1.0 - len(intact_pairs & rewired_pairs) / len(intact_pairs))
+
+
+def _node_metadata(
     bundle: GraphBundle,
     columns: tuple[str, ...],
 ) -> dict[int, tuple[str, ...]]:
-    id_column = _body_id_column(bundle.nodes)
-    missing = [column for column in columns if column not in bundle.nodes.columns]
+    if not columns:
+        return {int(body_id): () for body_id in bundle.nodes.bodyId.astype(int)}
+    missing = [name for name in columns if name not in bundle.nodes.columns]
     if missing:
-        raise ValueError(f"missing constrained-rewire metadata columns: {missing}")
-    lookup: dict[int, tuple[str, ...]] = {}
-    for row in bundle.nodes[[id_column, *columns]].itertuples(index=False, name=None):
+        raise ValueError(f"node metadata columns missing for constrained null: {missing}")
+    metadata: dict[int, tuple[str, ...]] = {}
+    for row in bundle.nodes[["bodyId", *columns]].itertuples(index=False, name=None):
         body_id = int(row[0])
-        values = tuple("" if value is None or pd.isna(value) else str(value) for value in row[1:])
-        if any(not value for value in values):
+        values = tuple(str(value) for value in row[1:])
+        if any(value in {"", "None", "nan", "<NA>"} for value in values):
             raise ValueError(
-                f"constrained rewiring requires complete metadata {columns}; body {body_id} is missing a value"
+                f"node {body_id} has unresolved metadata required by constrained null: {columns}"
             )
-        lookup[body_id] = values
-    return lookup
+        metadata[body_id] = values
+    return metadata
 
 
-def _attribute_preserving_target_rewire(
+def _source_target_metadata_counts(
+    bundle: GraphBundle,
+    columns: tuple[str, ...],
+) -> Counter[tuple[int, tuple[str, ...]]]:
+    metadata = _node_metadata(bundle, columns)
+    return Counter(
+        (int(source), metadata[int(target)])
+        for source, target in zip(
+            bundle.edges.source.astype(int),
+            bundle.edges.target.astype(int),
+            strict=True,
+        )
+    )
+
+
+def audit_degree_null(
+    intact: GraphBundle,
+    rewired: GraphBundle,
+    *,
+    target_metadata_columns: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    intact.validate(require_sign="sign" in intact.edges.columns)
+    rewired.validate(require_sign="sign" in rewired.edges.columns)
+
+    def degrees(bundle: GraphBundle, field: str) -> Counter[int]:
+        return Counter(int(x) for x in bundle.edges[field].astype(int))
+
+    pair_rows = list(
+        zip(
+            rewired.edges.source.astype(int),
+            rewired.edges.target.astype(int),
+            strict=True,
+        )
+    )
+    changed = changed_edge_fraction(intact, rewired)
+    weight_identity = sorted(intact.edges.weight.astype(float)) == sorted(
+        rewired.edges.weight.astype(float)
+    )
+    sign_identity = True
+    if "sign" in intact.edges.columns or "sign" in rewired.edges.columns:
+        sign_identity = (
+            "sign" in intact.edges.columns
+            and "sign" in rewired.edges.columns
+            and sorted(intact.edges.sign.astype(int)) == sorted(rewired.edges.sign.astype(int))
+        )
+    metadata_identity = _source_target_metadata_counts(
+        intact, target_metadata_columns
+    ) == _source_target_metadata_counts(rewired, target_metadata_columns)
+
+    gates = {
+        "node_identity_preserved": set(intact.nodes.bodyId.astype(int))
+        == set(rewired.nodes.bodyId.astype(int)),
+        "edge_count_preserved": len(intact.edges) == len(rewired.edges),
+        "exact_out_degree_identity": degrees(intact, "source") == degrees(rewired, "source"),
+        "exact_in_degree_identity": degrees(intact, "target") == degrees(rewired, "target"),
+        "weight_multiset_identity": weight_identity,
+        "sign_multiset_identity": sign_identity,
+        "target_metadata_constraint_identity": metadata_identity,
+        "no_self_loops": all(source != target for source, target in pair_rows),
+        "no_duplicate_edges": len(pair_rows) == len(set(pair_rows)),
+    }
+    return {
+        "generator": GENERATOR,
+        "passed": all(gates.values()),
+        "gates": gates,
+        "target_metadata_columns": list(target_metadata_columns),
+        "changed_edge_fraction": changed,
+        "intact_overlap_fraction": 1.0 - changed,
+        "edge_count": len(intact.edges),
+    }
+
+
+def exact_max_distance_constrained_rewire(
     bundle: GraphBundle,
     *,
-    metadata_columns: tuple[str, ...],
     seed: int,
-    family: str = "metadata_constrained_minimum_overlap",
+    minimum_changed_edge_fraction: float = 0.80,
+    target_metadata_columns: tuple[str, ...] = (),
+    max_candidate_pairs: int = 2_000_000,
 ) -> GraphBundle:
-    """Construct a seeded maximum-distance degree-preserving target reassignment.
+    """Minimize intact edge overlap under exact degree and metadata constraints.
 
-    The min-cost flow uses a lexicographic objective. One additional intact edge costs
-    more than the maximum possible total seed-specific tie cost, so the primary optimum
-    is always minimum overlap. The seed only selects among equally distant solutions.
+    Each source preserves its exact out-degree and the exact multiset of target
+    metadata classes defined by ``target_metadata_columns``. Each target preserves
+    its exact in-degree. Because edge attribute records remain attached to their
+    original presynaptic source rows, source-specific outgoing weight/sign multisets
+    are also preserved. Self-loops and duplicate directed edges are forbidden.
+
+    Empty metadata constraints produce the degree-preserving null. Adding target
+    metadata successively creates stricter nulls, such as hemisphere-, cell-type-,
+    or spatial-bin-preserving controls. The solver fails closed when constraints are
+    infeasible or the exact candidate graph is too large.
     """
-    metadata = _metadata_lookup(bundle, metadata_columns)
+    bundle.validate(require_sign="sign" in bundle.edges.columns)
+    if not 0.0 <= minimum_changed_edge_fraction <= 1.0:
+        raise ValueError("minimum_changed_edge_fraction must be in [0, 1]")
+
     edges = bundle.edges.copy().reset_index(drop=True)
-    for body_id in set(edges.source.astype(int)) | set(edges.target.astype(int)):
-        if body_id not in metadata:
-            raise ValueError(f"body {body_id} missing from constrained-rewire metadata lookup")
+    original_rows = list(zip(edges.source.astype(int), edges.target.astype(int), strict=True))
+    if len(original_rows) != len(set(original_rows)):
+        raise ValueError("exact constrained null requires a simple input digraph")
+    if any(source == target for source, target in original_rows):
+        raise ValueError("exact constrained null requires an input digraph without self-loops")
+    if not original_rows:
+        raise ValueError("cannot rewire an empty graph")
 
-    group_supply: Counter[tuple[int, tuple[str, ...]]] = Counter()
-    target_demand: Counter[int] = Counter()
-    for source, target in zip(edges.source.astype(int), edges.target.astype(int), strict=True):
-        group_supply[(source, metadata[target])] += 1
-        target_demand[target] += 1
+    metadata = _node_metadata(bundle, target_metadata_columns)
+    in_degree = Counter(target for _, target in original_rows)
+    group_supply = Counter((source, metadata[target]) for source, target in original_rows)
+    targets_by_class: dict[tuple[str, ...], list[int]] = {}
+    for target in sorted(in_degree):
+        targets_by_class.setdefault(metadata[target], []).append(target)
 
-    targets_by_class: dict[tuple[str, ...], list[int]] = defaultdict(list)
-    for target in sorted(target_demand):
-        targets_by_class[metadata[target]].append(target)
+    candidate_count = sum(
+        sum(target != source for target in targets_by_class.get(target_class, []))
+        for source, target_class in group_supply
+    )
+    if candidate_count > int(max_candidate_pairs):
+        raise ValueError(
+            f"exact constrained-null candidate graph is too large ({candidate_count} pairs > "
+            f"{max_candidate_pairs}); use a separately qualified scalable generator"
+        )
 
-    candidates: list[tuple[tuple[Any, ...], int]] = []
-    for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
-        group_key: tuple[Any, ...] = (source, *target_class)
-        for target in targets_by_class[target_class]:
-            if source != target:
-                candidates.append((group_key, int(target)))
-    tie_ranks = _seeded_tie_ranks(candidates, seed=seed)
-    overlap_scale = len(edges) * max(len(candidates), 1) + 1
-
+    original = set(original_rows)
+    rng = np.random.default_rng(int(seed))
+    tie_max = 999
+    overlap_penalty = len(original_rows) * tie_max + 1
     flow_graph = nx.DiGraph()
-    total_edges = len(edges)
-    flow_graph.add_node("source", demand=-total_edges)
-    flow_graph.add_node("sink", demand=total_edges)
-    for target in sorted(target_demand):
-        flow_graph.add_node(("target", target), demand=0)
-        flow_graph.add_edge(("target", target), "sink", capacity=target_demand[target], weight=0)
 
-    intact_pairs = _edge_pairs(bundle.edges)
-    for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
-        group = (source, target_class)
-        group_key = (source, *target_class)
-        group_node = ("group", source, *target_class)
-        flow_graph.add_node(group_node, demand=0)
-        flow_graph.add_edge("source", group_node, capacity=group_supply[group], weight=0)
-        for target in targets_by_class[target_class]:
-            if source == target:
+    for group, supply in group_supply.items():
+        source, target_class = group
+        node = ("group", source, *target_class)
+        flow_graph.add_node(node, demand=-int(supply))
+        candidates = targets_by_class.get(target_class, [])
+        for target in candidates:
+            if target == source:
                 continue
-            overlap_cost = overlap_scale if (source, target) in intact_pairs else 0
-            tie_cost = tie_ranks[(group_key, int(target))]
+            tie_cost = int(rng.integers(0, tie_max + 1))
+            overlap_cost = overlap_penalty if (source, target) in original else 0
             flow_graph.add_edge(
-                group_node,
+                node,
                 ("target", target),
                 capacity=1,
                 weight=int(overlap_cost + tie_cost),
             )
+
+    for target, degree in in_degree.items():
+        flow_graph.add_node(("target", target), demand=int(degree))
 
     try:
         flow = nx.min_cost_flow(flow_graph)
@@ -275,210 +244,98 @@ def _attribute_preserving_target_rewire(
         drop=True
     )
     manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
-    manifest.update(
-        {
-            "rewire_family": family,
-            "rewire_seed": int(seed),
-            "rewire_objective": "minimum-intact-overlap-with-seeded-optimum-tie-break",
-            "qualification_status": "candidate",
-        }
-    )
     rewired = GraphBundle(
         nodes=bundle.nodes.copy(),
         edges=rewired_edges,
         roles={key: list(values) for key, values in bundle.roles.items()},
         manifest=manifest,
     )
-    validation = validate_rewire(bundle, rewired)
-    if not validation["passed"]:
-        raise RuntimeError(f"constrained rewire violated graph invariants: {validation}")
-    return rewired
-
-
-def minimum_overlap_degree_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    return _attribute_preserving_target_rewire(
+    audit = audit_degree_null(
         bundle,
-        metadata_columns=(),
-        seed=seed,
-        family="degree_preserving",
+        rewired,
+        target_metadata_columns=target_metadata_columns,
     )
-
-
-def sign_preserving_max_distance_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    if "sign" not in bundle.edges.columns:
-        raise ValueError("sign-preserving rewiring requires an edge sign column")
-    return _attribute_preserving_target_rewire_with_edge_group(
-        bundle,
-        edge_group=lambda row: (str(int(row.sign)),),
-        metadata_columns=(),
-        seed=seed,
-        nodes_override=bundle.nodes,
-        family="degree_sign_preserving",
-    )
-
-
-def _attribute_preserving_target_rewire_with_edge_group(
-    bundle: GraphBundle,
-    *,
-    edge_group: Callable[[Any], tuple[str, ...]],
-    metadata_columns: tuple[str, ...],
-    seed: int,
-    nodes_override: pd.DataFrame | None = None,
-    family: str,
-) -> GraphBundle:
-    """General seeded constrained min-cost target assignment with source-row groups."""
-    nodes = bundle.nodes if nodes_override is None else nodes_override
-    id_column = _body_id_column(nodes)
-    if metadata_columns:
-        metadata = _metadata_lookup(
-            GraphBundle(nodes, bundle.edges, bundle.roles, bundle.manifest),
-            metadata_columns,
+    if not audit["passed"]:
+        failed = [name for name, passed in audit["gates"].items() if not passed]
+        raise RuntimeError(f"exact constrained null failed invariants: {failed}")
+    if float(audit["changed_edge_fraction"]) + 1e-12 < minimum_changed_edge_fraction:
+        raise ValueError(
+            "maximum-distance constrained null cannot satisfy frozen distance floor: "
+            f"changed={audit['changed_edge_fraction']:.6f} "
+            f"required={minimum_changed_edge_fraction:.6f}"
         )
-    else:
-        metadata = {int(body_id): () for body_id in nodes[id_column].astype(int)}
-    edges = bundle.edges.copy().reset_index(drop=True)
-    intact_pairs = _edge_pairs(edges)
-    target_demand = Counter(int(x) for x in edges.target)
-    group_rows: dict[tuple[int, tuple[str, ...], tuple[str, ...]], list[int]] = defaultdict(list)
-    for idx, row in enumerate(edges.itertuples(index=False)):
-        source = int(row.source)
-        target = int(row.target)
-        group_rows[(source, edge_group(row), metadata[target])].append(idx)
 
-    targets_by_metadata: dict[tuple[str, ...], list[int]] = defaultdict(list)
-    for target in sorted(target_demand):
-        targets_by_metadata[metadata[target]].append(target)
-
-    candidates: list[tuple[tuple[Any, ...], int]] = []
-    for key in sorted(group_rows, key=str):
-        source, edge_class, target_class = key
-        group_key: tuple[Any, ...] = (source, *edge_class, "targetclass", *target_class)
-        for target in targets_by_metadata[target_class]:
-            if target != source:
-                candidates.append((group_key, int(target)))
-    tie_ranks = _seeded_tie_ranks(candidates, seed=seed)
-    overlap_scale = len(edges) * max(len(candidates), 1) + 1
-
-    flow_graph = nx.DiGraph()
-    total_edges = len(edges)
-    flow_graph.add_node("source", demand=-total_edges)
-    flow_graph.add_node("sink", demand=total_edges)
-    for target in sorted(target_demand):
-        target_node = ("target", target)
-        flow_graph.add_node(target_node, demand=0)
-        flow_graph.add_edge(target_node, "sink", capacity=target_demand[target], weight=0)
-
-    for key, row_indices in group_rows.items():
-        source, edge_class, target_class = key
-        group_key = (source, *edge_class, "targetclass", *target_class)
-        group_node = ("group", source, *edge_class, "targetclass", *target_class)
-        flow_graph.add_node(group_node, demand=0)
-        flow_graph.add_edge("source", group_node, capacity=len(row_indices), weight=0)
-        for target in targets_by_metadata[target_class]:
-            if target == source:
-                continue
-            overlap_cost = overlap_scale if (source, target) in intact_pairs else 0
-            tie_cost = tie_ranks[(group_key, int(target))]
-            flow_graph.add_edge(
-                group_node,
-                ("target", target),
-                capacity=1,
-                weight=int(overlap_cost + tie_cost),
-            )
-
-    try:
-        flow = nx.min_cost_flow(flow_graph)
-    except (nx.NetworkXUnfeasible, nx.NetworkXError) as exc:
-        raise ValueError("no constrained simple degree-preserving rewire exists") from exc
-
-    assigned_targets: dict[tuple[int, tuple[str, ...], tuple[str, ...]], list[int]] = {}
-    for key in group_rows:
-        source, edge_class, target_class = key
-        group_node = ("group", source, *edge_class, "targetclass", *target_class)
-        targets = [
-            int(target_node[1])
-            for target_node, value in flow[group_node].items()
-            if int(value) > 0
-        ]
-        targets.sort()
-        if len(targets) != len(group_rows[key]):
-            raise RuntimeError("constrained flow assignment cardinality mismatch")
-        assigned_targets[key] = targets
-
-    for key, row_indices in group_rows.items():
-        targets = assigned_targets[key]
-        ordered_rows = sorted(row_indices, key=lambda idx: int(edges.iloc[idx].target))
-        for idx, target in zip(ordered_rows, targets, strict=True):
-            edges.at[idx, "target"] = int(target)
-
-    edges = edges.sort_values(["source", "target"], kind="stable").reset_index(drop=True)
-    manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
-    manifest.update(
-        {
-            "rewire_family": family,
-            "rewire_seed": int(seed),
-            "rewire_objective": "minimum-intact-overlap-with-seeded-optimum-tie-break",
-            "qualification_status": "candidate",
-        }
-    )
-    rewired = GraphBundle(
-        nodes=nodes.copy(),
-        edges=edges,
-        roles={key: list(values) for key, values in bundle.roles.items()},
-        manifest=manifest,
-    )
-    validation = validate_rewire(bundle, rewired)
-    if not validation["passed"]:
-        raise RuntimeError(f"constrained rewire violated graph invariants: {validation}")
+    rewired.manifest["graph_role"] = "confirmatory-topology-null"
+    rewired.manifest["rewire"] = {
+        "generator": GENERATOR,
+        "seed": int(seed),
+        "minimum_changed_edge_fraction": float(minimum_changed_edge_fraction),
+        "changed_edge_fraction": float(audit["changed_edge_fraction"]),
+        "intact_overlap_fraction": float(audit["intact_overlap_fraction"]),
+        "target_metadata_columns": list(target_metadata_columns),
+        "exact_in_out_degree_preserved": True,
+        "weight_multiset_preserved": True,
+        "sign_multiset_preserved": True,
+        "selection_used_behavior_performance": False,
+    }
     return rewired
 
 
-def sign_and_metadata_preserving_rewire(
-    bundle: GraphBundle,
-    *,
-    metadata_columns: tuple[str, ...],
-    seed: int,
-    family: str,
-) -> GraphBundle:
-    if "sign" not in bundle.edges.columns:
-        raise ValueError("sign-constrained rewiring requires an edge sign column")
-    return _attribute_preserving_target_rewire_with_edge_group(
-        bundle,
-        edge_group=lambda row: (str(int(row.sign)),),
-        metadata_columns=metadata_columns,
-        seed=seed,
-        nodes_override=bundle.nodes,
-        family=family,
-    )
-
-
-def hemisphere_preserving_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    return sign_and_metadata_preserving_rewire(
-        bundle,
-        metadata_columns=("hemisphere_class",),
-        seed=seed,
-        family="degree_sign_hemisphere_preserving",
-    )
-
-
-def type_preserving_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    return sign_and_metadata_preserving_rewire(
-        bundle,
-        metadata_columns=("cell_type",),
-        seed=seed,
-        family="within_cell_type_rewire",
-    )
-
-
-def spatially_constrained_rewire(
+def exact_max_distance_degree_rewire(
     bundle: GraphBundle,
     *,
     seed: int,
-    spatial_column: str = "spatial_bin",
+    minimum_changed_edge_fraction: float = 0.80,
+    max_candidate_pairs: int = 2_000_000,
 ) -> GraphBundle:
-    return sign_and_metadata_preserving_rewire(
+    return exact_max_distance_constrained_rewire(
         bundle,
-        metadata_columns=("cell_type", spatial_column),
         seed=seed,
-        family="spatially_constrained_rewire",
+        minimum_changed_edge_fraction=minimum_changed_edge_fraction,
+        target_metadata_columns=(),
+        max_candidate_pairs=max_candidate_pairs,
     )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate a confirmatory maximum-distance topology null")
+    parser.add_argument("bundle")
+    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--minimum-changed", type=float, default=0.80)
+    parser.add_argument("--target-metadata", action="append", default=[])
+    parser.add_argument("--max-candidate-pairs", type=int, default=2_000_000)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--report")
+    args = parser.parse_args()
+
+    intact = GraphBundle.load(args.bundle)
+    metadata_columns = tuple(str(x) for x in args.target_metadata)
+    rewired = exact_max_distance_constrained_rewire(
+        intact,
+        seed=args.seed,
+        minimum_changed_edge_fraction=args.minimum_changed,
+        target_metadata_columns=metadata_columns,
+        max_candidate_pairs=args.max_candidate_pairs,
+    )
+    save_bundle(rewired, args.output)
+    report = audit_degree_null(
+        intact,
+        rewired,
+        target_metadata_columns=metadata_columns,
+    )
+    report["seed"] = int(args.seed)
+    report["minimum_changed_edge_fraction"] = float(args.minimum_changed)
+    report_path = Path(args.report) if args.report else Path(args.output) / "null-audit.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    print(f"{args.output}")
+    print(
+        f"passed={report['passed']} changed={report['changed_edge_fraction']:.6f} "
+        f"overlap={report['intact_overlap_fraction']:.6f}"
+    )
+    print(f"metadata={','.join(metadata_columns) if metadata_columns else 'degree-only'}")
+    print(f"report={report_path}")
+
+
+if __name__ == "__main__":
+    main()
