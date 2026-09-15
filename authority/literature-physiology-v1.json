@@ -1,0 +1,46 @@
+{
+  "authority_kind": "cross-dataset-published-physiology-v1",
+  "scope": "Independent published Drosophila physiology used to constrain model calibration. These data are not MaleCNS v1.0 body-ID-resolved physiology and remain cross-dataset priors.",
+  "sources": [
+    {
+      "key": "Matheson2022",
+      "title": "A neural circuit for wind-guided olfactory navigation",
+      "journal": "Nature Communications",
+      "year": 2022,
+      "doi": "10.1038/s41467-022-32247-7",
+      "url": "https://www.nature.com/articles/s41467-022-32247-7",
+      "evidence": [
+        "Wind-sensitive PFN pathways carry directional wind information while odor-sensitive fan-shaped-body tangential pathways carry odor context.",
+        "hDeltaC neurons receive both pathways and exhibit odor-gated, wind-direction-tuned activity.",
+        "hDeltaC activity is required for persistent upwind orientation during odor in the reported preparation."
+      ]
+    },
+    {
+      "key": "MussellsPires2024",
+      "title": "Converting an allocentric goal into an egocentric steering signal",
+      "journal": "Nature",
+      "year": 2024,
+      "doi": "10.1038/s41586-023-07006-3",
+      "url": "https://www.nature.com/articles/s41586-023-07006-3",
+      "evidence": [
+        "FC2 activity correlates with goal angle and EPG activity represents heading.",
+        "Individual PFL3 cells show conjunctive spike-rate tuning to heading and goal angle during goal-directed navigation.",
+        "Quantitative analysis and optogenetic manipulation support an egocentric steering computation in PFL3 output."
+      ]
+    },
+    {
+      "key": "SteeringControl2025",
+      "title": "Neural circuit mechanisms for steering control in walking Drosophila",
+      "journal": "eLife",
+      "year": 2025,
+      "doi": "10.7554/eLife.102230",
+      "url": "https://elifesciences.org/articles/102230",
+      "evidence": [
+        "Targeted in vivo electrophysiology shows DNa02 firing predicts high-gain steering.",
+        "Dual recordings show rotational velocity is approximately linearly related to right-left DNa02 firing-rate difference across the measured dynamic range.",
+        "A 150 ms neural-to-behavior comparison lag was used, but the authors explicitly note that this lag may reflect biological delay and/or spherical-treadmill inertia."
+      ]
+    }
+  ],
+  "claim_boundary": "These publications provide independent measured physiological constraints and causal/behavioral evidence in other Drosophila preparations. They do not measure activity of the exact MaleCNS v1.0 body IDs and therefore cannot be promoted to MaleCNS-specific measured physiology."
+}
