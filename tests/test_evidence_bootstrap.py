@@ -8,7 +8,6 @@ import pytest
 from fly_sniff.evidence import EvidenceClass
 from fly_sniff.evidence.bootstrap import build_ledger
 
-
 CONFIG = Path("configs/evidence_bootstrap_v1.json")
 
 
