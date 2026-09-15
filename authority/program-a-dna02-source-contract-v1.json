@@ -1,6 +1,11 @@
 {
   "schema": "fly-sniff-dna02-calibration-source-v1",
   "contract_id": "program-a-dna02-bilateral-steering-v1",
+  "status": "BLOCKED",
+  "blockers": [
+    "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED",
+    "BLOCKED_FIGURE3C_COHORT_UNRESOLVED"
+  ],
   "paper": {
     "doi": "10.7554/eLife.102230.3",
     "title": "Neural circuit mechanisms for steering control in walking Drosophila",
@@ -11,8 +16,7 @@
   "data_authority": {
     "repository": "Harvard Dataverse",
     "doi": "10.7910/DVN/0NCLP1",
-    "exact_file_map": [],
-    "mapping_status": "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED"
+    "exact_file_map": []
   },
   "code_authorities": [
     {
@@ -57,7 +61,7 @@
     "a2_d_14": []
   },
   "figure3c_cohort": null,
-  "cohort_status": "BLOCKED_FIGURE3C_COHORT_UNRESOLVED",
+  "figure3c_cohort_authority": null,
   "cohort_review_note": "The paper reports n=4 paired DNa02 flies and general secondary-analysis dictionaries list a2_d_08/a2_d_12/a2_d_13/a2_d_14. However, physiology_quant_analysis_figures.ipynb excludes a2_d_14 as low SNR for a separate physiology analysis. The exact Figure 3C inclusion set must therefore be verified from panel-level provenance/data before freezing the cohort.",
   "source_fields": {
     "left_neuron": "ephys_A / a2_l",
