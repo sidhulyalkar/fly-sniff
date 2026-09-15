@@ -17,8 +17,12 @@ There is no warning-only state for a required scientific dependency. A file bein
 
 Every dependency therefore has both:
 
-1. an exact `ArtifactRef` that must be present byte/science-hash-equivalently in the `ExperimentSpec`; and
+1. an exact `ArtifactRef` that must be present identically in the `ExperimentSpec`; and
 2. an explicit `pass` or `blocked` scientific gate state.
+
+The complete dependency/status manifest is itself content-addressed. The `ExperimentSpec` must contain exactly one `program_a_dependency_manifest` `ArtifactRef` whose SHA-256 equals the canonical dependency-manifest hash. This makes the reviewed PASS/BLOCKED decisions part of the sealed scientific contract rather than mutable side metadata.
+
+The dedicated `evidence_ledger_sha256` field in the `ExperimentSpec` must also equal the SHA-256 of a bound `evidence_ledger` dependency artifact.
 
 A blocked artifact remains useful evidence, but it cannot unlock the confirmatory experiment.
 
@@ -69,11 +73,15 @@ A readiness report is a deterministic function of the exact `ExperimentSpec` and
 - the supplied readiness report exactly matches the recomputed report; and
 - the recomputed report is `READY_TO_LOCK`.
 
-The resulting generic `ExperimentLock` binds the exact spec, code reference and runtime hash. A dependency mutation requires a new spec, readiness report and lock.
+Program A additionally requires `code_ref` to be an immutable 40-character lowercase git commit SHA. A mutable branch or tag such as `main` is rejected even though the generic experiment kernel permits any non-empty code reference.
+
+The resulting generic `ExperimentLock` therefore binds the exact spec, exact reviewed dependency/status manifest, immutable source commit, and runtime hash. A dependency mutation or gate-status change requires a new spec, readiness report and lock.
 
 ## What this does not establish
 
 A green preflight does not establish that the biological hypothesis is true. It establishes only that the experiment about to run matches the preregistered Program A question and that every required dependency claims a reviewed PASS state under an exact content identity.
+
+The preflight currently validates content identities recorded in `ArtifactRef` objects; it does not independently dereference every URI and recompute source-file bytes. Those byte-level provenance checks belong to the producer/validator of each dependency artifact and must occur before that dependency is marked `pass`.
 
 The evaluator remains separately responsible for:
 
