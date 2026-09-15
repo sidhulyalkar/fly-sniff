@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from fly_video_neural import session_benchmark
 from fly_video_neural.alignment import TARGET_NEURAL_BOUNDARY_POLICY
 from fly_video_neural.development_protocol import run_development_protocol
 from fly_video_neural.provenance import preparation_implementation_fingerprint
@@ -172,8 +173,6 @@ def test_development_never_calls_numpy_load_on_test_batches(tmp_path: Path, monk
     forbidden = {
         str(Path(batch).resolve()) for batch in batches if Path(batch).stem in test_sessions
     }
-
-    import fly_video_neural.session_benchmark as session_benchmark
 
     original_load = session_benchmark.np.load
 
