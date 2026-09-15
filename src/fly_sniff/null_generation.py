@@ -14,7 +14,7 @@ import pandas as pd
 from .graph import GraphBundle
 from .rewire import save_bundle
 
-GENERATOR = "exact-minimum-overlap-degree-rewire-v1"
+GENERATOR = "exact-minimum-overlap-constrained-rewire-v1"
 
 
 def _edge_pairs(bundle: GraphBundle) -> set[tuple[int, int]]:
@@ -35,7 +35,48 @@ def changed_edge_fraction(intact: GraphBundle, rewired: GraphBundle) -> float:
     return float(1.0 - len(intact_pairs & rewired_pairs) / len(intact_pairs))
 
 
-def audit_degree_null(intact: GraphBundle, rewired: GraphBundle) -> dict[str, Any]:
+def _node_metadata(
+    bundle: GraphBundle,
+    columns: tuple[str, ...],
+) -> dict[int, tuple[str, ...]]:
+    if not columns:
+        return {int(body_id): () for body_id in bundle.nodes.bodyId.astype(int)}
+    missing = [name for name in columns if name not in bundle.nodes.columns]
+    if missing:
+        raise ValueError(f"node metadata columns missing for constrained null: {missing}")
+    metadata: dict[int, tuple[str, ...]] = {}
+    for row in bundle.nodes[["bodyId", *columns]].itertuples(index=False, name=None):
+        body_id = int(row[0])
+        values = tuple(str(value) for value in row[1:])
+        if any(value in {"", "None", "nan", "<NA>"} for value in values):
+            raise ValueError(
+                f"node {body_id} has unresolved metadata required by constrained null: {columns}"
+            )
+        metadata[body_id] = values
+    return metadata
+
+
+def _source_target_metadata_counts(
+    bundle: GraphBundle,
+    columns: tuple[str, ...],
+) -> Counter[tuple[int, tuple[str, ...]]]:
+    metadata = _node_metadata(bundle, columns)
+    return Counter(
+        (int(source), metadata[int(target)])
+        for source, target in zip(
+            bundle.edges.source.astype(int),
+            bundle.edges.target.astype(int),
+            strict=True,
+        )
+    )
+
+
+def audit_degree_null(
+    intact: GraphBundle,
+    rewired: GraphBundle,
+    *,
+    target_metadata_columns: tuple[str, ...] = (),
+) -> dict[str, Any]:
     intact.validate(require_sign="sign" in intact.edges.columns)
     rewired.validate(require_sign="sign" in rewired.edges.columns)
 
@@ -60,6 +101,9 @@ def audit_degree_null(intact: GraphBundle, rewired: GraphBundle) -> dict[str, An
             and "sign" in rewired.edges.columns
             and sorted(intact.edges.sign.astype(int)) == sorted(rewired.edges.sign.astype(int))
         )
+    metadata_identity = _source_target_metadata_counts(
+        intact, target_metadata_columns
+    ) == _source_target_metadata_counts(rewired, target_metadata_columns)
 
     gates = {
         "node_identity_preserved": set(intact.nodes.bodyId.astype(int))
@@ -69,6 +113,7 @@ def audit_degree_null(intact: GraphBundle, rewired: GraphBundle) -> dict[str, An
         "exact_in_degree_identity": degrees(intact, "target") == degrees(rewired, "target"),
         "weight_multiset_identity": weight_identity,
         "sign_multiset_identity": sign_identity,
+        "target_metadata_constraint_identity": metadata_identity,
         "no_self_loops": all(source != target for source, target in pair_rows),
         "no_duplicate_edges": len(pair_rows) == len(set(pair_rows)),
     }
@@ -76,54 +121,61 @@ def audit_degree_null(intact: GraphBundle, rewired: GraphBundle) -> dict[str, An
         "generator": GENERATOR,
         "passed": all(gates.values()),
         "gates": gates,
+        "target_metadata_columns": list(target_metadata_columns),
         "changed_edge_fraction": changed,
         "intact_overlap_fraction": 1.0 - changed,
         "edge_count": len(intact.edges),
     }
 
 
-def exact_max_distance_degree_rewire(
+def exact_max_distance_constrained_rewire(
     bundle: GraphBundle,
     *,
     seed: int,
     minimum_changed_edge_fraction: float = 0.80,
+    target_metadata_columns: tuple[str, ...] = (),
     max_candidate_pairs: int = 2_000_000,
 ) -> GraphBundle:
-    """Construct a simple directed graph with identical in/out degrees and minimum overlap.
+    """Minimize intact edge overlap under exact degree and metadata constraints.
 
-    The topology problem is solved as a bipartite min-cost flow. Existing edges carry
-    a dominating overlap penalty, while seeded integer tie costs select among equally
-    distant solutions. Edge attributes remain attached to their original presynaptic
-    records, so each source preserves its outgoing weight/sign multiset as well as the
-    global attribute multisets.
+    Each source preserves its exact out-degree and the exact multiset of target
+    metadata classes defined by ``target_metadata_columns``. Each target preserves
+    its exact in-degree. Because edge attribute records remain attached to their
+    original presynaptic source rows, source-specific outgoing weight/sign multisets
+    are also preserved. Self-loops and duplicate directed edges are forbidden.
 
-    This exact solver is intended for candidate circuits where the source-target
-    candidate product is tractable. It fails closed instead of silently falling back
-    to a weaker null on very large graphs.
+    Empty metadata constraints produce the degree-preserving null. Adding target
+    metadata successively creates stricter nulls, such as hemisphere-, cell-type-,
+    or spatial-bin-preserving controls. The solver fails closed when constraints are
+    infeasible or the exact candidate graph is too large.
     """
     bundle.validate(require_sign="sign" in bundle.edges.columns)
     if not 0.0 <= minimum_changed_edge_fraction <= 1.0:
         raise ValueError("minimum_changed_edge_fraction must be in [0, 1]")
 
     edges = bundle.edges.copy().reset_index(drop=True)
-    original_rows = list(
-        zip(edges.source.astype(int), edges.target.astype(int), strict=True)
-    )
+    original_rows = list(zip(edges.source.astype(int), edges.target.astype(int), strict=True))
     if len(original_rows) != len(set(original_rows)):
-        raise ValueError("exact degree null requires a simple input digraph without duplicate edges")
+        raise ValueError("exact constrained null requires a simple input digraph")
     if any(source == target for source, target in original_rows):
-        raise ValueError("exact degree null requires an input digraph without self-loops")
+        raise ValueError("exact constrained null requires an input digraph without self-loops")
     if not original_rows:
         raise ValueError("cannot rewire an empty graph")
 
-    out_degree = Counter(source for source, _ in original_rows)
+    metadata = _node_metadata(bundle, target_metadata_columns)
     in_degree = Counter(target for _, target in original_rows)
-    sources = sorted(out_degree)
-    targets = sorted(in_degree)
-    candidate_count = sum(1 for source in sources for target in targets if source != target)
+    group_supply = Counter((source, metadata[target]) for source, target in original_rows)
+    targets_by_class: dict[tuple[str, ...], list[int]] = {}
+    for target in sorted(in_degree):
+        targets_by_class.setdefault(metadata[target], []).append(target)
+
+    candidate_count = sum(
+        sum(target != source for target in targets_by_class.get(target_class, []))
+        for source, target_class in group_supply
+    )
     if candidate_count > int(max_candidate_pairs):
         raise ValueError(
-            f"exact degree-null candidate graph is too large ({candidate_count} pairs > "
+            f"exact constrained-null candidate graph is too large ({candidate_count} pairs > "
             f"{max_candidate_pairs}); use a separately qualified scalable generator"
         )
 
@@ -131,48 +183,61 @@ def exact_max_distance_degree_rewire(
     rng = np.random.default_rng(int(seed))
     tie_max = 999
     overlap_penalty = len(original_rows) * tie_max + 1
-
     flow_graph = nx.DiGraph()
-    for source in sources:
-        flow_graph.add_node(("source", source), demand=-int(out_degree[source]))
-    for target in targets:
-        flow_graph.add_node(("target", target), demand=int(in_degree[target]))
 
-    for source in sources:
-        for target in targets:
-            if source == target:
+    for group, supply in group_supply.items():
+        source, target_class = group
+        node = ("group", source, *target_class)
+        flow_graph.add_node(node, demand=-int(supply))
+        candidates = targets_by_class.get(target_class, [])
+        for target in candidates:
+            if target == source:
                 continue
             tie_cost = int(rng.integers(0, tie_max + 1))
             overlap_cost = overlap_penalty if (source, target) in original else 0
             flow_graph.add_edge(
-                ("source", source),
+                node,
                 ("target", target),
                 capacity=1,
                 weight=int(overlap_cost + tie_cost),
             )
 
-    flow = nx.min_cost_flow(flow_graph)
-    new_targets_by_source: dict[int, list[int]] = {source: [] for source in sources}
-    for source in sources:
-        outgoing = flow[("source", source)]
-        for node, value in outgoing.items():
+    for target, degree in in_degree.items():
+        flow_graph.add_node(("target", target), demand=int(degree))
+
+    try:
+        flow = nx.min_cost_flow(flow_graph)
+    except (nx.NetworkXUnfeasible, nx.NetworkXError) as exc:
+        raise ValueError(
+            "no simple degree-preserving graph satisfies the requested target metadata constraints"
+        ) from exc
+
+    new_targets_by_group: dict[tuple[int, tuple[str, ...]], list[int]] = {
+        group: [] for group in group_supply
+    }
+    for group in group_supply:
+        source, target_class = group
+        node = ("group", source, *target_class)
+        for target_node, value in flow[node].items():
             if int(value) <= 0:
                 continue
-            _, target = node
-            new_targets_by_source[source].append(int(target))
-        if len(new_targets_by_source[source]) != out_degree[source]:
-            raise RuntimeError("min-cost flow returned an invalid source degree")
-        new_targets_by_source[source].sort()
+            _, target = target_node
+            new_targets_by_group[group].append(int(target))
+        if len(new_targets_by_group[group]) != group_supply[group]:
+            raise RuntimeError("min-cost flow returned an invalid constrained source degree")
+        new_targets_by_group[group].sort()
 
     rewired_frames: list[pd.DataFrame] = []
-    for source in sources:
+    for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
         source_rows = edges.loc[edges.source.astype(int) == source].copy()
-        source_rows = source_rows.sort_values(["target"], kind="stable").reset_index(drop=True)
-        targets_for_source = new_targets_by_source[source]
-        if len(source_rows) != len(targets_for_source):
-            raise RuntimeError("attribute assignment source degree mismatch")
-        source_rows.loc[:, "target"] = targets_for_source
-        rewired_frames.append(source_rows)
+        mask = source_rows.target.astype(int).map(lambda target: metadata[target] == target_class)
+        group_rows = source_rows.loc[mask].copy()
+        group_rows = group_rows.sort_values(["target"], kind="stable").reset_index(drop=True)
+        targets_for_group = new_targets_by_group[(source, target_class)]
+        if len(group_rows) != len(targets_for_group):
+            raise RuntimeError("attribute assignment constrained-group degree mismatch")
+        group_rows.loc[:, "target"] = targets_for_group
+        rewired_frames.append(group_rows)
 
     rewired_edges = pd.concat(rewired_frames, ignore_index=True)
     rewired_edges = rewired_edges.sort_values(["source", "target"], kind="stable").reset_index(
@@ -185,24 +250,29 @@ def exact_max_distance_degree_rewire(
         roles={key: list(values) for key, values in bundle.roles.items()},
         manifest=manifest,
     )
-    audit = audit_degree_null(bundle, rewired)
+    audit = audit_degree_null(
+        bundle,
+        rewired,
+        target_metadata_columns=target_metadata_columns,
+    )
     if not audit["passed"]:
         failed = [name for name, passed in audit["gates"].items() if not passed]
-        raise RuntimeError(f"exact degree null failed invariants: {failed}")
+        raise RuntimeError(f"exact constrained null failed invariants: {failed}")
     if float(audit["changed_edge_fraction"]) + 1e-12 < minimum_changed_edge_fraction:
         raise ValueError(
-            "maximum-distance degree-preserving null cannot satisfy frozen distance floor: "
+            "maximum-distance constrained null cannot satisfy frozen distance floor: "
             f"changed={audit['changed_edge_fraction']:.6f} "
             f"required={minimum_changed_edge_fraction:.6f}"
         )
 
-    rewired.manifest["graph_role"] = "degree-preserving-confirmatory-null"
+    rewired.manifest["graph_role"] = "confirmatory-topology-null"
     rewired.manifest["rewire"] = {
         "generator": GENERATOR,
         "seed": int(seed),
         "minimum_changed_edge_fraction": float(minimum_changed_edge_fraction),
         "changed_edge_fraction": float(audit["changed_edge_fraction"]),
         "intact_overlap_fraction": float(audit["intact_overlap_fraction"]),
+        "target_metadata_columns": list(target_metadata_columns),
         "exact_in_out_degree_preserved": True,
         "weight_multiset_preserved": True,
         "sign_multiset_preserved": True,
@@ -211,25 +281,48 @@ def exact_max_distance_degree_rewire(
     return rewired
 
 
+def exact_max_distance_degree_rewire(
+    bundle: GraphBundle,
+    *,
+    seed: int,
+    minimum_changed_edge_fraction: float = 0.80,
+    max_candidate_pairs: int = 2_000_000,
+) -> GraphBundle:
+    return exact_max_distance_constrained_rewire(
+        bundle,
+        seed=seed,
+        minimum_changed_edge_fraction=minimum_changed_edge_fraction,
+        target_metadata_columns=(),
+        max_candidate_pairs=max_candidate_pairs,
+    )
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a confirmatory maximum-distance degree null")
+    parser = argparse.ArgumentParser(description="Generate a confirmatory maximum-distance topology null")
     parser.add_argument("bundle")
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--minimum-changed", type=float, default=0.80)
+    parser.add_argument("--target-metadata", action="append", default=[])
     parser.add_argument("--max-candidate-pairs", type=int, default=2_000_000)
     parser.add_argument("--output", required=True)
     parser.add_argument("--report")
     args = parser.parse_args()
 
     intact = GraphBundle.load(args.bundle)
-    rewired = exact_max_distance_degree_rewire(
+    metadata_columns = tuple(str(x) for x in args.target_metadata)
+    rewired = exact_max_distance_constrained_rewire(
         intact,
         seed=args.seed,
         minimum_changed_edge_fraction=args.minimum_changed,
+        target_metadata_columns=metadata_columns,
         max_candidate_pairs=args.max_candidate_pairs,
     )
     save_bundle(rewired, args.output)
-    report = audit_degree_null(intact, rewired)
+    report = audit_degree_null(
+        intact,
+        rewired,
+        target_metadata_columns=metadata_columns,
+    )
     report["seed"] = int(args.seed)
     report["minimum_changed_edge_fraction"] = float(args.minimum_changed)
     report_path = Path(args.report) if args.report else Path(args.output) / "null-audit.json"
@@ -240,6 +333,7 @@ def main() -> None:
         f"passed={report['passed']} changed={report['changed_edge_fraction']:.6f} "
         f"overlap={report['intact_overlap_fraction']:.6f}"
     )
+    print(f"metadata={','.join(metadata_columns) if metadata_columns else 'degree-only'}")
     print(f"report={report_path}")
 
 
