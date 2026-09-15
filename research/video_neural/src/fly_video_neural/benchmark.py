@@ -51,8 +51,6 @@ def _validate_common(document: dict[str, Any]) -> None:
         raise ValueError("ridge alpha grid changed")
     if document.get("model_selection_metric") != "median_pearson_r":
         raise ValueError("model-selection metric must be median_pearson_r")
-    if document.get("test_consumption_requires_explicit_flag") is not True:
-        raise ValueError("explicit acknowledgement is required before test consumption")
 
 
 def _validate_v0(document: dict[str, Any]) -> None:
@@ -79,6 +77,8 @@ def _validate_v0(document: dict[str, Any]) -> None:
         raise ValueError("input/target temporal overlap must remain forbidden")
     if document.get("test_animals_for_hyperparameter_selection") is not False:
         raise ValueError("test animals may not be used for hyperparameter selection")
+    if document.get("test_consumption_requires_explicit_flag") is not True:
+        raise ValueError("v0 requires explicit acknowledgement before test consumption")
 
 
 def _validate_v1(document: dict[str, Any]) -> None:
@@ -89,6 +89,8 @@ def _validate_v1(document: dict[str, Any]) -> None:
         raise ValueError("v1 revision status must remain pre_data_scoring_correction")
     if document.get("revision_was_informed_by_benchmark_scores") is not False:
         raise ValueError("v1 correction must remain uninformed by benchmark scores")
+    if document.get("expected_public_release_animals") != 8:
+        raise ValueError("v1 expects the complete eight-animal public MC2P release")
     rates = document.get("measurement_rates_hz")
     if rates != {"behavior_video": 100.0, "two_photon_nominal": 16.0}:
         raise ValueError("v1 measurement-rate contract changed")
@@ -133,3 +135,9 @@ def _validate_v1(document: dict[str, Any]) -> None:
         raise ValueError("raw cross-animal neural-pixel targets are forbidden in v1")
     if secondary.get("test_animals_for_hyperparameter_selection") is not False:
         raise ValueError("v1 secondary test animals may not tune hyperparameters")
+    if document.get("test_consumption_policy") != "one_way_validation_unlock_then_final_runner":
+        raise ValueError("v1 test consumption must use the one-way validation-unlock final runner")
+    if document.get("test_consumption_requires_validation_unlock") is not True:
+        raise ValueError("v1 final evaluation requires the frozen validation unlock")
+    if document.get("development_commands_may_consume_test") is not False:
+        raise ValueError("v1 development commands may not consume held-out test sessions")

@@ -6,6 +6,7 @@
   "revision_reason": "Raw two-photon image coordinates are subject-specific; direct across-animal raw-pixel prediction confounds neural dynamics with unobserved subject anatomy.",
   "revision_was_informed_by_benchmark_scores": false,
   "dataset_id": "mc2p_v1",
+  "expected_public_release_animals": 8,
   "target_evidence_class": "measured_neural_activity",
   "measurement_rates_hz": {
     "behavior_video": 100.0,
@@ -65,5 +66,7 @@
     100.0
   ],
   "model_selection_metric": "median_pearson_r",
-  "test_consumption_requires_explicit_flag": true
+  "test_consumption_policy": "one_way_validation_unlock_then_final_runner",
+  "test_consumption_requires_validation_unlock": true,
+  "development_commands_may_consume_test": false
 }

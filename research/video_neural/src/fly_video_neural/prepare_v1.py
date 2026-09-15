@@ -14,6 +14,8 @@ from .mc2p_legacy import convert_legacy_pickle, sha256_file
 from .pose_neural import build_session_pose_neural_batch, load_pose3d
 from .session_benchmark import build_session_split_lock, load_session_batches
 
+EXPECTED_PUBLIC_RELEASE_ANIMALS = 8
+
 
 def _sha(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
@@ -33,6 +35,17 @@ def _require_pickle_trust(source: Path, *, trust_upstream_pickle: bool) -> None:
         raise ValueError(
             f"refusing to inspect or deserialize {source.name} without --trust-upstream-pickle"
         )
+
+
+def _validate_behavior_frame_alignment(alignment_path: Path, pose_path: Path) -> int:
+    alignment = load_safe_alignment(alignment_path)
+    pose = load_pose3d(pose_path)
+    if len(alignment) != len(pose):
+        raise ValueError(
+            "behavior-frame count mismatch between synchronization and pose: "
+            f"alignment={len(alignment)} pose3d={len(pose)}"
+        )
+    return len(alignment)
 
 
 def _copy_safe_alignment(source: Path, destination: Path) -> dict[str, Any]:
@@ -143,6 +156,11 @@ def prepare_mc2p_v1(
 ) -> dict[str, Any]:
     output = _fresh_output_dir(output_dir)
     manifest = build_manifest(root)
+    if manifest["animal_count"] != EXPECTED_PUBLIC_RELEASE_ANIMALS:
+        raise ValueError(
+            "v1 expects the complete eight-animal public MC2P release; "
+            f"discovered {manifest['animal_count']} animals"
+        )
     manifest_path = output / "mc2p-manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
@@ -161,6 +179,7 @@ def prepare_mc2p_v1(
             session_dir,
             trust_upstream_pickle=trust_upstream_pickle,
         )
+        behavior_frame_count = _validate_behavior_frame_alignment(alignment_path, pose_path)
         windows = materialize_session_windows(session.path, alignment_path)
         if windows["window_count"] < 2:
             raise ValueError(
@@ -184,6 +203,7 @@ def prepare_mc2p_v1(
             {
                 "animal_id": session.animal_id,
                 "session_id": session.session_id,
+                "behavior_frame_count": behavior_frame_count,
                 "alignment_conversion_sha256": alignment_receipt["receipt_sha256"],
                 "pose_conversion_sha256": pose_receipt["receipt_sha256"],
                 "windows_sha256": sha256_file(windows_path),
@@ -204,6 +224,7 @@ def prepare_mc2p_v1(
         "protocol": "mc2p-v1-preparation-v1",
         "benchmark_id": "mc2p_future_neural_v1",
         "dataset_id": "mc2p_v1",
+        "expected_public_release_animals": EXPECTED_PUBLIC_RELEASE_ANIMALS,
         "manifest_sha256": manifest["manifest_sha256"],
         "manifest_file_sha256": sha256_file(manifest_path),
         "animal_count": manifest["animal_count"],
