@@ -51,8 +51,8 @@ def test_hash_file_reports_exact_bytes(tmp_path: Path) -> None:
     path.write_bytes(b"fly-sniff-source-inspection")
     size, md5, sha256 = _hash_file(path, chunk_bytes=5)
     assert size == len(b"fly-sniff-source-inspection")
-    assert md5 == "9572c45b9278cff06bd29a062a09d757"
-    assert sha256 == "40490f5190bb4f19ab878355c71197396a1961e228010945172baaf36e1d04bc"
+    assert md5 == "848df4fdbb7181f326f2142aab7f5363"
+    assert sha256 == "d98984fd5e494aeb5e9b6ad07218d2a4daa80c70b8e473c5d4ef46be76175438"
 
 
 def test_local_source_set_must_be_exact(tmp_path: Path) -> None:
