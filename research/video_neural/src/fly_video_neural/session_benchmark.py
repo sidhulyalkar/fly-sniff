@@ -176,16 +176,22 @@ def build_session_split_lock(
     return payload
 
 
+def _verify_lock_self_hash(lock: dict[str, Any]) -> None:
+    supplied = dict(lock)
+    claimed = supplied.pop("split_lock_sha256", None)
+    if claimed != _sha(supplied):
+        raise ValueError("session split lock self-hash mismatch")
+
+
 def verify_session_split_lock(
     lock: dict[str, Any],
     batch: SessionBenchmarkBatch,
     *,
     source_batches: list[dict[str, str]] | None = None,
 ) -> None:
+    _verify_lock_self_hash(lock)
     supplied = dict(lock)
-    claimed = supplied.pop("split_lock_sha256", None)
-    if claimed != _sha(supplied):
-        raise ValueError("session split lock self-hash mismatch")
+    supplied.pop("split_lock_sha256", None)
     rebuilt = build_session_split_lock(
         batch,
         source_batches=source_batches,
@@ -195,6 +201,82 @@ def verify_session_split_lock(
     expected.pop("split_lock_sha256")
     if expected != supplied:
         raise ValueError("session split lock does not match batch inputs or assignments")
+
+
+def verify_development_projection(
+    lock: dict[str, Any],
+    batch: SessionBenchmarkBatch,
+    *,
+    source_batches: list[dict[str, str]] | None = None,
+) -> None:
+    """Verify an exact train+validation projection without requiring test arrays in memory."""
+    _verify_lock_self_hash(lock)
+    sample_to_split = lock["sample_to_split"]
+    sample_to_animal = lock["sample_to_animal"]
+    expected_samples = {
+        sample for sample, split_name in sample_to_split.items() if split_name in {"train", "validation"}
+    }
+    actual_samples = set(batch.sample_ids.tolist())
+    if actual_samples != expected_samples:
+        missing = sorted(expected_samples - actual_samples)
+        extra = sorted(actual_samples - expected_samples)
+        raise ValueError(
+            "development projection does not exactly match frozen train+validation samples; "
+            f"missing={missing[:5]} extra={extra[:5]}"
+        )
+
+    expected_sessions: set[str] = set()
+    for animal, assignments in lock["animal_sessions"].items():
+        expected_sessions.update(assignments["train"])
+        expected_sessions.update(assignments["validation"])
+        if set(assignments["test"]) & set(batch.session_ids.tolist()):
+            raise ValueError("development projection contains a held-out test session")
+    if set(batch.session_ids.tolist()) != expected_sessions:
+        raise ValueError("development projection session set does not match frozen train+validation sessions")
+
+    for sample, animal, session in zip(
+        batch.sample_ids, batch.animal_ids, batch.session_ids, strict=True
+    ):
+        sample_id = str(sample)
+        animal_id = str(animal)
+        session_id = str(session)
+        split_name = sample_to_split.get(sample_id)
+        if split_name not in {"train", "validation"}:
+            raise ValueError(f"development projection contains non-development sample {sample_id!r}")
+        if sample_to_animal.get(sample_id) != animal_id:
+            raise ValueError(f"development sample {sample_id!r} changed animal identity")
+        allowed_sessions = set(lock["animal_sessions"][animal_id][split_name])
+        if session_id not in allowed_sessions:
+            raise ValueError(f"development sample {sample_id!r} changed session identity")
+
+    if source_batches is not None:
+        frozen_sources = {
+            (row["path"], row["sha256"]) for row in lock.get("source_batches", [])
+        }
+        supplied_sources = {(row["path"], row["sha256"]) for row in source_batches}
+        if not supplied_sources <= frozen_sources:
+            raise ValueError("development source-batch identity is not a subset of the frozen split lock")
+        if len(source_batches) != len(expected_sessions):
+            raise ValueError("development source-batch count does not match development session count")
+
+
+def subset_development_batch(
+    batch: SessionBenchmarkBatch,
+    lock: dict[str, Any],
+) -> SessionBenchmarkBatch:
+    _verify_lock_self_hash(lock)
+    sample_to_split = lock["sample_to_split"]
+    mask = np.asarray(
+        [sample_to_split[str(sample)] in {"train", "validation"} for sample in batch.sample_ids],
+        dtype=bool,
+    )
+    return SessionBenchmarkBatch(
+        sample_ids=batch.sample_ids[mask],
+        animal_ids=batch.animal_ids[mask],
+        session_ids=batch.session_ids[mask],
+        features=batch.features[mask],
+        targets=batch.targets[mask],
+    )
 
 
 def _finite_values(rows: list[dict[str, Any]], metric: str) -> list[float]:
@@ -224,27 +306,32 @@ def run_within_animal_ridge(
     source_batches: list[dict[str, str]] | None = None,
     consume_test: bool = False,
 ) -> dict[str, Any]:
-    verify_session_split_lock(lock, batch, source_batches=source_batches)
+    if consume_test:
+        verify_session_split_lock(lock, batch, source_batches=source_batches)
+    else:
+        verify_development_projection(lock, batch, source_batches=source_batches)
     sample_to_split = lock["sample_to_split"]
     sample_to_animal = lock["sample_to_animal"]
-    animals = sorted(set(batch.animal_ids.tolist()))
+    animals = sorted(lock["animal_sessions"])
     rows: list[dict[str, Any]] = []
     for animal in animals:
         animal_mask = np.array(
-            [sample_to_animal[sample] == animal for sample in batch.sample_ids], dtype=bool
+            [sample_to_animal[str(sample)] == animal for sample in batch.sample_ids], dtype=bool
         )
         train = animal_mask & np.array(
-            [sample_to_split[sample] == "train" for sample in batch.sample_ids], dtype=bool
+            [sample_to_split[str(sample)] == "train" for sample in batch.sample_ids], dtype=bool
         )
         validation = animal_mask & np.array(
-            [sample_to_split[sample] == "validation" for sample in batch.sample_ids],
+            [sample_to_split[str(sample)] == "validation" for sample in batch.sample_ids],
             dtype=bool,
         )
         test = animal_mask & np.array(
-            [sample_to_split[sample] == "test" for sample in batch.sample_ids], dtype=bool
+            [sample_to_split[str(sample)] == "test" for sample in batch.sample_ids], dtype=bool
         )
-        if min(train.sum(), validation.sum(), test.sum()) < 2:
-            raise ValueError(f"animal {animal!r} needs at least two windows in every split")
+        if min(train.sum(), validation.sum()) < 2:
+            raise ValueError(f"animal {animal!r} needs at least two windows in train and validation")
+        if consume_test and test.sum() < 2:
+            raise ValueError(f"animal {animal!r} needs at least two windows in test")
         candidates: list[dict[str, Any]] = []
         for alpha in RIDGE_ALPHAS:
             model = RidgeDecoder(alpha).fit(batch.features[train], batch.targets[train])
