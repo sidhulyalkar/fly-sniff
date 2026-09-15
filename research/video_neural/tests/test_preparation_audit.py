@@ -275,7 +275,7 @@ def test_preflight_rejects_rehashed_split_with_duplicate_partition(tmp_path: Pat
     split_path = root / "session-split-lock.json"
     split_lock = json.loads(split_path.read_text())
     split_lock.pop("split_lock_sha256")
-    first_animal = sorted(split_lock["animal_sessions"])[0]
+    first_animal = min(split_lock["animal_sessions"])
     split_lock["animal_sessions"][first_animal]["test"] = list(
         split_lock["animal_sessions"][first_animal]["validation"]
     )
@@ -293,7 +293,7 @@ def test_preflight_rejects_rehashed_split_with_duplicate_partition(tmp_path: Pat
 def test_preflight_rejects_rehashed_window_identity_drift(tmp_path: Path):
     root = tmp_path / "prepared"
     _build_prepared_fixture(root)
-    session_dir = sorted((root / "sessions").iterdir())[0]
+    session_dir = min((root / "sessions").iterdir())
     windows_path = session_dir / "windows.json"
     windows = json.loads(windows_path.read_text())
     windows["windows"][0]["sample"]["animal_id"] = "different_animal"
@@ -328,7 +328,7 @@ def test_preflight_rejects_rehashed_claim_of_model_fitting(tmp_path: Path):
 def test_preflight_rejects_rehashed_conversion_output_repointing(tmp_path: Path):
     root = tmp_path / "prepared"
     _build_prepared_fixture(root)
-    session_dir = sorted((root / "sessions").iterdir())[0]
+    session_dir = min((root / "sessions").iterdir())
     conversion_path = session_dir / "alignment-conversion.json"
     conversion = json.loads(conversion_path.read_text())
     conversion.pop("receipt_sha256")
