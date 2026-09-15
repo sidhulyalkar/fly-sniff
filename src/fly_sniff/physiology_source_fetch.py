@@ -4,8 +4,8 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -39,7 +39,7 @@ def _bounded_get(url: str, *, max_bytes: int, timeout_s: float = 30.0) -> tuple[
     if max_bytes <= 0:
         raise ValueError("max_bytes must be positive")
     request = Request(url, headers={"User-Agent": _USER_AGENT, "Accept": "*/*"})
-    with urlopen(request, timeout=timeout_s) as response:  # noqa: S310 - frozen HTTPS authorities
+    with urlopen(request, timeout=timeout_s) as response:
         final_url = str(response.geturl())
         if not final_url.startswith("https://"):
             raise ValueError("source fetch redirected to a non-HTTPS URL")
