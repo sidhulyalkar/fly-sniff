@@ -99,6 +99,11 @@ def validate_final_authorization(
         raise ValueError("development validation did not unlock final test consumption")
     if saved_unlock.get("test_consumption_allowed") is not True:
         raise ValueError("validation receipt does not authorize final test consumption")
+    eligible_ids = saved_unlock.get("eligible_animal_ids")
+    if not isinstance(eligible_ids, list) or len(eligible_ids) < acceptance_config["minimum_eligible_animals"]:
+        raise ValueError("validation receipt does not freeze a sufficient confirmatory animal population")
+    if len(eligible_ids) != len(set(eligible_ids)):
+        raise ValueError("validation receipt contains duplicate confirmatory animal ids")
     return bundle
 
 
@@ -214,6 +219,7 @@ def run_final_protocol(
     split_lock = _load_json(split_lock_path)
     acceptance_config = load_acceptance_config(acceptance_config_path)
     bundle = validate_final_authorization(development_dir, split_lock, acceptance_config)
+    confirmatory_animal_ids = list(bundle["unlock"]["eligible_animal_ids"])
     expected_source_batches = _verify_preload_contract(
         bundle,
         split_lock_path=split_lock_path,
@@ -273,7 +279,11 @@ def run_final_protocol(
         json.dumps(null_final, indent=2, sort_keys=True) + "\n"
     )
     effects = _test_effects(aligned_final, null_final)
-    final_inference = evaluate_final_inference(effects, acceptance_config)
+    final_inference = evaluate_final_inference(
+        effects,
+        acceptance_config,
+        confirmatory_animal_ids=confirmatory_animal_ids,
+    )
     receipt: dict[str, Any] = {
         "schema_version": 1,
         "protocol": "mc2p-v1-final-evaluation-v1",
@@ -286,12 +296,14 @@ def run_final_protocol(
         "test_status": "consumed_once",
         "prepared_test_batches_first_reopened_post_split_after_consumption_lock": True,
         "primary_null_selection": "fraction_selected_on_validation_before_test",
+        "confirmatory_animal_ids": confirmatory_animal_ids,
         "animal_effects": effects,
         "final_inference": final_inference,
         "median_paired_alignment_effect": final_inference["median_paired_effect"],
         "positive_effect_animals": final_inference["positive_effect_animals"],
-        "eligible_animals": len(effects),
+        "eligible_animals": final_inference["confirmatory_population_size"],
         "scorable_test_animals": final_inference["scorable_animals"],
+        "total_test_animals_reported": len(effects),
         "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
         "claim_boundary": (
             "This receipt reports the prespecified held-out evaluation against the null fraction selected "
@@ -299,8 +311,10 @@ def run_final_protocol(
             "batches before the split is evaluated; after that split is frozen, DEVELOPMENT authenticates "
             "held-out batch bytes without reopening their arrays, and FINAL is the first supported post-split "
             "command to reopen those prepared held-out arrays, only after the one-way consumption marker. "
-            "Final support is decided only by the prespecified animal-level inference rule. Pixels and "
-            "overlapping windows are not treated as independent biological replicates."
+            "The confirmatory population is exactly the validation-eligible animal IDs frozen before test. "
+            "Validation-ineligible animals cannot enter final inference, and missing/non-computable effects "
+            "inside the frozen confirmatory population cannot shrink the denominator. Pixels and overlapping "
+            "windows are not treated as independent biological replicates."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
