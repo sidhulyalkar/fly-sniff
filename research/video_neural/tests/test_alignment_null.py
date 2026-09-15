@@ -9,7 +9,11 @@ from fly_video_neural.alignment_null import (
     circular_session_fraction_shift,
     run_alignment_null,
 )
-from fly_video_neural.session_benchmark import SessionBenchmarkBatch, build_session_split_lock
+from fly_video_neural.session_benchmark import (
+    SessionBenchmarkBatch,
+    build_session_split_lock,
+    subset_development_batch,
+)
 
 
 def _batch() -> SessionBenchmarkBatch:
@@ -47,9 +51,10 @@ def test_quartile_session_shifts_preserve_feature_multiset_but_change_pairing():
 
 
 def test_alignment_null_ensemble_keeps_every_test_score_locked_by_default():
-    batch = _batch()
-    lock = build_session_split_lock(batch)
-    report = run_alignment_null(batch, lock)
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development_batch = subset_development_batch(full_batch, lock)
+    report = run_alignment_null(development_batch, lock)
     assert report["test_status"] == "locked_not_consumed"
     assert report["null_name"] == NULL_NAME
     assert report["null_fractions"] == list(NULL_FRACTIONS)
