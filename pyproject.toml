@@ -53,6 +53,7 @@ fly-sniff-topology-null = "fly_sniff.topology_nulls:main"
 fly-sniff-topology-inference = "fly_sniff.topology_inference:main"
 fly-sniff-calibration-validate = "fly_sniff.physiology_calibration:main"
 fly-sniff-program-a = "fly_sniff.program_a_preflight:main"
+fly-sniff-source-fetch = "fly_sniff.physiology_source_fetch:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
