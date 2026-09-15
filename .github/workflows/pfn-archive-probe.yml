@@ -1,0 +1,40 @@
+name: pfn-archive-probe
+
+on:
+  pull_request:
+    paths:
+      - "src/fly_sniff/pfn_archive_probe.py"
+      - "tests/test_pfn_archive_probe.py"
+      - "pyproject.toml"
+      - ".github/workflows/pfn-archive-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e .
+      - name: Probe only bounded ZIP directory metadata
+        shell: bash
+        run: |
+          mkdir -p results/pfn-archive-probe
+          set +e
+          fly-sniff-pfn-archive-probe \
+            --out results/pfn-archive-probe/archive-directory-v1.json \
+            > results/pfn-archive-probe/stdout.txt \
+            2> results/pfn-archive-probe/stderr.txt
+          echo "$?" > results/pfn-archive-probe/exit-code.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pfn-archive-directory-probe-${{ github.sha }}
+          path: results/pfn-archive-probe
+          if-no-files-found: error
+          retention-days: 30
