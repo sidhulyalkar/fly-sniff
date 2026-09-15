@@ -1,0 +1,42 @@
+{
+  "schema": "fly-sniff-pfn-readme-evidence-v1",
+  "evidence_id": "program-a-pfn-readme-v1",
+  "status": "SHA256_VERIFIED",
+  "scientific_authority": {
+    "repository": "Dryad",
+    "doi": "10.5061/dryad.vq83bk3rh",
+    "file_stream_id": 536042,
+    "filename": "Currier2020README.rtf",
+    "published_md5": "91e5213503788fcde11c0f5aa3e91f43"
+  },
+  "retrieval": {
+    "primary_url": "https://datadryad.org/downloads/file_stream/536042",
+    "primary_result": "HTTP 403",
+    "transport": "zenodo_dryad_archive_mirror",
+    "mirror_record": "https://zenodo.org/records/4407395",
+    "mirror_url": "https://zenodo.org/records/4407395/files/Currier2020README.rtf?download=1",
+    "observed_byte_count": 2549,
+    "observed_md5": "91e5213503788fcde11c0f5aa3e91f43",
+    "observed_sha256": "6313f97ff216f29e5457502f80524edbc3ec0801dc0cb3b7fd57d08cebc31692",
+    "md5_matches_dryad_authority": true,
+    "navigation_performance_used": false
+  },
+  "readme_findings": {
+    "unzipped_root": "Data and Code",
+    "figure4_ephys_location": "Ephys directory",
+    "single_fly_analysis_script": "analyzeWindTuning",
+    "group_analysis_script": "windTuningPFN",
+    "archive_structure_statement": "dataset zipped and split into Currier2020.zip.001-Currier2020.zip.013 bundles"
+  },
+  "scope": {
+    "resolves": [
+      "PFN README exact byte SHA-256"
+    ],
+    "does_not_resolve": [
+      "which multipart archive container holds each Figure 4 Ephys member",
+      "the exact 12 Figure 4 recording files and soma-side identities",
+      "any PFN calibration statistic value"
+    ]
+  },
+  "evidence_sha256": "31756df446359b73585fc80432f707f1b08d0fbe0a9f60aa211839c811651915"
+}
