@@ -1,10 +1,8 @@
 {
   "schema": "fly-sniff-dna02-calibration-source-v1",
   "contract_id": "program-a-dna02-bilateral-steering-v1",
-  "status": "BLOCKED",
-  "blockers": [
-    "BLOCKED_DATAVERSE_FILE_MAP_UNRESOLVED"
-  ],
+  "status": "READY_FOR_EXTRACTION",
+  "blockers": [],
   "paper": {
     "doi": "10.7554/eLife.102230.3",
     "title": "Neural circuit mechanisms for steering control in walking Drosophila",
@@ -15,7 +13,32 @@
   "data_authority": {
     "repository": "Harvard Dataverse",
     "doi": "10.7910/DVN/0NCLP1",
-    "exact_file_map": []
+    "exact_file_map": [
+      {
+        "fly_alias": "a2_d_08",
+        "file_id": 11634638,
+        "filename": "180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat",
+        "sha256": "f02a345effb2fe722800dd1f43dce2c876878424307cb1fa486b5974f3d5922b"
+      },
+      {
+        "fly_alias": "a2_d_12",
+        "file_id": 11634639,
+        "filename": "180430_gfp_3G_ss730_dual_12_data_for_SH_with_lat_vel.mat",
+        "sha256": "0f9a9251262f528f0b415d67cdb169bc1236a5157029ffeebace6d86136f60f7"
+      },
+      {
+        "fly_alias": "a2_d_13",
+        "file_id": 11634640,
+        "filename": "180501_gfp_3G_ss730_dual_13_data_for_SH_with_lat_vel.mat",
+        "sha256": "a460eb313b503b039b3eeec554efd902b54119aadfd783c72210efaee2daee24"
+      },
+      {
+        "fly_alias": "a2_d_14",
+        "file_id": 11634641,
+        "filename": "180517_gfp_3G_ss730_dual_14_data_for_SH_with_lat_vel.mat",
+        "sha256": "6e5aabc4bc45d76fd24baa81a9351cc6d29530c72e697038b78f07a0da36623f"
+      }
+    ]
   },
   "code_authorities": [
     {
@@ -98,14 +121,16 @@
   "allowed_interpretation": [
     "DNa02 bilateral activity has a reproducible lateralized relationship to rotational velocity in the published preparation",
     "the Figure 3C cohort is resolved to a2_d_08/a2_d_12/a2_d_13/a2_d_14 by cross-source set identity",
+    "the exact bytes of all four frozen Dataverse source files are content-addressed by SHA-256 after reproducing the repository MD5s",
+    "the DNa02 source lane is ready for deterministic physiology-statistic extraction under the already frozen preprocessing boundary",
     "a normalized bilateral steering relation is a candidate navigation-independent calibration target"
   ],
   "forbidden_interpretation": [
+    "READY_FOR_EXTRACTION means DNa02 dynamics are calibrated or odor-navigation performance is qualified",
     "the 150 ms publication alignment is a universal biological or model delay",
     "the absolute firing-rate-to-turn gain transfers unchanged to exact MaleCNS DNa02 body IDs",
     "cohort inclusion means a2_d_14 passes every secondary quality-control analysis",
-    "Dataverse MD5 values substitute for the required SHA-256 byte identity",
-    "unmapped or unhashed Dataverse files may be used for calibration extraction",
+    "Dataverse MD5 values alone substitute for the required SHA-256 byte identity",
     "navigation performance may choose the cohort, preprocessing, normalization, or target statistic"
   ]
 }
