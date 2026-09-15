@@ -12,6 +12,7 @@ CRITICAL_SOURCE_FILES = (
     "alignment_null.py",
     "data_qc.py",
     "development_protocol.py",
+    "final_inference.py",
     "final_protocol.py",
     "metrics.py",
     "provenance.py",
