@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .experiment_protocol import ExperimentSpec, seal_experiment
+from .zero_shot_artifacts import validate_zero_shot_artifact
 
 PROGRAM = "latent-wiring"
 REQUIRED_NULL_FAMILIES = {
@@ -187,11 +188,22 @@ def seal_zero_shot(
     missing_paths = [str(path) for path in artifact_paths.values() if not path.exists()]
     if missing_paths:
         raise FileNotFoundError(f"required zero-shot artifacts missing: {missing_paths}")
+
+    artifact_validation = {
+        name: validate_zero_shot_artifact(name, path)
+        for name, path in sorted(artifact_paths.items())
+    }
+    invalid = [name for name, report in artifact_validation.items() if not report["valid"]]
+    if invalid:
+        raise ValueError(f"zero-shot artifacts failed semantic validation: {invalid}")
+
+    lock_runtime = dict(runtime)
+    lock_runtime["artifact_validation"] = artifact_validation
     lock = seal_experiment(
         spec,
         artifact_paths=artifact_paths,
         code_ref=code_ref,
-        runtime=runtime,
+        runtime=lock_runtime,
     )
     return lock.to_dict()
 
