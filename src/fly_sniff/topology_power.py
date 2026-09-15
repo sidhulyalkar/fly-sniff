@@ -81,6 +81,26 @@ def estimate_power(
     }
 
 
+def simulate_topology_power(
+    pilot_null_values: list[float],
+    *,
+    assumed_intact_advantage: float,
+    null_counts: tuple[int, ...] | list[int] = (31, 63, 127),
+    trials: int = 10_000,
+    alpha: float = 0.05,
+    seed: int = 20260914,
+) -> dict[str, Any]:
+    """Stable public wrapper for topology-level power simulation."""
+    return estimate_power(
+        pilot_null_values,
+        assumed_intact_advantage=assumed_intact_advantage,
+        candidate_null_counts=[int(x) for x in null_counts],
+        trials=trials,
+        alpha=alpha,
+        seed=seed,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Estimate topology-level randomization-test power")
     parser.add_argument("pilot")
@@ -100,10 +120,10 @@ def main() -> None:
     if not isinstance(values, list):
         raise TypeError("pilot file must be a JSON list or contain null_values")
     counts = [int(x) for x in args.null_counts.split(",") if x.strip()]
-    report = estimate_power(
+    report = simulate_topology_power(
         [float(x) for x in values],
         assumed_intact_advantage=args.assumed_advantage,
-        candidate_null_counts=counts,
+        null_counts=counts,
         trials=args.trials,
         alpha=args.alpha,
         seed=args.seed,
