@@ -39,7 +39,7 @@ def validate_zero_shot_spec(spec: ExperimentSpec) -> dict[str, Any]:
     circuit = spec.circuit
     environment = spec.environment
     interventions = {str(row["name"]): str(row["mode"]) for row in spec.interventions}
-    required_artifacts = set(str(x) for x in spec.metadata.get("required_artifacts", []))
+    required_artifacts = {str(x) for x in spec.metadata.get("required_artifacts", [])}
 
     gates = [
         {"name": "latent_wiring_program", "passed": training.get("program") == PROGRAM},
