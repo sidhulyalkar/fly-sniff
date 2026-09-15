@@ -8,7 +8,6 @@ import pytest
 from fly_sniff.experiment_protocol import ExperimentSpec
 from fly_sniff.zero_shot_experiment import seal_zero_shot, validate_zero_shot_spec
 
-
 SPEC = Path("configs/zero_shot_latent_wiring_v1.json")
 
 
