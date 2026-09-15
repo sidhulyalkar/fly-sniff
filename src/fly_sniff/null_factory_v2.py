@@ -94,8 +94,9 @@ def validate_protocol(config: dict[str, Any]) -> dict[str, Any]:
     ready_families = [
         name
         for name, status in implementation_status.items()
-        if status not in {"not-implemented", "blocked"}
+        if status.startswith("implemented-confirmatory")
     ]
+    blocked_families = [name for name in family_names if name not in ready_families]
     return {
         "protocol": PROTOCOL,
         "status": config.get("status"),
@@ -104,6 +105,7 @@ def validate_protocol(config: dict[str, Any]) -> dict[str, Any]:
         "passed_gate_count": sum(bool(row["passed"]) for row in gates),
         "gates": gates,
         "ready_families": ready_families,
+        "blocked_families": blocked_families,
         "implementation_status": implementation_status,
         "claim_boundary": config["claim_boundary"],
     }
@@ -119,6 +121,8 @@ def main() -> None:
         f"gates={report['passed_gate_count']}/{report['gate_count']}"
     )
     print("ready_families=" + ",".join(report["ready_families"]))
+    if report["blocked_families"]:
+        print("blocked_families=" + ",".join(report["blocked_families"]))
 
 
 if __name__ == "__main__":
