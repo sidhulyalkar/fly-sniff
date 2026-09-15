@@ -26,6 +26,8 @@ jobs:
         run: fly-video-neural validate-benchmark configs/benchmark_v0.json
       - name: Validate corrected v1 benchmark contract
         run: fly-video-neural validate-benchmark configs/benchmark_v1.json
+      - name: Smoke preparation preflight command
+        run: fly-video-neural-preflight --help
       - name: Ruff
         run: ruff check src tests
       - name: Tests
