@@ -28,6 +28,13 @@ def _fresh_output_dir(path: str | Path) -> Path:
     return output
 
 
+def _require_pickle_trust(source: Path, *, trust_upstream_pickle: bool) -> None:
+    if not trust_upstream_pickle:
+        raise ValueError(
+            f"refusing to inspect or deserialize {source.name} without --trust-upstream-pickle"
+        )
+
+
 def _copy_safe_alignment(source: Path, destination: Path) -> dict[str, Any]:
     alignment = load_safe_alignment(source)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -79,12 +86,13 @@ def _prepare_alignment(
         receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
         return destination, receipt
     if source.suffix.lower() in {".pkl", ".pickle"}:
+        _require_pickle_trust(source, trust_upstream_pickle=trust_upstream_pickle)
         receipt = convert_legacy_pickle(
             source,
             destination,
             receipt_path,
             kind="alignment",
-            trust_upstream_pickle=trust_upstream_pickle,
+            trust_upstream_pickle=True,
         )
         return destination, receipt
     raise ValueError(f"unsupported synchronization format for {session.session_id}: {source}")
@@ -107,12 +115,13 @@ def _prepare_pose(
         receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
         return destination, receipt
     if source.suffix.lower() in {".pkl", ".pickle"}:
+        _require_pickle_trust(source, trust_upstream_pickle=trust_upstream_pickle)
         receipt = convert_legacy_pickle(
             source,
             destination,
             receipt_path,
             kind="pose3d",
-            trust_upstream_pickle=trust_upstream_pickle,
+            trust_upstream_pickle=True,
         )
         return destination, receipt
     raise ValueError(
