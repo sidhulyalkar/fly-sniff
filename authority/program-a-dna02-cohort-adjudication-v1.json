@@ -1,0 +1,123 @@
+{
+  "schema": "fly-sniff-dna02-cohort-adjudication-v1",
+  "adjudication_id": "program-a-dna02-figure3c-cohort-v1",
+  "status": "RESOLVED_COHORT_ONLY",
+  "paper_authority": {
+    "doi": "10.7554/eLife.102230.3",
+    "figure": "Figure 3C",
+    "published_n_flies": 4,
+    "cohort_definition": "dual recordings from the right and left copies of DNa02",
+    "panel_statement": "each Figure 3C line is a different fly; n=4 flies"
+  },
+  "dataverse_authority": {
+    "doi": "10.7910/DVN/0NCLP1",
+    "dataset_id": 11618096,
+    "version": "1.2",
+    "version_state": "RELEASED",
+    "file_count": 380,
+    "raw_metadata_sha256": "1bc78258d1ec4ffab4a80ac30a99bb35aee46a3b8a9c057ddf5464fe667c57fe",
+    "readme": {
+      "file_id": 11634832,
+      "filename": "README.md",
+      "published_md5": "cfb0cb853be3a454b965d74eb5c772c0",
+      "observed_sha256": "91409a03266dbddb44035df3177440ba0acc2a67aa75118a3d97c267038c9681",
+      "scope": "documents raw electrophysiology/behavior folders and folder naming"
+    },
+    "bilateral_dna02_raw_folders": [
+      {
+        "fly_alias": "a2_d_08",
+        "file_id": 11634638,
+        "directory_label": "rayshubskiy_elife_102230/ephys_data_a2_d_08",
+        "filename": "180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat",
+        "filesize": 458239048,
+        "checksum_type": "MD5",
+        "checksum_value": "f3d0d40d7435af8f3d4e73d004bd3f9d",
+        "restricted": false
+      },
+      {
+        "fly_alias": "a2_d_12",
+        "file_id": 11634639,
+        "directory_label": "rayshubskiy_elife_102230/ephys_data_a2_d_12",
+        "filename": "180430_gfp_3G_ss730_dual_12_data_for_SH_with_lat_vel.mat",
+        "filesize": 212825201,
+        "checksum_type": "MD5",
+        "checksum_value": "71ed13ab29ecd3b3abcf7bf6b77940e4",
+        "restricted": false
+      },
+      {
+        "fly_alias": "a2_d_13",
+        "file_id": 11634640,
+        "directory_label": "rayshubskiy_elife_102230/ephys_data_a2_d_13",
+        "filename": "180501_gfp_3G_ss730_dual_13_data_for_SH_with_lat_vel.mat",
+        "filesize": 71381032,
+        "checksum_type": "MD5",
+        "checksum_value": "c3f95c76e9efc1a5b2277e7ee958143e",
+        "restricted": false
+      },
+      {
+        "fly_alias": "a2_d_14",
+        "file_id": 11634641,
+        "directory_label": "rayshubskiy_elife_102230/ephys_data_a2_d_14",
+        "filename": "180517_gfp_3G_ss730_dual_14_data_for_SH_with_lat_vel.mat",
+        "filesize": 186996111,
+        "checksum_type": "MD5",
+        "checksum_value": "eb0950ad281d61c4473404ea126b386a",
+        "restricted": false
+      }
+    ],
+    "exact_bilateral_dna02_raw_folder_count": 4
+  },
+  "code_authority": {
+    "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+    "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+    "completed_bilateral_aliases": [
+      "a2_d_08",
+      "a2_d_12",
+      "a2_d_13",
+      "a2_d_14"
+    ],
+    "sources": [
+      {
+        "path": "import_preprocess_data.ipynb",
+        "git_blob_sha1": "0da2089b468c172f700881b714bfdda99a6fe424",
+        "role": "declares all four bilateral DNa02 aliases as completed inputs"
+      },
+      {
+        "path": "kv_linrel_scatters.ipynb",
+        "git_blob_sha1": "693bbdd8b60083744239ad049dd39f4d988418a4",
+        "role": "relationship-analysis workspace includes the same four bilateral DNa02 aliases"
+      }
+    ]
+  },
+  "conflicting_evidence": {
+    "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+    "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+    "path": "physiology_quant_analysis_figures.ipynb",
+    "git_blob_sha1": "384f5d342e089e101600955820fa46306b1c2593",
+    "observation": "a2_d_14 is marked low SNR/rejected in a separate physiology-quantification analysis",
+    "scope_decision": "retain as a QC caveat; this is not panel-level evidence that a2_d_14 was excluded from Figure 3C"
+  },
+  "decision_rule": {
+    "required_conditions": [
+      "paper Figure 3C defines a bilateral DNa02 cohort with n=4",
+      "released Dataverse contains exactly four raw ephys_data_a2_d_* folders",
+      "the four Dataverse bilateral aliases equal the four completed bilateral aliases in pinned secondary analysis code"
+    ],
+    "all_conditions_met": true,
+    "navigation_performance_used": false
+  },
+  "resolved_figure3c_cohort": [
+    "a2_d_08",
+    "a2_d_12",
+    "a2_d_13",
+    "a2_d_14"
+  ],
+  "remaining_blocker": "exact neural data-file SHA-256 values are not yet frozen; cohort resolution does not authorize calibration extraction",
+  "forbidden_interpretations": [
+    "cohort inclusion means a2_d_14 passes every secondary quality-control analysis",
+    "Dataverse MD5 values substitute for the source contract's required SHA-256 byte identity",
+    "cohort resolution alone makes the DNa02 calibration source READY_FOR_EXTRACTION",
+    "navigation performance may alter the resolved cohort"
+  ],
+  "adjudication_sha256": "a7262fe9e82c1898a4ac6dc753aa38a854e05de558d64e466ffdde884dfdde53"
+}
