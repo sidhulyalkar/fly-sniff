@@ -65,11 +65,13 @@ fly-sniff-evidence-bootstrap = "fly_sniff.evidence.bootstrap:main"
 fly-sniff-experiment-protocol = "fly_sniff.experiment_protocol:main"
 fly-sniff-connectome-necessity = "fly_sniff.connectome_necessity:main"
 fly-sniff-physiology-calibration = "fly_sniff.physiology_calibration:main"
+fly-sniff-physiology-bind = "fly_sniff.physiology_probe_binding:main"
 fly-sniff-null-factory-v2 = "fly_sniff.null_factory_v2:main"
 fly-sniff-null-generate = "fly_sniff.null_generation:main"
 fly-sniff-final-seeds = "fly_sniff.final_seed_commitment:main"
 fly-sniff-zero-shot = "fly_sniff.zero_shot_experiment:main"
 fly-sniff-topology-stats = "fly_sniff.topology_statistics:main"
+fly-sniff-topology-power = "fly_sniff.topology_power:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
