@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from fly_sniff.dna02_field_map import (
-    DEFAULT_AUTHORITY,
     _EXPECTED_FIELDS,
+    DEFAULT_AUTHORITY,
     confirm_field_map,
     load_authority,
 )
