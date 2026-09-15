@@ -62,7 +62,9 @@ After the split is frozen, DEVELOPMENT:
 - authenticates held-out test batch bytes without reopening their NPZ arrays;
 - rejects any development projection that differs from the exact frozen train+validation sample set or contains even one held-out sample.
 
-FINAL is the only supported v1 scoring path that reopens prepared held-out arrays after the split. Before doing so, it verifies the complete development authorization, exact source bytes, acceptance-config bytes, implementation fingerprint, and Python/NumPy runtime, then creates `FINAL_TEST_CONSUMED.json` with exclusive-create semantics. A crash after this marker does not permit reopening the same final namespace.
+FINAL is the only supported v1 scoring path that reopens prepared held-out arrays after the split. Before consuming that namespace, it verifies the complete development authorization, exact source bytes, acceptance-config bytes, implementation fingerprint, and Python/NumPy runtime. It then maps the authenticated batch inputs back to the exact train+validation batch identities frozen in the development receipt, loads only those batches, reruns the aligned and temporal-null development analyses, and requires exact equality with the saved development reports.
+
+If that test-free development replay fails, FINAL stops **without** creating the one-way test-consumption marker. Only after every check that can be performed without reopening held-out arrays succeeds does FINAL create `FINAL_TEST_CONSUMED.json` with exclusive-create semantics. A crash after this marker does not permit reopening the same final namespace. The full prepared batch set, including held-out test arrays, is loaded only after the marker exists.
 
 This is an operational/provenance barrier. It does not cryptographically prove that a human or unrelated process could never copy or inspect files outside the tooling.
 
