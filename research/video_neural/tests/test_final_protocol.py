@@ -5,9 +5,11 @@ from pathlib import Path
 
 import pytest
 
+from fly_video_neural import final_protocol
 from fly_video_neural.alignment_null import NULL_FRACTIONS, NULL_NAME, NULL_SELECTION_RULE
 from fly_video_neural.final_protocol import (
     FINAL_LOCK_NAME,
+    _development_paths_from_receipt,
     _verify_preload_contract,
     _write_consumption_lock,
     validate_final_authorization,
@@ -24,10 +26,12 @@ def _sha(payload: dict) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _acceptance_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "configs" / "validation_acceptance_v1.json"
+
+
 def _development_bundle(root: Path, *, unlocked: bool = True) -> tuple[dict, dict]:
-    config = load_acceptance_config(
-        Path(__file__).resolve().parents[1] / "configs" / "validation_acceptance_v1.json"
-    )
+    config = load_acceptance_config(_acceptance_path())
     animals = [f"fly{index}" for index in range(6)]
     qc = {
         "schema_version": 1,
@@ -112,6 +116,7 @@ def test_final_authorization_reconstructs_frozen_unlock(tmp_path: Path):
     bundle = validate_final_authorization(tmp_path, split, config)
     assert bundle["unlock"]["test_consumption_allowed"] is True
     assert bundle["unlock"]["eligible_animals"] == 6
+    assert bundle["unlock"]["eligible_animal_ids"] == [f"fly{index}" for index in range(6)]
     assert bundle["receipt"]["test_target_arrays_deserialized"] is False
 
 
@@ -133,7 +138,7 @@ def test_final_authorization_rejects_development_that_deserialized_test_arrays(t
         validate_final_authorization(tmp_path, split, config)
 
 
-def test_consumption_lock_is_one_way_and_precedes_prepared_test_batch_reopen(tmp_path: Path):
+def test_consumption_lock_is_one_way_and_follows_development_replay(tmp_path: Path):
     first = _write_consumption_lock(
         tmp_path,
         split_lock_sha256="split",
@@ -143,6 +148,7 @@ def test_consumption_lock_is_one_way_and_precedes_prepared_test_batch_reopen(tmp
     assert (tmp_path / FINAL_LOCK_NAME).is_file()
     assert first["reopen_after_failure_allowed"] is False
     assert first["prepared_test_batch_reopen_allowed_after_this_marker_only"] is True
+    assert first["development_evidence_reproduced_before_marker"] is True
     with pytest.raises(ValueError, match="already consumed"):
         _write_consumption_lock(
             tmp_path,
@@ -150,6 +156,52 @@ def test_consumption_lock_is_one_way_and_precedes_prepared_test_batch_reopen(tmp
             development_receipt_sha256="dev",
             validation_unlock_sha256="unlock",
         )
+
+
+def test_development_path_selection_excludes_held_out_batches(tmp_path: Path):
+    development = tmp_path / "development.npz"
+    held_out = tmp_path / "held-out.npz"
+    development.write_bytes(b"development")
+    held_out.write_bytes(b"held out")
+    receipt = {
+        "development_deserialized_batches": [
+            {"path": str(development.resolve()), "sha256": sha256_file(development)}
+        ]
+    }
+    paths, sources = _development_paths_from_receipt(receipt, [development, held_out])
+    assert paths == [development]
+    assert sources == receipt["development_deserialized_batches"]
+    assert held_out not in paths
+
+
+def test_failed_preconsumption_replay_does_not_burn_final_namespace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    split_document, _ = _development_bundle(tmp_path)
+    split_path = tmp_path / "split.json"
+    split_path.write_text(json.dumps(split_document))
+    nonexistent_batch = tmp_path / "must-not-open.npz"
+
+    monkeypatch.setattr(final_protocol, "_verify_preload_contract", lambda *args, **kwargs: [])
+
+    def fail_replay(*args, **kwargs):
+        raise ValueError("synthetic replay failure")
+
+    monkeypatch.setattr(
+        final_protocol,
+        "_reproduce_development_evidence_preconsumption",
+        fail_replay,
+    )
+    with pytest.raises(ValueError, match="synthetic replay failure"):
+        final_protocol.run_final_protocol(
+            split_path,
+            [nonexistent_batch],
+            tmp_path,
+            tmp_path / "final",
+            acceptance_config_path=_acceptance_path(),
+        )
+    assert not (tmp_path / FINAL_LOCK_NAME).exists()
 
 
 def test_preload_contract_verifies_bytes_code_and_runtime_without_loading_npz(tmp_path: Path):
