@@ -6,7 +6,11 @@ from pathlib import Path
 import numpy as np
 
 from fly_video_neural.data_qc import audit_development_data, load_qc_config
-from fly_video_neural.session_benchmark import SessionBenchmarkBatch, build_session_split_lock
+from fly_video_neural.session_benchmark import (
+    SessionBenchmarkBatch,
+    build_session_split_lock,
+    subset_development_batch,
+)
 
 
 def _config() -> dict:
@@ -38,40 +42,47 @@ def _batch(samples_per_session: int = 5) -> SessionBenchmarkBatch:
     )
 
 
-def test_qc_never_summarizes_test_target_values():
-    batch = _batch()
-    lock = build_session_split_lock(batch)
-    first = audit_development_data(batch, lock, _config())
+def test_qc_is_invariant_to_test_targets_because_test_arrays_are_not_in_projection():
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    first = audit_development_data(development, lock, _config())
+
     test_sessions = set(lock["animal_sessions"]["flyA"]["test"])
-    changed = batch.targets.copy()
-    mask = np.asarray([session in test_sessions for session in batch.session_ids])
+    changed = full_batch.targets.copy()
+    mask = np.asarray([session in test_sessions for session in full_batch.session_ids])
     changed[mask] += 1_000_000.0
-    mutated = SessionBenchmarkBatch(
-        sample_ids=batch.sample_ids,
-        animal_ids=batch.animal_ids,
-        session_ids=batch.session_ids,
-        features=batch.features,
+    mutated_full = SessionBenchmarkBatch(
+        sample_ids=full_batch.sample_ids,
+        animal_ids=full_batch.animal_ids,
+        session_ids=full_batch.session_ids,
+        features=full_batch.features,
         targets=changed,
     )
-    second = audit_development_data(mutated, lock, _config())
+    mutated_development = subset_development_batch(mutated_full, lock)
+    second = audit_development_data(mutated_development, lock, _config())
+
     assert first == second
+    assert first["test_target_arrays_deserialized"] is False
     assert first["test_target_values_summarized"] is False
-    test_rows = [row for row in first["sessions"] if row["split"] == "test"]
-    assert test_rows and all("target_distribution" not in row for row in test_rows)
+    assert first["test_sample_count_metadata_only"] == int(mask.sum())
+    assert all(row["split"] in {"train", "validation"} for row in first["sessions"])
 
 
 def test_qc_blocks_development_sessions_with_too_few_windows():
-    batch = _batch(samples_per_session=1)
-    lock = build_session_split_lock(batch)
-    report = audit_development_data(batch, lock, _config())
+    full_batch = _batch(samples_per_session=1)
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    report = audit_development_data(development, lock, _config())
     assert report["status"] == "blocked"
     assert any("only 1 prediction windows" in message for message in report["structural_failures"])
 
 
 def test_qc_reports_fixed_autocorrelation_grid_and_hash():
-    batch = _batch()
-    lock = build_session_split_lock(batch)
-    report = audit_development_data(batch, lock, _config())
+    full_batch = _batch()
+    lock = build_session_split_lock(full_batch)
+    development = subset_development_batch(full_batch, lock)
+    report = audit_development_data(development, lock, _config())
     assert report["status"] == "pass"
     assert len(report["report_sha256"]) == 64
     lags = sorted({row["lag_windows"] for row in report["development_diagnostics"]["autocorrelation"]})
