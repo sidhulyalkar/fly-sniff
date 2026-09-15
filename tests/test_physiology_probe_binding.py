@@ -21,7 +21,7 @@ def test_published_evidence_binds_five_probes_but_not_temporal_scale() -> None:
     assert report["unresolved_probes"] == ["temporal_response_scale"]
 
 
-def test_binding_report_retains_evidence_classes_and_authorities() -> None:
+def test_binding_report_retains_only_independent_physiology_authorities() -> None:
     calibration = json.loads(CALIBRATION.read_text())
     ledger = build_ledger(json.loads(BOOTSTRAP.read_text()))
     report = bind_probe_authorities(calibration, ledger)
@@ -34,4 +34,5 @@ def test_binding_report_retains_evidence_classes_and_authorities() -> None:
     assert "PFN_airflow_tuning_geometry" in bound
     assert "CROSS_DATASET_PRIOR" in bound["PFN_airflow_tuning_geometry"]["evidence_classes"]
     assert "PFL3_lateralized_steering_relationship" in bound
-    assert "MODELED_STATE" in bound["PFL3_lateralized_steering_relationship"]["evidence_classes"]
+    assert "CROSS_DATASET_PRIOR" in bound["PFL3_lateralized_steering_relationship"]["evidence_classes"]
+    assert "MODELED_STATE" not in bound["PFL3_lateralized_steering_relationship"]["evidence_classes"]
