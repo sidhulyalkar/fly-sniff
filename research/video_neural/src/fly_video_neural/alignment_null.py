@@ -49,7 +49,7 @@ def circular_session_fraction_shift(
             raise ValueError(f"alignment null requires at least two windows in session {session!r}")
         starts = np.asarray([_sample_start(str(batch.sample_ids[index])) for index in session_indices])
         chronological = session_indices[np.argsort(starts)]
-        offset = int(round(len(chronological) * fraction))
+        offset = round(len(chronological) * fraction)
         offset = min(max(1, offset), len(chronological) - 1)
         source = np.roll(chronological, offset)
         for destination_index, source_index in zip(chronological, source, strict=True):
