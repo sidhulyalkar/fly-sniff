@@ -8,7 +8,11 @@ from typing import Any
 
 import numpy as np
 
-from .alignment import TARGET_NEURAL_BOUNDARY_POLICY, load_safe_alignment, materialize_session_windows
+from .alignment import (
+    TARGET_NEURAL_BOUNDARY_POLICY,
+    load_safe_alignment,
+    materialize_session_windows,
+)
 from .mc2p import MC2PSession, build_manifest, discover_sessions
 from .mc2p_legacy import convert_legacy_pickle, sha256_file
 from .pose_neural import build_session_pose_neural_batch, load_pose3d
