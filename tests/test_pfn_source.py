@@ -8,7 +8,6 @@ import pytest
 
 from fly_sniff.pfn_source import (
     BLOCKED_MEMBER_MAP,
-    BLOCKED_README,
     BLOCKED_RECORDINGS,
     READY,
     ArchiveMemberRef,
@@ -22,6 +21,7 @@ from fly_sniff.pfn_source import (
 
 AUTHORITY_PATH = Path("authority/program-a-pfn-source-contract-v1.json")
 DIRECTIONS = (-135, -90, -45, 0, 45, 90, 135, 180)
+README_SHA256 = "6313f97ff216f29e5457502f80524edbc3ec0801dc0cb3b7fd57d08cebc31692"
 
 
 def _real_contract():
@@ -48,17 +48,17 @@ def _resolved_contract():
     )
     return dataclasses.replace(
         contract,
-        readme_sha256="a" * 64,
         archive_member_map=members,
         recording_set=recordings,
     )
 
 
-def test_real_contract_is_blocked_on_exact_unresolved_inputs() -> None:
+def test_real_contract_is_blocked_only_on_member_and_recording_maps() -> None:
     contract = _real_contract()
     contract.validate()
     assert contract.status == "BLOCKED"
-    assert contract.blockers == (BLOCKED_MEMBER_MAP, BLOCKED_RECORDINGS, BLOCKED_README)
+    assert contract.blockers == (BLOCKED_MEMBER_MAP, BLOCKED_RECORDINGS)
+    assert contract.readme_sha256 == README_SHA256
     assert contract.navigation_performance_used is False
 
 
@@ -69,6 +69,7 @@ def test_public_repository_identity_and_archive_inventory_are_frozen() -> None:
     assert contract.readme_filename == "Currier2020README.rtf"
     assert contract.readme_file_stream_id == 536042
     assert contract.readme_md5 == "91e5213503788fcde11c0f5aa3e91f43"
+    assert contract.readme_sha256 == README_SHA256
     assert len(contract.archive_inventory) == 14
     assert contract.archive_inventory[0][0] == "Currier2020.z01"
     assert contract.archive_inventory[-1][0] == "Currier2020.zip.013"
@@ -115,9 +116,9 @@ def test_direction_order_or_set_cannot_drift() -> None:
         mean_response_vector_angle_deg((-180, -135, -90, -45, 0, 45, 90, 135), responses)
 
 
-def test_readme_hash_resolution_alone_does_not_promote_source() -> None:
-    contract = dataclasses.replace(_real_contract(), readme_sha256="a" * 64)
-    contract.validate()
+def test_verified_readme_does_not_promote_member_or_recording_maps() -> None:
+    contract = _real_contract()
+    assert contract.readme_sha256 == README_SHA256
     assert contract.blockers == (BLOCKED_MEMBER_MAP, BLOCKED_RECORDINGS)
     assert contract.status == "BLOCKED"
 
