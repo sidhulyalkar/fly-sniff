@@ -1,0 +1,75 @@
+{
+  "schema": "fly-sniff-dna02-field-map-authority-v1",
+  "authority_id": "program-a-dna02-raw-field-map-v1",
+  "status": "FROZEN_MAPPING_PENDING_SCHEMA_CONFIRMATION",
+  "code_authority": {
+    "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+    "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+    "import_notebook": {
+      "path": "import_preprocess_data.ipynb",
+      "git_blob_sha1": "0da2089b468c172f700881b714bfdda99a6fe424"
+    },
+    "loader": {
+      "path": "a2lib/proc_utils.py",
+      "git_blob_sha1": "160147b83d5a5d5238b0cb558ce00319a9711d76",
+      "function": "load_sr_matfile_data"
+    }
+  },
+  "bilateral_cohort_labels": {
+    "a2_d_08": ["a2_l", "a2_r"],
+    "a2_d_12": ["a2_l", "a2_r"],
+    "a2_d_13": ["a2_l", "a2_r"],
+    "a2_d_14": ["a2_l", "a2_r"]
+  },
+  "required_raw_fields": {
+    "ball_SR": "ball sampling rate",
+    "t_ball": "ball-data time base",
+    "fwd": "forward velocity",
+    "yaw": "yaw/rotational velocity",
+    "lat": "lateral velocity",
+    "ephys_SR": "electrophysiology sampling rate",
+    "t_ephys": "electrophysiology time base",
+    "stim": "optogenetic stimulus channel on the ephys time base",
+    "ephys_A": "first electrophysiology channel",
+    "ephys_B": "second electrophysiology channel"
+  },
+  "frozen_channel_mapping": {
+    "ephys_A": {
+      "secondary_label": "a2_l",
+      "soma_side": "L",
+      "role": "left DNa02 physiology channel"
+    },
+    "ephys_B": {
+      "secondary_label": "a2_r",
+      "soma_side": "R",
+      "role": "right DNa02 physiology channel"
+    },
+    "yaw": {
+      "role": "raw rotational/yaw behavior channel"
+    }
+  },
+  "mapping_basis": [
+    "the pinned import notebook assigns each of the four bilateral a2_d_* aliases the ordered neuron labels ['a2_l', 'a2_r']",
+    "the pinned load_sr_matfile_data function maps neuron_labels[0] to data['ephys_A'] and neuron_labels[1] to data['ephys_B']",
+    "the same loader reads yaw directly from data['yaw'] and sampling/time bases from ball_SR, t_ball, ephys_SR, and t_ephys"
+  ],
+  "schema_confirmation": {
+    "required": true,
+    "receipt_schema": "fly-sniff-dna02-source-inspection-v1",
+    "required_receipt_status": "SCHEMA_INVENTORIED_PENDING_EXTRACTION_REVIEW",
+    "rule": "all required field names must be present in every authenticated source file before numeric extraction is authorized",
+    "extra_fields_allowed": true,
+    "raw_values_may_be_used_for_confirmation": false
+  },
+  "navigation_performance_used": false,
+  "allowed_interpretation": [
+    "pinned secondary-analysis code provides an independent raw-field and left/right channel mapping to compare against the authenticated source-file schema"
+  ],
+  "forbidden_interpretation": [
+    "field-map authority alone proves the local source bytes have the expected schema",
+    "field-map authority computes or validates the Figure 3C statistic",
+    "secondary labels a2_l/a2_r may be remapped after seeing navigation performance",
+    "ephys_A/ephys_B laterality may be swapped to improve a downstream result"
+  ],
+  "authority_sha256": "55679a444be57d110a4b0ad26f1fa7a90b4e4c2b1d422c42b78e7d9a9ea55f67"
+}
