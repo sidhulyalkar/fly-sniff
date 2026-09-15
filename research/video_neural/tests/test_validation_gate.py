@@ -62,12 +62,17 @@ def test_validation_gate_unlocks_only_after_six_animals_positive_majority_and_me
     assert report["status"] == "unlocked_for_single_test_consumption"
     assert report["test_consumption_allowed"] is True
     assert report["eligible_animals"] == 6
+    assert report["eligible_animal_ids"] == [f"fly{index}" for index in range(6)]
     assert report["positive_effect_animals"] == 6
     assert report["median_paired_effect"] > 0
     assert report["alignment_null_fractions"] == list(NULL_FRACTIONS)
     assert report["ineligible_animals"] == []
     assert report["final_inference_prespecified"]["unit"] == "animal"
+    assert report["final_inference_prespecified"]["population"] == "validation_eligible_animals_only"
     assert report["final_inference_prespecified"]["minimum_scorable_animals"] == 6
+    assert report["final_inference_prespecified"][
+        "require_all_validation_eligible_test_effects_computable"
+    ] is True
     assert all("selected_null_fraction" in row for row in report["animal_effects"])
 
 
@@ -115,15 +120,15 @@ def test_validation_gate_rejects_null_ensemble_contract_drift():
     assert any("fractions mismatch" in failure for failure in report["failures"])
 
 
-def test_noncomputable_validation_metric_makes_animal_ineligible_and_can_block():
+def test_noncomputable_validation_metric_freezes_animal_out_of_final_population():
     qc, aligned, null = _reports(
-        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
-        [0.1, 0.2, None, 0.2, 0.1, 0.15],
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.22],
+        [0.1, 0.2, None, 0.2, 0.1, 0.15, 0.11],
     )
     report = build_validation_unlock(qc, aligned, null, _config())
-    assert report["status"] == "blocked"
-    assert report["eligible_animals"] == 5
-    assert report["test_consumption_allowed"] is False
+    assert report["status"] == "unlocked_for_single_test_consumption"
+    assert report["eligible_animals"] == 6
+    assert report["eligible_animal_ids"] == ["fly0", "fly1", "fly3", "fly4", "fly5", "fly6"]
     assert report["ineligible_animals"] == [
         {
             "animal_id": "fly2",
@@ -133,4 +138,16 @@ def test_noncomputable_validation_metric_makes_animal_ineligible_and_can_block()
             "selected_null_fraction": NULL_FRACTIONS[2],
         }
     ]
+    assert "fly2" not in report["eligible_animal_ids"]
+
+
+def test_noncomputable_validation_metric_can_block_when_fewer_than_six_remain():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, None, 0.2, 0.1, 0.15],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["eligible_animals"] == 5
+    assert report["test_consumption_allowed"] is False
     assert any("only 5 eligible animals" in failure for failure in report["failures"])
