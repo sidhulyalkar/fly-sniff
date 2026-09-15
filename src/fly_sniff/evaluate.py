@@ -6,11 +6,12 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
+from scipy.stats import binomtest
 
 from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import Controller
 from .env import FlySniffEnv
-from .metrics import EpisodeMetrics, paired_bootstrap_delta, spl
+from .metrics import EpisodeMetrics, paired_bootstrap_delta, shortest_path_to_goal_region, spl
 
 
 def run_episode(
@@ -22,7 +23,11 @@ def run_episode(
 ) -> EpisodeMetrics:
     env = FlySniffEnv(seed=seed, arena=arena, plume=plume, sensors=sensors)
     controller.reset(seed + 101)
-    initial = env.distance_to_source
+    initial_center_distance = env.distance_to_source
+    shortest_path = shortest_path_to_goal_region(
+        initial_center_distance,
+        env.arena.source_radius,
+    )
     obs = env.observe()
     done = False
     while not done:
@@ -36,8 +41,8 @@ def run_episode(
         steps=a.steps,
         elapsed_s=a.steps * env.arena.dt,
         path_length=a.path_length,
-        shortest_path=initial,
-        spl=spl(a.found, initial, a.path_length),
+        shortest_path=shortest_path,
+        spl=spl(a.found, shortest_path, a.path_length),
         final_distance=env.distance_to_source,
     )
 
@@ -77,10 +82,71 @@ def summarize(frame: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def paired_spl_report(frame: pd.DataFrame, a: str, b: str) -> dict[str, float]:
-    pivot = frame.pivot(index="seed", columns="label", values="spl").dropna(subset=[a, b])
-    mean, lo, hi = paired_bootstrap_delta(pivot[a].to_numpy(), pivot[b].to_numpy())
-    return {"mean_delta": mean, "ci95_low": lo, "ci95_high": hi, "n": len(pivot)}
+def paired_metric_report(
+    frame: pd.DataFrame,
+    a: str,
+    b: str,
+    metric: str,
+    *,
+    bootstrap_seed: int = 13013,
+    n_boot: int = 10000,
+) -> dict[str, float | int | str]:
+    if metric not in frame.columns:
+        raise ValueError(f"metric {metric!r} is not present in evaluation frame")
+    pivot = frame.pivot(index="seed", columns="label", values=metric).dropna(subset=[a, b])
+    mean, lo, hi = paired_bootstrap_delta(
+        pivot[a].to_numpy(),
+        pivot[b].to_numpy(),
+        seed=bootstrap_seed,
+        n_boot=n_boot,
+    )
+    return {
+        "metric": metric,
+        "mean_delta": mean,
+        "ci95_low": lo,
+        "ci95_high": hi,
+        "n": len(pivot),
+    }
+
+
+def paired_spl_report(frame: pd.DataFrame, a: str, b: str) -> dict[str, float | int | str]:
+    return paired_metric_report(frame, a, b, "spl")
+
+
+def paired_success_report(
+    frame: pd.DataFrame,
+    a: str,
+    b: str,
+    *,
+    bootstrap_seed: int = 13013,
+    n_boot: int = 10000,
+) -> dict[str, float | int | str]:
+    pivot = frame.pivot(index="seed", columns="label", values="success").dropna(subset=[a, b])
+    a_success = pivot[a].astype(bool)
+    b_success = pivot[b].astype(bool)
+    a_only = int((a_success & ~b_success).sum())
+    b_only = int((~a_success & b_success).sum())
+    discordant = a_only + b_only
+    exact_p = float(binomtest(a_only, discordant, p=0.5).pvalue) if discordant else 1.0
+    mean, lo, hi = paired_bootstrap_delta(
+        a_success.astype(float).to_numpy(),
+        b_success.astype(float).to_numpy(),
+        seed=bootstrap_seed,
+        n_boot=n_boot,
+    )
+    return {
+        "metric": "success",
+        "a_success_rate": float(a_success.mean()),
+        "b_success_rate": float(b_success.mean()),
+        "mean_delta": mean,
+        "ci95_low": lo,
+        "ci95_high": hi,
+        "a_only_successes": a_only,
+        "b_only_successes": b_only,
+        "discordant_pairs": discordant,
+        "mcnemar_exact_p": exact_p,
+        "n": len(pivot),
+    }
 
 
 def manifest_digest(payload: dict) -> str:

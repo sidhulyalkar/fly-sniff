@@ -1,0 +1,55 @@
+{
+  "protocol": "E004a-rewire-prequalification-v1",
+  "dataset": "male-cns:v1.0",
+  "purpose": "Freeze the graph-randomization, lesion, seed, and equal-compute rules before closed-loop navigation results are observed.",
+  "rewire": {
+    "method": "directed degree-preserving edge swaps",
+    "swaps_per_edge": 8,
+    "require_full_requested_swap_count": true,
+    "minimum_changed_edge_fraction": 0.8,
+    "preserve_source_out_degree": true,
+    "preserve_target_in_degree": true,
+    "preserve_edge_count": true,
+    "preserve_sign_by_edge": true,
+    "preserve_weight_multiset": true,
+    "self_loops_allowed": false,
+    "duplicate_edges_allowed": false,
+    "seeds": [24018, 24019, 24020, 24021, 24022],
+    "minimum_independent_rewires_for_final_claim": 5
+  },
+  "lesions": [
+    "hDeltaG_output_cut",
+    "PFL3_output_cut",
+    "FC2_goal_lane_cut",
+    "EPG_heading_lane_cut"
+  ],
+  "equal_compute_contract": {
+    "same_episode_seeds": true,
+    "same_plume_realizations": true,
+    "same_initial_states": true,
+    "same_controller_step_budget": true,
+    "same_optimization_budget": true,
+    "same_model_parameters": true,
+    "no_variant_specific_early_stopping": true
+  },
+  "selection_prohibitions": [
+    "do not select rewire seeds by poor performance",
+    "do not change lesion definitions after benchmark results",
+    "do not change graph threshold based on intact-vs-rewire separation",
+    "do not allocate more training compute to intact than rewired variants",
+    "do not discard failed or inconvenient rewires"
+  ],
+  "required_preflight_reports": [
+    "in_degree_histogram_identity",
+    "out_degree_histogram_identity",
+    "edge_count_identity",
+    "weight_multiset_identity",
+    "sign_count_identity",
+    "no_self_loops",
+    "no_duplicate_edges",
+    "deterministic_same_seed_rewire",
+    "full_requested_swap_count",
+    "minimum_changed_edge_fraction"
+  ],
+  "claim_boundary": "E004a freezes fair controls only. It does not compare behavioral performance and cannot support a real-vs-rewired navigation claim by itself."
+}

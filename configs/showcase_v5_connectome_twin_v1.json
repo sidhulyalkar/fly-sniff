@@ -1,0 +1,46 @@
+{
+  "protocol": "who-farted-showcase-v5-connectome-twin-v1",
+  "purpose": "Render a professional embodied fly + whole-MaleCNS split view while preserving evidence semantics and replay provenance.",
+  "dataset": "male-cns:v1.0",
+  "formats": {
+    "scientific": {"aspect": "16:9", "resolution": [1920, 1080]},
+    "social": {"aspect": "4:5", "resolution": [1080, 1350]}
+  },
+  "layout": {
+    "scientific": "embodied world left; 3D MaleCNS right; shared causal timeline bottom",
+    "social": "cinematic two-column world/CNS composition with minimal persistent text"
+  },
+  "connectome_geometry": {
+    "source": "official MaleCNS centerline skeletons / CC-BY",
+    "whole_cns_lod": "aggressively simplified line geometry; progressive loading",
+    "active_route_lod": "exact or high-resolution skeletons for selected body IDs",
+    "full_resolution_166k_meshes_every_frame": false,
+    "activity_mapping": "only actual modeled state/events may drive emissive intensity",
+    "illustrative_traveling_pulses_allowed_as_activity": false
+  },
+  "visual_evidence_classes": {
+    "measured_structure": "neutral low-opacity whole CNS; saturated exact route",
+    "modeled_activity": "emissive intensity / event flash on exact neuron morphology",
+    "behavioral_state": "body pose, trajectory, local sensor state and physical odor field",
+    "lesion": "retain geometry but desaturate / mark cut",
+    "rewire": "render as graph/topology control, never invent rewired anatomical arbors"
+  },
+  "public_text_budget": {
+    "persistent_labels_max": 5,
+    "debug_hashes_visible": false,
+    "debug_gate_counts_visible": false,
+    "detailed_provenance": "interactive/paper mode only"
+  },
+  "required_public_labels": [
+    "MEASURED CONNECTIVITY",
+    "MODELED ACTIVITY",
+    "DEVELOPMENT BEHAVIOR or QUALIFIED CONTROLLER as appropriate"
+  ],
+  "forbidden_visual_implications": [
+    "illustrative pulse presented as measured firing",
+    "mechanism probe presented as synchronized to an unrelated chase",
+    "rewired edges drawn as if they were biological neuron morphology",
+    "source coordinates shown inside controller-facing HUD"
+  ],
+  "production_goal": "A viewer should understand in under three seconds: what the fly senses, what part of the CNS is active in the model, and what action follows."
+}

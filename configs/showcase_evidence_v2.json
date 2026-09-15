@@ -1,0 +1,109 @@
+{
+  "protocol": "who-farted-showcase-evidence-v2",
+  "release_mode": "development-structure-teaser",
+  "dataset": "male-cns:v1.0",
+  "evidence_authorities": [
+    "authority/malecns-v1.0-integration-route-evidence.json",
+    "authority/malecns-v1.0-goal-relay-evidence.json",
+    "authority/malecns-v1.0-steering-structure-evidence.json",
+    "authority/malecns-v1.0-steering-probe-evidence-v2.json",
+    "authority/malecns-v1.0-integration-transmitter-evidence.json"
+  ],
+  "measured_structure": {
+    "allowed": true,
+    "label": "MEASURED CONNECTIVITY",
+    "populations": [
+      "FB5AB",
+      "PFNa",
+      "PFNm",
+      "PFNp",
+      "hDeltaC",
+      "hDeltaG",
+      "PFL3",
+      "PFL2",
+      "DNa03",
+      "LAL010",
+      "DNa02"
+    ],
+    "edge_families": [
+      "FB5AB->hDeltaC",
+      "PFNa->hDeltaC",
+      "PFNm->hDeltaC",
+      "PFNp->hDeltaC",
+      "hDeltaC->hDeltaG",
+      "hDeltaG->PFL3",
+      "hDeltaG->PFL2",
+      "PFL3->DNa02",
+      "PFL3->DNa03",
+      "PFL3->LAL010",
+      "DNa03->DNa02",
+      "LAL010->DNa02"
+    ],
+    "animation_rule": "Structural edges may be highlighted or traced but must not pulse in a way labeled or implied as measured firing."
+  },
+  "modeled_activity": {
+    "label": "MODELED ACTIVITY",
+    "currently_allowed_named_populations": [
+      "PFL3",
+      "DNa03",
+      "LAL010",
+      "DNa02"
+    ],
+    "requires_recorded_state": true,
+    "integration_populations_blocked_until_e002b": [
+      "FB5AB",
+      "PFNa",
+      "PFNm",
+      "PFNp",
+      "hDeltaC",
+      "hDeltaG"
+    ]
+  },
+  "behavioral_state": {
+    "current_controller_label": "DEVELOPMENT PROXY",
+    "malecns_behavior_claim_allowed": false,
+    "allowed_fields": [
+      "left_odor",
+      "right_odor",
+      "odor_delta",
+      "wind_x_body",
+      "wind_y_body",
+      "turn",
+      "position",
+      "heading",
+      "found"
+    ],
+    "forbidden_controller_inputs": [
+      "source_coordinates",
+      "culprit_id",
+      "viewer_plume_image"
+    ]
+  },
+  "column_visualization": {
+    "allowed_as_anatomical_metadata": true,
+    "direction_angles_allowed": false,
+    "PFNp_column_slots_allowed": false,
+    "note": "Do not invent column positions for PFNp when the release instance metadata does not provide them."
+  },
+  "comparison": {
+    "real_vs_rewire_headline_allowed": false,
+    "required_before_promotion": [
+      "E002b signed integration perturbation",
+      "sealed sensory and wind role mapping",
+      "matched degree-preserving rewires",
+      "equal compute budgets",
+      "frozen held-out evaluation",
+      "paired cohort statistics"
+    ]
+  },
+  "allowed_headline_now": "WHO FARTED?",
+  "allowed_science_caption_now": "CANDIDATE MALECNS STRUCTURE • MODELED STEERING • DEVELOPMENT BEHAVIOR",
+  "forbidden_public_phrases": [
+    "the fly connectome found the source",
+    "real brain firing",
+    "measured neural activity",
+    "real wiring beats scrambled wiring",
+    "complete smell-navigation circuit"
+  ],
+  "claim_boundary": "The current public-ready visualization may show exact MaleCNS structure and separately labeled modeled steering evidence, but the behavioral controller remains a development proxy until signed integration, sensory/wind role sealing, matched rewiring, and held-out behavioral qualification pass."
+}

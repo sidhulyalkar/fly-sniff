@@ -1,0 +1,228 @@
+{
+  "protocol": "malecns-goal-relay-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "thresholds": [1, 3, 5, 10],
+  "populations": [
+    "hDeltaC",
+    "hDeltaA",
+    "hDeltaG",
+    "hDeltaH",
+    "hDeltaM",
+    "hDeltaK",
+    "PFG",
+    "FC2A",
+    "FC2B",
+    "FC2C",
+    "PFL3",
+    "PFL2"
+  ],
+  "direct_predictions": [
+    {
+      "source": "hDeltaC",
+      "target": "PFL3",
+      "analysis_role": "direct-edge baseline",
+      "prior": "The 2022 model collapses the hDeltaC-to-PFL pathway, but its Methods explicitly state that the biological pathways involve at least one additional cell type. Weak direct support is therefore not by itself a failure of the published mechanism.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "target": "hDeltaA",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Matheson et al. identify hDeltaA among local FB types downstream of hDeltaC with motifs capable of relaying goal information toward PFL outputs.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "target": "hDeltaG",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Matheson et al. identify hDeltaG among local FB types downstream of hDeltaC with motifs capable of relaying goal information toward PFL outputs.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "target": "hDeltaH",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Matheson et al. identify hDeltaH among local FB types downstream of hDeltaC with motifs capable of relaying goal information toward PFL outputs.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "target": "hDeltaM",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Matheson et al. identify hDeltaM among local FB types downstream of hDeltaC with motifs capable of relaying goal information toward PFL outputs.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaA",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay output",
+      "prior": "Test whether a named hDelta local relay supplies the strong PFL3-facing leg omitted by the collapsed 2022 model.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaG",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay output",
+      "prior": "Test whether a named hDelta local relay supplies the strong PFL3-facing leg omitted by the collapsed 2022 model.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaH",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay output",
+      "prior": "Test whether a named hDelta local relay supplies the strong PFL3-facing leg omitted by the collapsed 2022 model.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaM",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay output",
+      "prior": "Test whether a named hDelta local relay supplies the strong PFL3-facing leg omitted by the collapsed 2022 model.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaA",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output check",
+      "prior": "The 2022 model routes local goal output to both PFL3 and PFL2; PFL2 is audited separately rather than inferred from PFL3 connectivity.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaG",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output check",
+      "prior": "The 2022 model routes local goal output to both PFL3 and PFL2; PFL2 is audited separately rather than inferred from PFL3 connectivity.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaH",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output check",
+      "prior": "The 2022 model routes local goal output to both PFL3 and PFL2; PFL2 is audited separately rather than inferred from PFL3 connectivity.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaM",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output check",
+      "prior": "The 2022 model routes local goal output to both PFL3 and PFL2; PFL2 is audited separately rather than inferred from PFL3 connectivity.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "FC2A",
+      "target": "PFL3",
+      "analysis_role": "independent goal-interface positive control",
+      "prior": "Goal-steering work identifies FC2 neurons as strong fan-shaped-body input to PFL3 carrying goal-angle information.",
+      "reference": "https://doi.org/10.1038/s41586-023-07006-3"
+    },
+    {
+      "source": "FC2B",
+      "target": "PFL3",
+      "analysis_role": "independent goal-interface positive control",
+      "prior": "Goal-steering work identifies FC2 neurons as strong fan-shaped-body input to PFL3 carrying goal-angle information.",
+      "reference": "https://doi.org/10.1038/s41586-023-07006-3"
+    },
+    {
+      "source": "FC2C",
+      "target": "PFL3",
+      "analysis_role": "independent goal-interface positive control",
+      "prior": "Goal-steering work identifies FC2 neurons as strong fan-shaped-body input to PFL3 carrying goal-angle information.",
+      "reference": "https://doi.org/10.1038/s41586-023-07006-3"
+    },
+    {
+      "source": "hDeltaK",
+      "target": "PFG",
+      "analysis_role": "2026 persistent-goal recurrent candidate",
+      "prior": "Recent olfactory-navigation work identifies hDeltaK and PFG as a recurrent persistent-goal circuit; this audit asks only whether the corresponding MaleCNS structural edge is present.",
+      "reference": "https://doi.org/10.1038/s41467-026-75945-2"
+    },
+    {
+      "source": "PFG",
+      "target": "hDeltaK",
+      "analysis_role": "2026 persistent-goal recurrent candidate",
+      "prior": "Recent olfactory-navigation work identifies hDeltaK and PFG as a recurrent persistent-goal circuit; reciprocal direction is tested separately.",
+      "reference": "https://doi.org/10.1038/s41467-026-75945-2"
+    },
+    {
+      "source": "hDeltaK",
+      "target": "PFL3",
+      "analysis_role": "exploratory persistent-goal output",
+      "prior": "Exploratory test of whether the newer persistent-goal population has direct structural access to PFL3 in MaleCNS; no direct edge is assumed a priori.",
+      "reference": "https://doi.org/10.1038/s41467-026-75945-2"
+    },
+    {
+      "source": "PFG",
+      "target": "PFL3",
+      "analysis_role": "exploratory persistent-goal output",
+      "prior": "Exploratory test of whether the newer persistent-goal recurrent partner has direct structural access to PFL3 in MaleCNS; no direct edge is assumed a priori.",
+      "reference": "https://doi.org/10.1038/s41467-026-75945-2"
+    }
+  ],
+  "two_hop_predictions": [
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaA",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Explicitly test the extra-cell-type relay that the 2022 model collapsed.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaG",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Explicitly test the extra-cell-type relay that the 2022 model collapsed.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaH",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Explicitly test the extra-cell-type relay that the 2022 model collapsed.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaM",
+      "target": "PFL3",
+      "analysis_role": "2022 local-relay candidate",
+      "prior": "Explicitly test the extra-cell-type relay that the 2022 model collapsed.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaA",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output candidate",
+      "prior": "Test the same collapsed local relay toward PFL2 independently of PFL3.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaG",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output candidate",
+      "prior": "Test the same collapsed local relay toward PFL2 independently of PFL3.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaH",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output candidate",
+      "prior": "Test the same collapsed local relay toward PFL2 independently of PFL3.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    },
+    {
+      "source": "hDeltaC",
+      "via": "hDeltaM",
+      "target": "PFL2",
+      "analysis_role": "2022 local-relay speed-output candidate",
+      "prior": "Test the same collapsed local relay toward PFL2 independently of PFL3.",
+      "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+    }
+  ],
+  "claim_boundary": "This audit distinguishes 2022 local-relay hypotheses, an independent FC2 goal-interface positive control, and newer persistent-goal candidates. Structural support does not establish functional transmission. Absence of a direct edge must not be treated as absence of a multi-cell mechanism. Thresholds are fixed before observing this MaleCNS audit."
+}

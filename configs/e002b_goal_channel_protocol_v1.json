@@ -1,0 +1,101 @@
+{
+  "protocol": "E002b-goal-channel-propagation-v1",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "preregistered-not-run",
+  "scope": "Mechanistic propagation through the frozen odor/wind goal-channel candidate into PFL outputs. This protocol does not test heading comparison, DNa02 turning, or behavioral navigation.",
+  "fixed_route": {
+    "odor_context": "FB5AB",
+    "wind_families": ["PFNa", "PFNm", "PFNp"],
+    "integrator": "hDeltaC",
+    "primary_relay": "hDeltaG",
+    "frozen_relay_comparator": "hDeltaM",
+    "outputs": ["PFL3", "PFL2"]
+  },
+  "fixed_structural_thresholds": [1, 3, 5, 10],
+  "required_authorities": [
+    "authority/malecns-v1.0-integration-route-evidence.json",
+    "authority/malecns-v1.0-goal-relay-evidence.json",
+    "authority/malecns-v1.0-integration-transmitter-evidence.json"
+  ],
+  "required_run_artifacts": [
+    "results/route/integration-sign-audit-v2.json",
+    "results/route/integration-topography-audit-v1.json"
+  ],
+  "primary_model_semantics": {
+    "odor_context": "gate",
+    "description": "FB5AB context gates expression/transmission of the PFN-derived hDeltaC wind representation. This follows the Matheson et al. modeling abstraction and must not be described as measured axo-axonic physiology in MaleCNS.",
+    "reference": "https://doi.org/10.1038/s41467-022-32247-7"
+  },
+  "descriptive_model_comparators": [
+    {
+      "name": "additive_FB5AB_ACh",
+      "description": "Treat predicted cholinergic FB5AB structural input as additive modeled drive rather than a gate. Report only as a mechanistic sensitivity comparison; it cannot replace the preregistered primary gate model based on task performance."
+    },
+    {
+      "name": "hDeltaM_relay",
+      "description": "Use the frozen hDeltaM structural comparator in place of hDeltaG. This comparator cannot rescue or replace hDeltaG if downstream performance is better."
+    }
+  ],
+  "probe_inputs": [
+    "uniform_PFNa_family_drive",
+    "uniform_PFNm_family_drive",
+    "uniform_PFNp_family_drive",
+    "single_anatomical_column_impulses_where_instance_metadata_exists"
+  ],
+  "input_semantics": "Probe inputs are abstract mechanistic perturbations. They must not be labeled physical wind direction, left wind, right wind, odor concentration, or source location until a separate sensory/topography mapping is sealed.",
+  "fixed_perturbations": [
+    "odor_gate_off",
+    "hDeltaC_output_cut",
+    "hDeltaG_output_cut",
+    "PFL3_output_observation_only",
+    "PFL2_output_observation_only",
+    "PFNp_b_modeled_sign_zero_sensitivity",
+    "hDeltaM_frozen_comparator"
+  ],
+  "fixed_gates": [
+    {
+      "name": "authority_hashes_match",
+      "criterion": "All structural, sign, and topography inputs match their sealed hashes."
+    },
+    {
+      "name": "sign_v2_ready",
+      "criterion": "integration-sign-audit-v2 reports ready_for_modeled_sign_probe=true."
+    },
+    {
+      "name": "no_behavioral_oracle_inputs",
+      "criterion": "No source coordinates, culprit identity, distance-to-source, plume image, reward, or behavioral success signal is available to the mechanistic graph."
+    },
+    {
+      "name": "deterministic_replay",
+      "criterion": "Identical graph, perturbation, seed, and drive sequence reproduce modeled state exactly within 1e-12."
+    },
+    {
+      "name": "primary_route_hDeltaC_cut",
+      "criterion": "Within the restricted primary route, removing hDeltaC output abolishes downstream hDeltaG/PFL propagation from PFN probes."
+    },
+    {
+      "name": "primary_route_hDeltaG_cut",
+      "criterion": "Within the restricted primary route, removing hDeltaG output abolishes PFL propagation from upstream probes."
+    },
+    {
+      "name": "odor_gate_negative_control",
+      "criterion": "Under the preregistered gate model, PFN probe transmission through the odor-gated hDeltaC output is suppressed when the context gate is off."
+    }
+  ],
+  "mandatory_reports_not_pass_thresholds": [
+    "response amplitude for each structural threshold 1/3/5/10",
+    "population and column coverage",
+    "additive_FB5AB_ACh comparator",
+    "hDeltaM relay comparator",
+    "PFNp_b sign-zero sensitivity",
+    "partial lesion amplitudes"
+  ],
+  "forbidden_selection": [
+    "Do not choose a structural threshold because it gives the best downstream response.",
+    "Do not replace hDeltaG with hDeltaM because hDeltaM performs better.",
+    "Do not infer a wind direction from anatomical column number or somaSide.",
+    "Do not tune the gate strength using behavioral success.",
+    "Do not call PFL activity a steering command until the heading channel is independently integrated."
+  ],
+  "claim_boundary": "Passing E002b would qualify deterministic modeled propagation through a restricted, signed candidate goal channel under explicit literature-constrained gating assumptions. It would not qualify sensory tuning, heading comparison, physiological firing, steering direction, source finding, or intact-versus-rewire behavioral performance."
+}

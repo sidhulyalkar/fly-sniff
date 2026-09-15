@@ -1,0 +1,19 @@
+{
+  "authority_kind": "type-level-predicted-transmitter-evidence",
+  "dataset": "male-cns:v1.0",
+  "population": "hDeltaM",
+  "source": {
+    "catalog": "Male CNS Cell Type Explorer",
+    "repository": "reiserlab/celltype-explorer-drosophila-male-cns",
+    "commit": "789cc6c105798ce2fd70ba85dab394f90899616b",
+    "source_path": "types/hDeltaM.html",
+    "neuprint_dataset": "male-cns:v1.0"
+  },
+  "prediction": {
+    "predicted_neurotransmitter": "ACh",
+    "confidence": 0.959,
+    "modeled_sign": 1
+  },
+  "use": "Frozen hDeltaM relay comparator in E002b only. This evidence is kept separate from the primary integration-sign-v2 authority so the already-sealed sign-v2 artifact hash does not drift.",
+  "claim_boundary": "The catalog reports a predicted type-level ACh identity for hDeltaM. This supports an explicit comparator sign convention only; it is not synapse-specific receptor physiology or evidence that hDeltaM carries an odor-navigation goal signal."
+}

@@ -1,0 +1,53 @@
+{
+  "protocol": "E003a-sensory-to-goal-encoder-v1",
+  "dataset": "male-cns:v1.0",
+  "purpose": "Evaluate candidate mappings from recorded odor-context and airflow state into a goal-direction representation before any candidate is allowed to control navigation.",
+  "primary_candidate": "odor_gated_upwind",
+  "candidate_encoders": {
+    "odor_gated_upwind": {
+      "description": "When odor context is present, encode the allocentric upwind direction derived from recorded body heading and body-frame airflow; when odor is absent, emit no new goal update.",
+      "free_fit_parameters": 0
+    },
+    "odor_weighted_wind_memory": {
+      "description": "Sensitivity-only exponential memory of odor-weighted upwind vectors.",
+      "memory_tau_s_grid": [0.5, 1.0, 2.0],
+      "selection_status": "sensitivity-only; may not replace primary based on navigation score"
+    },
+    "persistent_goal_update": {
+      "description": "Sensitivity-only hold-last-goal policy across temporary odor loss, updated only on subsequent odor-context events.",
+      "selection_status": "sensitivity-only; may not replace primary based on navigation score"
+    }
+  },
+  "odor_context_rule": {
+    "source": "recorded bilateral odor observations only",
+    "primary": "max(left_odor, right_odor) > 0",
+    "forbidden": ["source coordinates", "distance to source", "culprit identity", "viewer plume image"]
+  },
+  "airflow_rule": {
+    "source": "recorded wind_x_body, wind_y_body plus recorded body heading",
+    "world_direction_derivation": "deterministic coordinate transform only",
+    "forbidden": "using source direction to resolve wind sign or angle"
+  },
+  "evaluation": {
+    "navigation_score_allowed_for_selection": false,
+    "required_reports": [
+      "goal_update_fraction_during_odor",
+      "goal_update_fraction_without_odor",
+      "goal_angle_continuity",
+      "goal_stability_during_short_odor_dropouts",
+      "response_to_frozen_wind_direction_changes",
+      "OOD_plume_seed_behavior",
+      "all_candidate_and_parameter_sensitivities"
+    ]
+  },
+  "qualification_gates": [
+    "no_oracle_inputs",
+    "deterministic_replay",
+    "no_goal_updates_without_allowed_context_for_primary",
+    "coordinate_transform_invariance",
+    "all_sensitivity_candidates_reported",
+    "navigation_performance_not_used_for_selection"
+  ],
+  "selection_rule": "The zero-fit odor-gated-upwind encoder is primary before E003a execution. Memory-based variants are sensitivity analyses only unless a later preregistered experiment independently justifies promotion.",
+  "claim_boundary": "E003a qualifies only an explicit sensory-to-goal representation adapter. It does not establish that FC2 physiology implements that adapter, that the full MaleCNS circuit navigates, or that intact wiring outperforms rewires."
+}

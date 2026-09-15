@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,9 @@ from .party_social import PartyAgent, _make_agent
 SCHEMA_VERSION = 1
 DEFAULT_SIM_SECONDS = 45.0
 DEFAULT_PLUME_POINTS = 220
+MATHEMATICAL_MODEL_CONTRACT = "docs/MATHEMATICAL_MODEL.md"
+PLUME_MODEL_ID = "stochastic-puff-2d-v1"
+SENSOR_MODEL_ID = "bilateral-phenomenological-v1"
 
 _CONTROLLER_FACTORIES: dict[str, tuple[str, type[Controller], str]] = {
     "proxy": ("PROXY", BilateralProxyController, "#38BDF8"),
@@ -77,8 +81,17 @@ def _agent_payload(
     }
 
 
-def _plume_payload(live: PartyAgent, max_points: int) -> list[list[float]]:
-    return live.env.plume.snapshot(max_points=max_points).astype(float).tolist()
+def _plume_payload(live: PartyAgent, max_points: int) -> tuple[list[list[float]], dict[str, Any]]:
+    plume = live.env.plume
+    snapshot = plume.snapshot(max_points=max_points)
+    full_count = len(plume.x)
+    recorded_count = len(snapshot)
+    return snapshot.astype(float).tolist(), {
+        "full_count": int(full_count),
+        "recorded_count": int(recorded_count),
+        "complete": bool(plume.snapshot_is_complete(max_points)),
+        "sample_fraction": float(recorded_count / full_count) if full_count else 1.0,
+    }
 
 
 def _assert_shared_plume(agents: list[PartyAgent], max_points: int) -> None:
@@ -125,6 +138,8 @@ def build_recording(
         colors[label] = color
 
     arena = agents[0].env.arena
+    plume_config = agents[0].env.plume_config
+    sensor_config = agents[0].env.sensor_config
     steps = min(arena.max_steps, round(sim_seconds / arena.dt))
     frames: list[dict[str, Any]] = []
     episode_step = 0
@@ -133,12 +148,14 @@ def build_recording(
         _assert_shared_plume(agents, plume_points)
         if actions is None:
             actions = [{"turn": 0.0, "speed": 0.0} for _ in agents]
+        plume, plume_snapshot = _plume_payload(agents[0], plume_points)
         frames.append(
             {
                 "step": episode_step,
                 "t": float(episode_step * arena.dt),
                 "plume_t": float(agents[0].env.plume.t),
-                "plume": _plume_payload(agents[0], plume_points),
+                "plume": plume,
+                "plume_snapshot": plume_snapshot,
                 "agents": [
                     _agent_payload(live, action=action)
                     for live, action in zip(agents, actions, strict=True)
@@ -188,6 +205,30 @@ def build_recording(
         "claim_boundary": "DEVELOPMENT PROXY • NOT A MALECNS RESULT",
         "seed": int(seed),
         "dt": float(arena.dt),
+        "model_contract": {
+            "mathematical_model": MATHEMATICAL_MODEL_CONTRACT,
+            "plume_model": PLUME_MODEL_ID,
+            "sensor_model": SENSOR_MODEL_ID,
+            "claim": (
+                "benchmark phenomenology; not CFD, receptor kinetics, or recorded neural activity"
+            ),
+        },
+        "config": {
+            "arena": asdict(arena),
+            "plume": asdict(plume_config),
+            "sensor": asdict(sensor_config),
+        },
+        "plume_recording": {
+            "component_columns": ["x", "y", "sigma"],
+            "max_recorded_points": int(plume_points),
+            "max_model_puffs": int(plume_config.max_puffs),
+            "puff_mass": float(plume_config.puff_mass),
+            "exact_density_rule": (
+                "Gaussian density reconstruction is exact only for frames where "
+                "plume_snapshot.complete is true"
+            ),
+        },
+        # Kept as a compact compatibility view for existing social renderers.
         "arena": {
             "width": float(arena.width),
             "height": float(arena.height),

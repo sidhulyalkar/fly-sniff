@@ -9,7 +9,14 @@ import pandas as pd
 
 from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .controllers import CastSurgeController
-from .evaluate import evaluate, manifest_digest, paired_spl_report, summarize, write_receipt
+from .evaluate import (
+    evaluate,
+    manifest_digest,
+    paired_spl_report,
+    paired_success_report,
+    summarize,
+    write_receipt,
+)
 from .freeze import current_git_ref
 from .graph import GraphBundle, MaleCNSRateController
 from .rewire import degree_preserving_rewire
@@ -58,14 +65,15 @@ def verify_code_ref(manifest: dict) -> str:
 def _gold_report(id_frame: pd.DataFrame, ood_frame: pd.DataFrame, manifest: dict) -> dict:
     id_summary = summarize(id_frame).set_index("label")
     ood_summary = summarize(ood_frame).set_index("label")
-    paired = paired_spl_report(id_frame, "malecns", "rewire")
+    paired_spl = paired_spl_report(id_frame, "malecns", "rewire")
+    paired_success = paired_success_report(id_frame, "malecns", "rewire")
     gold = manifest["gold"]
     sr = float(id_summary.loc["malecns", "success_rate"])
     ood_sr = float(ood_summary.loc["malecns", "success_rate"])
     checks = {
         "id_success": sr >= float(gold["success_rate_min"]),
-        "spl_delta": paired["mean_delta"] >= float(gold["spl_delta_vs_rewire_min"]),
-        "ci_excludes_zero": paired["ci95_low"] > 0.0,
+        "spl_delta": paired_spl["mean_delta"] >= float(gold["spl_delta_vs_rewire_min"]),
+        "ci_excludes_zero": paired_spl["ci95_low"] > 0.0,
         "ood_success": ood_sr >= float(gold["ood_success_rate_min"]),
     }
     return {
@@ -73,9 +81,15 @@ def _gold_report(id_frame: pd.DataFrame, ood_frame: pd.DataFrame, manifest: dict
         "checks": checks,
         "id_success_rate": sr,
         "ood_success_rate": ood_sr,
-        "malecns_vs_rewire_spl": paired,
+        "malecns_vs_rewire_spl": paired_spl,
+        "malecns_vs_rewire_success": paired_success,
         "id_summary": id_summary.reset_index().to_dict(orient="records"),
         "ood_summary": ood_summary.reset_index().to_dict(orient="records"),
+        "statistical_note": (
+            "Gold gating remains preregistered on absolute held-out/OOD success and paired SPL. "
+            "The paired success report is additional inference: bootstrap CI plus exact McNemar "
+            "discordant-pair test, not a post-hoc replacement gate."
+        ),
     }
 
 
@@ -116,9 +130,12 @@ def main() -> None:
     sensors = SensorConfig(**cfg["sensor"])
     ood_plume = PlumeConfig(**manifest["ood_plume"])
 
+    # The neural model and environment share one sealed simulation clock. If a
+    # future manifest changes arena.dt, the modeled neural relaxation keeps the
+    # same physical tau rather than silently changing with call frequency.
     factories = {
-        "malecns": lambda: MaleCNSRateController(biological),
-        "rewire": lambda: MaleCNSRateController(rewired),
+        "malecns": lambda: MaleCNSRateController(biological, model_dt_s=arena.dt),
+        "rewire": lambda: MaleCNSRateController(rewired, model_dt_s=arena.dt),
         "classical": CastSurgeController,
     }
     id_frame = evaluate(

@@ -1,0 +1,76 @@
+{
+  "protocol": "E002d-pfl3-relative-phase-comparison-v3",
+  "dataset": "male-cns:v1.0",
+  "supersedes_unrun_protocols": ["E002d-pfl3-relative-phase-comparison-v1", "E002d-pfl3-relative-phase-comparison-v2"],
+  "qualification_status": "preregistered-not-run",
+  "scope": "Test literature-derived relative heading/goal phase structure in modeled PFL3 state without behavior inputs.",
+  "required_inputs": [
+    "results/e002/pfl3-convergence-v1.json",
+    "results/route/fc2-goal-interface-audit-v1.json",
+    "results/route/heading-route-audit-v1.json",
+    "results/route/heading-topography-review-v1.json",
+    "configs/steering_scaffold_candidate_v1.json"
+  ],
+  "literature_reference": "https://doi.org/10.1038/s41586-023-07006-3",
+  "model_form": "r=f(cos(H-Hpref)+d*cos(G-Gpref)); f(x)=a*log(1+exp(b*(x+c)))",
+  "fixed_published_parameters": {
+    "d": 0.63,
+    "a_hz": 29.23,
+    "b": 2.17,
+    "c": -0.7,
+    "source": "final Nature Methods fit used by the full PFL3 population model",
+    "fit_policy": "Do not refit these values to MaleCNS, DNa02 output, turning, or navigation performance."
+  },
+  "mapping": {
+    "absolute_world_offset": "nuisance-parameter",
+    "nine_column_goal_sensitivity_degrees": [0.0, -45.0, -90.0, -135.0, -180.0, 135.0, 90.0, 45.0, 0.0],
+    "heading_glomerulus_sequence_degrees_left_to_right": [-22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5],
+    "status": "candidate-literature-crosswalk",
+    "nine_column_note": "Sensitivity mapping only. The paper favors twelve functional columns; do not promote MaleCNS C1-C9 to proven preferred goal angles."
+  },
+  "readout": {
+    "left_group_source": "configs/steering_scaffold_candidate_v1.json candidate_roles.turn_drive_left",
+    "right_group_source": "configs/steering_scaffold_candidate_v1.json candidate_roles.turn_drive_right",
+    "rule": "Use exact PFL3-to-DNa02 structural target groups. PFL3 instance R/L remains PB metadata and never defines steering side."
+  },
+  "fixed_conditions": [
+    "relative_phase_sweep",
+    "common_rotation_offset_sweep",
+    "FC2_lane_cut",
+    "EPG_lane_cut",
+    "turn_drive_left_sum",
+    "turn_drive_right_sum",
+    "right_minus_left_population_difference"
+  ],
+  "fixed_gates": [
+    "sealed_inputs_match",
+    "fc2_columns_complete",
+    "steering_side_groups_match_candidate_config",
+    "no_absolute_world_angle_claim",
+    "deterministic_replay_le_1e-12",
+    "both_lanes_required",
+    "common_rotation_offset_invariance",
+    "relative_phase_curve_varies_and_has_zero_crossing"
+  ],
+  "mandatory_reports": [
+    "PFL3 C labels",
+    "PB metadata labels",
+    "frozen turn_drive_left and turn_drive_right body IDs",
+    "mapping ambiguities",
+    "left/right sums over relative phase",
+    "right-minus-left curve",
+    "common-offset invariance error",
+    "lane-cut controls",
+    "threshold 1/3/5/10 sensitivity outputs"
+  ],
+  "forbidden": [
+    "Do not select threshold from output amplitude.",
+    "Do not tune phase offset from DNa02 output or navigation.",
+    "Do not use PFL3 instance R/L as steering side.",
+    "Do not refit the published nonlinear parameters to this MaleCNS result.",
+    "Do not promote the nine-column mapping because it looks cleaner.",
+    "Do not add signed Delta7 dynamics without separate evidence."
+  ],
+  "next_gate": "E002e may connect a passed frozen comparison readout to E002a steering only after E002d-v3 qualification.",
+  "claim_boundary": "A pass would support a modeled relative-phase PFL3 comparison pattern under explicit literature mapping assumptions, not absolute preferred angles, physiological firing, steering behavior, source finding, or intact-versus-rewire superiority."
+}

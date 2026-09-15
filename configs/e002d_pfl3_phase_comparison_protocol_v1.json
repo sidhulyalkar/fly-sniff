@@ -1,0 +1,72 @@
+{
+  "protocol": "E002d-pfl3-relative-phase-comparison-v1",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "preregistered-not-run",
+  "scope": "Test literature-derived relative heading/goal phase structure in the modeled PFL3 population. This is not a behavior test.",
+  "required_inputs": [
+    "results/e002/pfl3-convergence-v1.json",
+    "results/route/fc2-goal-interface-audit-v1.json",
+    "results/route/heading-route-audit-v1.json",
+    "results/route/heading-topography-review-v1.json"
+  ],
+  "literature": {
+    "reference": "https://doi.org/10.1038/s41586-023-07006-3",
+    "model_form": "r=f(cos(H-Hpref)+d*cos(G-Gpref))",
+    "note": "The publication favors twelve functional columns. Its nine-column alternative is used here only as a frozen sensitivity mapping because MaleCNS instance metadata resolves C1-C9."
+  },
+  "phase_mapping": {
+    "absolute_world_offset": "nuisance-parameter",
+    "nine_column_goal_sensitivity_degrees": {
+      "C1": 0.0,
+      "C2": -45.0,
+      "C3": -90.0,
+      "C4": -135.0,
+      "C5": -180.0,
+      "C6": 135.0,
+      "C7": 90.0,
+      "C8": 45.0,
+      "C9": 0.0
+    },
+    "heading_glomerulus_sequence_degrees_left_to_right": [-22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5, -67.5, -22.5, 22.5],
+    "crosswalk_status": "candidate-literature-crosswalk-requires-report"
+  },
+  "fixed_conditions": [
+    "goal_phase_sweep",
+    "heading_phase_sweep",
+    "relative_phase_sweep",
+    "common_rotation_offset_sweep",
+    "FC2_lane_cut",
+    "EPG_lane_cut",
+    "PFL3_L_sum",
+    "PFL3_R_sum",
+    "PFL3_R_minus_L"
+  ],
+  "fixed_gates": [
+    "sealed_inputs_match",
+    "fc2_columns_complete",
+    "no_absolute_world_angle_claim",
+    "deterministic_replay_le_1e-12",
+    "both_lanes_required",
+    "common_rotation_offset_invariance",
+    "relative_phase_population_difference_has_structure_and_zero_crossing"
+  ],
+  "mandatory_reports": [
+    "exact PFL3 body IDs grouped by C label and instance L/R metadata",
+    "exact PB labels used by the heading crosswalk",
+    "all irregular or ambiguous instances",
+    "PFL3 L/R sums versus relative phase",
+    "PFL3 R-minus-L versus relative phase",
+    "common-offset invariance error",
+    "FC2 and EPG lane cuts",
+    "threshold 1/3/5/10 sensitivity outputs"
+  ],
+  "forbidden_selection": [
+    "Do not choose structural threshold from PFL3 asymmetry magnitude.",
+    "Do not tune phase offsets using DNa02 output or navigation performance.",
+    "Do not promote the nine-column sensitivity mapping to anatomical truth because it yields a cleaner curve.",
+    "Do not add signed Delta7 dynamics without independent sign evidence.",
+    "Do not call modeled PFL3 population difference measured firing or a proven steering command."
+  ],
+  "next_gate": "After E002d passes, E002e may connect the frozen PFL3 comparison readout to the separately qualified E002a steering scaffold.",
+  "claim_boundary": "Passing E002d would support a deterministic literature-derived relative-phase comparison pattern in the modeled MaleCNS PFL3 population under explicit mapping assumptions. It would not establish absolute preferred angles, physiological firing, DNa02 steering, odor-source navigation, or intact-versus-rewire superiority."
+}

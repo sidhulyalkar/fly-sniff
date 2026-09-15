@@ -1,0 +1,78 @@
+{
+  "protocol": "E003b-complex-odor-sensory-benchmark-v1",
+  "dataset": "male-cns:v1.0",
+  "purpose": "Test whether a receptor-grounded sensory front end can represent target odor identity and direction under variable wind, concentration, distractors, and mixtures without using source coordinates or navigation performance for model selection.",
+  "status": "preregistered-not-run",
+  "world": {
+    "dimensions": "3D-production-with-2D-fast-test-allowed",
+    "odor_channels": "vector-valued; one physical concentration field per chemical component",
+    "wind": "time-varying and seed-controlled",
+    "multiple_sources_required": true,
+    "target_absent_trials_required": true,
+    "target_present_trials_required": true
+  },
+  "sensory": {
+    "primary_response_authority": "DoOR / pinned Drosophila odor-response data",
+    "controller_receives": [
+      "local left/right receptor-or-ORN response vectors",
+      "local airflow",
+      "body heading / proprioceptive heading representation when explicitly allowed by downstream protocol"
+    ],
+    "forbidden_inputs": [
+      "odorant identity label",
+      "target_present boolean",
+      "source coordinates",
+      "distance to source",
+      "culprit identity",
+      "viewer plume image",
+      "navigation success",
+      "future sensory state"
+    ],
+    "mixture_models_all_reported": [
+      "independent-saturating-receptors",
+      "competitive-binding-sensitivity"
+    ]
+  },
+  "data_selection_rule": "Choose benchmark odorants by preregistered response-data coverage and receptor diversity only, before behavior or intact-vs-rewire results are observed. Do not choose odorants because the intact connectome performs well on them.",
+  "factorial_axes": [
+    "target concentration",
+    "distractor identity",
+    "mixture ratio",
+    "number of distractors",
+    "background concentration",
+    "wind direction/time course",
+    "source position",
+    "receptor noise/adaptation",
+    "target present/absent"
+  ],
+  "primary_identity_metrics": [
+    "AUROC",
+    "AUPRC",
+    "false-positive rate at frozen threshold",
+    "detection latency",
+    "calibration",
+    "held-out mixture generalization"
+  ],
+  "primary_direction_metrics": [
+    "circular goal-direction error when target evidence is present",
+    "goal stability during target dropout",
+    "wrong-source attraction rate",
+    "common-coordinate-rotation invariance"
+  ],
+  "required_controls": [
+    "receptor-to-ORN mapping shuffle",
+    "target-absent mixtures",
+    "concentration scaling",
+    "distractor-only mixtures",
+    "sensor-noise sensitivity",
+    "mixture-model sensitivity"
+  ],
+  "selection_prohibitions": [
+    "no navigation score during sensory-model selection",
+    "no source-coordinate leakage",
+    "no target label as a neural input",
+    "no post-hoc odorant selection by intact performance",
+    "no post-hoc removal of difficult mixtures"
+  ],
+  "claim_boundary": "Passing E003b would qualify a receptor-grounded sensory benchmark front end under the tested mixture/world assumptions. It would not establish that MaleCNS physiology implements the chosen peripheral model, that a closed-loop connectome navigates, or that intact wiring outperforms rewires."
+}

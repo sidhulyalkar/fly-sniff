@@ -128,6 +128,17 @@ class BilateralProxyController(Controller):
         self.lost_steps = 0
         self._diag: dict[str, float] = {}
 
+    @staticmethod
+    def _motor_diagnostics(turn: float) -> tuple[float, float]:
+        """Return display-only left/right motor channels consistent with turn sign.
+
+        Positive FlySniff turn is left/counterclockwise. These channels are proxy
+        diagnostics for visualization, not measured descending-neuron activity.
+        """
+        left = float(np.clip(0.5 + turn / 2.0, 0.0, 1.0))
+        right = float(np.clip(0.5 - turn / 2.0, 0.0, 1.0))
+        return left, right
+
     def act(self, obs: Observation) -> Action:
         self.memory = 0.93 * self.memory + 0.07 * obs.mean_odor
         recently_detected = self.memory > 0.03 and self.lost_steps < 20
@@ -145,8 +156,7 @@ class BilateralProxyController(Controller):
                     1.0,
                 )
             )
-            left_dn = float(np.clip(0.5 - turn / 2.0, 0.0, 1.0))
-            right_dn = float(np.clip(0.5 + turn / 2.0, 0.0, 1.0))
+            left_dn, right_dn = self._motor_diagnostics(turn)
             self._diag = {
                 "hdc_proxy": bilateral,
                 "odor_delta": float(obs.odor_delta),
@@ -163,13 +173,14 @@ class BilateralProxyController(Controller):
             self.cast_dir *= -1
         crosswind_err = _wind_target_error(obs, self.cast_dir * np.pi / 2.0)
         turn = float(np.tanh(1.5 * crosswind_err))
+        left_dn, right_dn = self._motor_diagnostics(turn)
         self._diag = {
             "hdc_proxy": 0.0,
             "odor_delta": float(obs.odor_delta),
             "odor_memory": float(self.memory),
             "upwind_error": float(_wind_target_error(obs, np.pi)),
-            "dn_left": float(np.clip(0.5 - turn / 2.0, 0.0, 1.0)),
-            "dn_right": float(np.clip(0.5 + turn / 2.0, 0.0, 1.0)),
+            "dn_left": left_dn,
+            "dn_right": right_dn,
             "mode_surge": 0.0,
         }
         return Action(turn, 0.70)

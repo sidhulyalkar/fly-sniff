@@ -1,0 +1,45 @@
+{
+  "protocol": "who-farted-showcase-evidence-v3",
+  "release_mode": "qualified-mechanism-teaser",
+  "dataset": "male-cns:v1.0",
+  "measured_structure": {
+    "allowed": true,
+    "label": "MEASURED CONNECTIVITY"
+  },
+  "modeled_activity": {
+    "allowed": true,
+    "label": "MODELED ACTIVITY",
+    "source_rule": "Only sealed E002b/E002c report state may be animated. It must not be presented as measured firing or as behavior-synchronized neural state.",
+    "behavior_sync_allowed": false
+  },
+  "mechanism_probe": {
+    "e002b_required": true,
+    "e002c_protocol": "E002c-pfl3-goal-heading-convergence-v1",
+    "e002c_sha256": "46cf03f75dd6956722f1874877070f06243afc1cdae385cb459263422b14a0c2",
+    "e002c_must_pass": true,
+    "fc2_protocol": "malecns-fc2-goal-interface-audit-v1",
+    "fc2_sha256": "49e416da2c11681892e62cfbe233495c5c46dc323069c9c2524e7a0ffbc5e860",
+    "display_threshold": 5,
+    "all_thresholds_must_be_reported": [1, 3, 5, 10],
+    "phase_mapping_must_remain_unresolved": true,
+    "label": "SEALED MODEL PROBE • SEPARATE FROM CHASE TIMELINE"
+  },
+  "behavioral_state": {
+    "current_controller_label": "DEVELOPMENT PROXY",
+    "malecns_behavior_claim_allowed": false
+  },
+  "comparison": {
+    "real_vs_rewire_headline_allowed": false
+  },
+  "allowed_headline_now": "WHO FARTED?",
+  "allowed_science_caption_now": "MEASURED CONNECTIVITY • SEALED MODEL PROBES • DEVELOPMENT BEHAVIOR",
+  "forbidden_public_phrases": [
+    "the fly connectome found the source",
+    "real brain firing",
+    "measured neural activity",
+    "PFL3 computes the error in this demo",
+    "real wiring beats scrambled wiring",
+    "complete smell-navigation circuit"
+  ],
+  "claim_boundary": "This teaser may show exact MaleCNS structure and independently sealed E002b/E002c modeled activity beside a development behavior replay. The mechanism probe is a separate experiment and must never be implied to be the neural state that generated the displayed chase."
+}

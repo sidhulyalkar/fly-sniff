@@ -1,0 +1,14 @@
+{
+  "authority_kind": "type-level-predicted-transmitter-evidence",
+  "protocol": "malecns-fc2-transmitter-evidence-v1",
+  "dataset": "male-cns:v1.0",
+  "catalog_commit": "789cc6c105798ce2fd70ba85dab394f90899616b",
+  "modeling_convention": "ACh maps to modeled sign +1; this is an engineering convention, not measured postsynaptic physiology.",
+  "predictions": {
+    "FC2A": {"neuron_count": 18, "predicted_transmitter": "ACh", "confidence": 0.687, "modeled_sign": 1},
+    "FC2B": {"neuron_count": 27, "predicted_transmitter": "ACh", "confidence": 0.780, "modeled_sign": 1},
+    "FC2C": {"neuron_count": 47, "predicted_transmitter": "ACh", "confidence": 0.853, "modeled_sign": 1}
+  },
+  "literature_role": "Published PFL3 work treats FC2 as fan-shaped-body goal-angle input to PFL3.",
+  "claim_boundary": "Supports a literature-motivated FC2 goal-interface candidate and +1 modeled presynaptic sign. Does not establish measured tuning, postsynaptic physiological sign, preferred goal angle, steering, or behavior."
+}

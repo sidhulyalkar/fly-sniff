@@ -1,0 +1,51 @@
+{
+  "protocol": "E002e-pfl3-descending-steering-v1",
+  "dataset": "male-cns:v1.0",
+  "purpose": "Test whether the preregistered E002d relative-phase PFL3 population state propagates through the frozen steering scaffold into a correctly lateralized modeled DNa02 turn signal.",
+  "required_inputs": {
+    "e002d_protocol": "E002d-pfl3-relative-phase-comparison-v3",
+    "e002d_must_pass": true,
+    "phase_crosswalk_protocol": "E002d-pfl3-phase-crosswalk-v1",
+    "steering_scaffold_protocol": "malecns-steering-scaffold-candidate-v1",
+    "steering_probe_protocol": "E002a-steering-scaffold-propagation-v2"
+  },
+  "primary_structural_threshold": 5,
+  "all_structural_thresholds": [1, 3, 5, 10],
+  "relative_phase_probe_deg": [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150],
+  "mirrored_phase_pairs_deg": [[-150, 150], [-120, 120], [-90, 90], [-60, 60], [-30, 30]],
+  "common_rotation_offsets_deg": [0, 45, 90, 135],
+  "deterministic_tolerance": 1e-12,
+  "zero_cut_tolerance": 1e-12,
+  "side_swap_definition": "Swap the complete frozen 12-cell left/right PFL3 groups by deterministic (anatomical column, PB label, body ID) rank, treating absent instantaneous drive as zero. This is an adversarial laterality-label swap, not a claim of bilateral cell homology.",
+  "lane_cut_definition": "At the primary threshold, a lane cut must reduce the number of preregistered mirrored phase pairs that retain opposite modeled turn signs relative to intact. No amplitude threshold is fit or selected from E002e results.",
+  "frozen_controls": [
+    "FC2_lane_cut",
+    "EPG_lane_cut",
+    "PFL3_output_cut",
+    "swap_frozen_PFL3_left_right_groups",
+    "common_coordinate_rotation",
+    "threshold_1_3_5_10"
+  ],
+  "qualification_gates": [
+    "sealed_inputs_match",
+    "no_behavior_oracle_inputs",
+    "deterministic_replay_le_1e-12",
+    "mirrored_phase_pairs_produce_opposite_turn_signs",
+    "FC2_lane_cut_destroys_phase_dependent_turning",
+    "EPG_lane_cut_destroys_phase_dependent_turning",
+    "PFL3_output_cut_zeroes_DNa02_turn",
+    "left_right_group_swap_reverses_turn_curve",
+    "common_rotation_offset_invariance",
+    "all_structural_thresholds_reported"
+  ],
+  "forbidden_inputs": [
+    "source_coordinates",
+    "distance_to_source",
+    "culprit_identity",
+    "plume_image",
+    "navigation_score",
+    "behavioral_success"
+  ],
+  "selection_rule": "Do not alter the primary threshold, phase probes, side groups, model parameters, or controls based on E002e outcome. Threshold 5 remains primary because it was frozen before E002d/E002e from the broad structural-support lane. The side-swap clarification repairs an implementation crash observed before any E002e result was produced; it does not change phase probes, side membership, thresholds, or model parameters.",
+  "claim_boundary": "Passing E002e would support a modeled, body-ID-resolved PFL3-to-descending steering transformation under a literature-constrained relative phase representation. It would not establish sensory-to-goal encoding, measured firing, closed-loop odor navigation, or superiority of intact wiring over rewires."
+}

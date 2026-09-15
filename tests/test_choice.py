@@ -26,6 +26,21 @@ def test_proxy_turns_toward_mirrored_odor_sources():
     assert right.mean_turn < 0
 
 
+def test_proxy_motor_diagnostics_follow_turn_side():
+    controller = BilateralProxyController()
+    controller.reset(7)
+    left_action = controller.act(choice_observation("left"))
+    left_diag = controller.diagnostics()
+    assert left_action.turn > 0
+    assert left_diag["dn_left"] > left_diag["dn_right"]
+
+    controller.reset(7)
+    right_action = controller.act(choice_observation("right"))
+    right_diag = controller.diagnostics()
+    assert right_action.turn < 0
+    assert right_diag["dn_right"] > right_diag["dn_left"]
+
+
 def test_balanced_proxy_benchmark_is_deterministic():
     a = benchmark_choice(BilateralProxyController(), trials=20, seed=11)
     b = benchmark_choice(BilateralProxyController(), trials=20, seed=11)

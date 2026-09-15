@@ -1,0 +1,88 @@
+{
+  "authority_kind": "body-id-resolved-heading-route-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "structural-evidence-not-functional-qualification",
+  "source_artifact": {
+    "path": "results/route/heading-route-audit-v1.json",
+    "protocol": "malecns-heading-route-audit-v1",
+    "sha256": "a311aa2d02e5032f2004c7c459befd451ff92dbddd811ced0b0ecc534f4ea7de",
+    "git_branch": "feat/science-rigor-v1",
+    "git_sha": "e8d205811b4d51cff5e1dc0d15b4f2e144ab6f87",
+    "git_dirty_paths": [],
+    "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "config_sha256": "02cae036408893a31beb00b37284ea380953d88d08154405c911b41acf1a6efb",
+    "fixed_thresholds": [1, 3, 5, 10]
+  },
+  "population_counts": {
+    "EPG": 46,
+    "Delta7": 42,
+    "PFL3": 24
+  },
+  "direct_support": {
+    "EPG_to_PFL3": {
+      "edge_pairs": 113,
+      "weight_sum": 1182.0,
+      "thresholds": {
+        "1": {"edge_pairs": 113, "source_coverage": "41/46", "target_coverage": "24/24"},
+        "3": {"edge_pairs": 79, "source_coverage": "38/46", "target_coverage": "24/24"},
+        "5": {"edge_pairs": 70, "source_coverage": "38/46", "target_coverage": "24/24"},
+        "10": {"edge_pairs": 54, "source_coverage": "36/46", "target_coverage": "24/24"}
+      }
+    },
+    "EPG_to_Delta7": {
+      "edge_pairs": 1670,
+      "weight_sum": 19896.0,
+      "thresholds": {
+        "1": {"edge_pairs": 1670, "source_coverage": "46/46", "target_coverage": "42/42"},
+        "3": {"edge_pairs": 1342, "source_coverage": "46/46", "target_coverage": "42/42"},
+        "5": {"edge_pairs": 1154, "source_coverage": "46/46", "target_coverage": "42/42"},
+        "10": {"edge_pairs": 863, "source_coverage": "46/46", "target_coverage": "42/42"}
+      }
+    },
+    "Delta7_to_PFL3": {
+      "edge_pairs": 278,
+      "weight_sum": 5617.0,
+      "thresholds": {
+        "1": {"edge_pairs": 278, "source_coverage": "42/42", "target_coverage": "24/24"},
+        "3": {"edge_pairs": 229, "source_coverage": "42/42", "target_coverage": "24/24"},
+        "5": {"edge_pairs": 207, "source_coverage": "42/42", "target_coverage": "24/24"},
+        "10": {"edge_pairs": 167, "source_coverage": "42/42", "target_coverage": "24/24"}
+      }
+    }
+  },
+  "two_hop_support": {
+    "EPG_via_Delta7_to_PFL3": {
+      "paths": 11046,
+      "thresholds": {
+        "1": {"paths": 11046, "EPG_coverage": "46/46", "Delta7_coverage": "42/42", "PFL3_coverage": "24/24"},
+        "3": {"paths": 7319, "EPG_coverage": "46/46", "Delta7_coverage": "42/42", "PFL3_coverage": "24/24"},
+        "5": {"paths": 5690, "EPG_coverage": "46/46", "Delta7_coverage": "42/42", "PFL3_coverage": "24/24"},
+        "10": {"paths": 3447, "EPG_coverage": "46/46", "Delta7_coverage": "42/42", "PFL3_coverage": "24/24"}
+      }
+    }
+  },
+  "direct_EPG_to_PFL3_pb_glomerulus_review": {
+    "derivation": "Parsed PB side/index tokens from exact source_instance and target_instance strings in the source artifact. This is descriptive anatomy, not a preferred-angle assignment.",
+    "thresholds": {
+      "1": {"retained_edges": 113, "matching_pb_edges": 62, "matching_pb_weight_fraction": 0.8908629441624365},
+      "3": {"retained_edges": 79, "matching_pb_edges": 61, "matching_pb_weight_fraction": 0.9236172080772608},
+      "5": {"retained_edges": 70, "matching_pb_edges": 60, "matching_pb_weight_fraction": 0.9458483754512635},
+      "10": {"retained_edges": 54, "matching_pb_edges": 53, "matching_pb_weight_fraction": 0.9861660079051383}
+    },
+    "threshold_10_unmatched_edges": [
+      {
+        "source_instance": "EPG(PB08)_R4",
+        "target_instance": "PFL3(PB12c)_R3_C5",
+        "weight": 14.0
+      }
+    ]
+  },
+  "selection_rule": {
+    "primary_signed_heading_lane": "direct EPG->PFL3",
+    "basis": "Direct EPG->PFL3 has full 24/24 PFL3 target coverage at every frozen threshold, strong PB-glomerulus alignment, and EPG has a separately pinned cholinergic catalog prediction. This choice is frozen before downstream E002c behavior or steering evaluation.",
+    "Delta7_status": "mandatory structural/literature comparator; excluded from the primary signed lane while effective sign remains unresolved under the conservative policy",
+    "forbidden_use": "Do not promote Delta7 into the signed primary lane because it improves modeled convergence, steering, or navigation performance."
+  },
+  "claim_boundary": "This authority seals structural MaleCNS evidence for heading-related routes into PFL3 and a descriptive PB-glomerulus alignment review. It does not establish heading tuning, preferred angles, effective Delta7 sign, neural dynamics, PFL3 goal-heading comparison, steering direction, or behavior."
+}

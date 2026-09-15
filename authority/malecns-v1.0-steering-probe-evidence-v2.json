@@ -1,0 +1,42 @@
+{
+  "authority_kind": "modeled-steering-propagation-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "isolated-modeled-propagation-pass-not-behavioral-qualification",
+  "source_report": {
+    "protocol": "E002a-steering-scaffold-propagation-v2",
+    "report_sha256": "674ebfa67ea5e142cd7dcb5ba997784fa27958eb41941b865a571c4a4480bb86",
+    "seed": 13013,
+    "steps": 32
+  },
+  "input_bundle": {
+    "path": "data/cache/steering-scaffold-v1",
+    "files": {
+      "nodes.parquet": {"bytes": 7891, "sha256": "ae925672115f783aadd67f28de7ccfc34116b1adf25fc815108805b4b30cbc20"},
+      "edges.parquet": {"bytes": 5870, "sha256": "b25dc69646aeafaf6adf1c0d80204f51ffcfcdce129eec9eee2188fce7e06463"},
+      "roles.json": {"bytes": 400, "sha256": "0e15e659f9713a63ab0f3d9e104b4bbc652a95a9e0082044158cce449d4b29ed"},
+      "manifest.json": {"bytes": 1251, "sha256": "2c7b4dbc1885eb63037cbd0a9a3b3cae05f2947c4243cf0c869bc680681843d9"}
+    },
+    "source_route_audit_sha256": "250459ad4128ec37b2ecfee45b77fcf9ca4c784f24a949c9744a95206c5323b7",
+    "sign_authority_sha256": "65896a73b46fb8e5289891e9368c090610bcf1b32bd12431f1eb498c130f53c3"
+  },
+  "gates": {
+    "passed": 7,
+    "total": 7,
+    "candidate_not_promoted": true,
+    "no_sensory_role_aliasing": true,
+    "explicit_signed_edges": true,
+    "modeled_left_right_laterality": true,
+    "modeled_left_right_opposition": true,
+    "deterministic_role_drive": true,
+    "pfl3_output_cut": true
+  },
+  "probe": {
+    "left_turn": 0.9716491195410979,
+    "right_turn": -0.9716533526536367,
+    "separation": 1.9433024721947345,
+    "deterministic_error": 0.0,
+    "pfl3_cut_peak_turn": 0.0
+  },
+  "lesion_interpretation": "Partial direct/DNa03/LAL010 lesion amplitudes are descriptive only because the current rate model normalizes postsynaptic incoming weights. They are not physiological contribution estimates and are not qualification gates.",
+  "claim_boundary": "Passing establishes deterministic modeled propagation and correct left/right sign within the restricted, provenance-bound steering scaffold. It does not qualify odor sensing, the hDeltaC/hDeltaG integration route, inhibitory see-saw physiology, measured firing, or navigation performance."
+}

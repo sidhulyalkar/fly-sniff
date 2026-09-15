@@ -1,0 +1,180 @@
+{
+  "protocol": "evidence-bootstrap-v1",
+  "dataset": "male-cns:v1.0",
+  "records": [
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "integration-route"},
+      "authority_path": "authority/malecns-v1.0-integration-route-evidence.json",
+      "facts": [
+        {
+          "statement": "MaleCNS contains the audited body-ID-resolved FB5AB/PFN to hDeltaC/hDeltaG to PFL structural candidate route.",
+          "evidence_class": "MEASURED_STRUCTURE",
+          "confidence": "exact-connectome-structure",
+          "caveat": "Structural connectivity does not establish physiological transmission or navigation function."
+        }
+      ],
+      "allowed_claims": ["body-ID-resolved structural candidate"],
+      "forbidden_claims": ["measured functional odor-navigation pathway", "measured neural activity"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "heading-route"},
+      "authority_path": "authority/malecns-v1.0-heading-route-evidence.json",
+      "facts": [
+        {
+          "statement": "MaleCNS contains the audited EPG/Delta7 to PFL3 heading-route structure.",
+          "evidence_class": "MEASURED_STRUCTURE",
+          "confidence": "exact-connectome-structure",
+          "caveat": "Anatomical route and topography do not establish a universal physical heading angle map."
+        }
+      ],
+      "allowed_claims": ["body-ID-resolved heading-route structural candidate"],
+      "forbidden_claims": ["measured heading tuning", "universal PB label to world-angle mapping"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "integration-transmitter-annotations"},
+      "authority_path": "authority/malecns-v1.0-integration-transmitter-evidence.json",
+      "facts": [
+        {
+          "statement": "Frozen integration populations have catalog-predicted neurotransmitter annotations with retained confidence.",
+          "evidence_class": "PREDICTED_ANNOTATION",
+          "confidence": "catalog-prediction",
+          "caveat": "Predicted transmitter identity is not a measured postsynaptic physiological sign."
+        }
+      ],
+      "allowed_claims": ["predicted neurotransmitter annotation"],
+      "forbidden_claims": ["measured synaptic sign", "measured transmitter release"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "FC2-transmitter-annotations"},
+      "authority_path": "authority/malecns-v1.0-fc2-transmitter-evidence.json",
+      "facts": [
+        {
+          "statement": "FC2 populations have catalog-predicted transmitter annotations used only as a modeling convention.",
+          "evidence_class": "PREDICTED_ANNOTATION",
+          "confidence": "catalog-prediction",
+          "caveat": "This does not establish measured goal tuning or postsynaptic effect."
+        }
+      ],
+      "allowed_claims": ["predicted FC2 transmitter annotation"],
+      "forbidden_claims": ["measured FC2 goal tuning", "measured FC2 physiological sign"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "steering-scaffold-model"},
+      "authority_path": "authority/malecns-v1.0-steering-probe-evidence-v2.json",
+      "facts": [
+        {
+          "statement": "A deterministic explicit rate model propagates mirrored PFL3 drive through the restricted steering scaffold into opposite modeled DNa02 turn signals.",
+          "evidence_class": "MODELED_STATE",
+          "confidence": "deterministic-model-probe",
+          "caveat": "Modeled propagation is not measured firing and is not behavioral qualification."
+        },
+        {
+          "statement": "The steering probe depends on explicit signed-rate-model assumptions.",
+          "evidence_class": "MODEL_ASSUMPTION",
+          "confidence": "explicit",
+          "caveat": "Partial lesion amplitudes are descriptive under postsynaptic normalization."
+        }
+      ],
+      "allowed_claims": ["deterministic modeled steering propagation"],
+      "forbidden_claims": ["measured DNa02 activity", "biological navigation performance"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "persistent-goal-structure"},
+      "authority_path": "authority/malecns-v1.0-persistent-goal-structure-evidence.json",
+      "facts": [
+        {
+          "statement": "MaleCNS contains strong audited hDeltaK/PFGs structural recurrence.",
+          "evidence_class": "MEASURED_STRUCTURE",
+          "confidence": "exact-connectome-structure",
+          "caveat": "Structural recurrence alone is not evidence of persistent activity, memory, or attractor dynamics."
+        }
+      ],
+      "allowed_claims": ["structural recurrent candidate"],
+      "forbidden_claims": ["measured persistent activity", "memory circuit established"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-wind-odor-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent Drosophila experiments support directional wind tuning in PFN pathways that provide wind information to the fan-shaped body.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology",
+          "caveat": "Measured in another Drosophila preparation, not the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "Matheson2022",
+            "probe_ids": ["PFN_airflow_tuning_geometry", "PFN_mirrored_directional_response"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured physiology"
+          }
+        },
+        {
+          "statement": "Independent Drosophila experiments show hDeltaC activity is odor-gated and wind-direction tuned after convergence of odor and wind pathways.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology",
+          "caveat": "Measured in another Drosophila preparation and cannot be promoted to MaleCNS-specific physiology.",
+          "metadata": {
+            "source_key": "Matheson2022",
+            "probe_ids": ["odor_context_gating"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured physiology"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for PFN wind tuning and odor-context gating"],
+      "forbidden_claims": ["measured MaleCNS PFN physiology", "measured MaleCNS hDeltaC physiology"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-PFL3-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent Drosophila experiments show individual PFL3 neurons have conjunctive spike-rate tuning to heading and goal angle and support an egocentric steering computation.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-physiology-and-intervention",
+          "caveat": "Measured in another Drosophila preparation and not on the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "MussellsPires2024",
+            "probe_ids": ["PFL3_lateralized_steering_relationship"],
+            "calibration_eligible": true,
+            "underlying_evidence": "measured spike-rate physiology and optogenetic intervention"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for PFL3 heading-goal steering computation"],
+      "forbidden_claims": ["measured MaleCNS PFL3 activity"]
+    },
+    {
+      "entity": {"dataset": "male-cns:v1.0", "name": "cross-dataset-DNa02-physiology"},
+      "authority_path": "authority/literature-physiology-v1.json",
+      "facts": [
+        {
+          "statement": "Independent bilateral DNa02 recordings show fly rotational velocity is approximately linearly related to right-left DNa02 firing-rate difference over the measured dynamic range.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-targeted-electrophysiology",
+          "caveat": "Measured in walking Drosophila, not the exact MaleCNS v1.0 body IDs.",
+          "metadata": {
+            "source_key": "SteeringControl2025",
+            "probe_ids": ["DNa02_turn_relationship"],
+            "calibration_eligible": true,
+            "underlying_evidence": "targeted in vivo electrophysiology"
+          }
+        },
+        {
+          "statement": "The DNa02 steering study compares neural activity with behavior about 150 ms later, while explicitly noting that the lag may reflect biological delay and/or spherical-treadmill inertia.",
+          "evidence_class": "CROSS_DATASET_PRIOR",
+          "confidence": "peer-reviewed-measured-neural-behavior-lag",
+          "caveat": "This observation is not a direct neural time-constant measurement and is therefore not eligible to calibrate the model time constant.",
+          "metadata": {
+            "source_key": "SteeringControl2025",
+            "probe_ids": ["temporal_response_scale"],
+            "calibration_eligible": false,
+            "underlying_evidence": "neural-to-behavior lag with explicit mechanical confound"
+          }
+        }
+      ],
+      "allowed_claims": ["cross-dataset physiological prior for bilateral DNa02 steering"],
+      "forbidden_claims": ["150 ms is the DNa02 neural time constant", "measured MaleCNS DNa02 firing"]
+    }
+  ]
+}

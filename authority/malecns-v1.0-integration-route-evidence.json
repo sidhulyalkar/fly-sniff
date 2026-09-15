@@ -1,0 +1,35 @@
+{
+  "authority_kind": "body-id-resolved-integration-route-structural-evidence",
+  "dataset": "male-cns:v1.0",
+  "qualification_status": "structural-evidence-not-functional-qualification",
+  "source_audit": {
+    "protocol": "malecns-integration-route-audit-v1",
+    "audit_sha256": "393044451445af3c1ba1dd720adcb633e134b407e37a3dfcd42d17ad7d515a13",
+    "git_sha": "913b82de0243761bfb65bde1aa6e94959525c15b",
+    "git_dirty_paths": [],
+    "annotations_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "weights_sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "config_sha256": "bef5618435918e0c73a9682302c5a9e7dc810611a798d4ee977c55edd366fec0",
+    "fixed_thresholds": [1, 3, 5, 10]
+  },
+  "frozen_relay_authority": "authority/malecns-v1.0-goal-relay-evidence.json",
+  "frozen_primary_relay": "hDeltaG",
+  "direct_support": {
+    "FB5AB_to_hDeltaC": {"edge_pairs": 40, "weight_sum": 1751.0, "edge_pairs_at_5": 40, "edge_pairs_at_10": 40},
+    "PFNa_to_hDeltaC": {"edge_pairs": 224, "weight_sum": 1303.0, "edge_pairs_at_5": 117, "edge_pairs_at_10": 38},
+    "PFNm_to_hDeltaC": {"edge_pairs": 114, "weight_sum": 450.0, "edge_pairs_at_5": 32, "edge_pairs_at_10": 13},
+    "PFNp_to_hDeltaC": {"edge_pairs": 150, "weight_sum": 612.0, "edge_pairs_at_5": 49, "edge_pairs_at_10": 14},
+    "hDeltaC_to_hDeltaG": {"edge_pairs": 42, "weight_sum": 133.0, "edge_pairs_at_5": 11, "edge_pairs_at_10": 1},
+    "hDeltaG_to_PFL3": {"edge_pairs": 48, "weight_sum": 582.0, "edge_pairs_at_5": 34, "edge_pairs_at_10": 26},
+    "hDeltaG_to_PFL2": {"edge_pairs": 26, "weight_sum": 180.0, "edge_pairs_at_5": 12, "edge_pairs_at_10": 6}
+  },
+  "three_edge_support_to_PFL3": {
+    "FB5AB": {"paths_at_1": 510, "paths_at_3": 188, "paths_at_5": 90, "paths_at_10": 4, "coverage_at_5": {"source": "2/2", "hDeltaC": "11/20", "hDeltaG": "7/8", "PFL3": "23/24"}},
+    "PFNa": {"paths_at_1": 2820, "paths_at_3": 787, "paths_at_5": 271, "paths_at_10": 6, "coverage_at_5": {"source": "44/58", "hDeltaC": "11/20", "hDeltaG": "7/8", "PFL3": "23/24"}},
+    "PFNm": {"paths_at_1": 1396, "paths_at_3": 261, "paths_at_5": 69, "paths_at_10": 2, "coverage_at_5": {"source": "10/47", "hDeltaC": "8/20", "hDeltaG": "5/8", "PFL3": "17/24"}},
+    "PFNp": {"paths_at_1": 1749, "paths_at_3": 390, "paths_at_5": 95, "paths_at_10": 0, "coverage_at_5": {"source": "18/291", "hDeltaC": "11/20", "hDeltaG": "7/8", "PFL3": "23/24"}}
+  },
+  "robustness_note": "At weight >=5 the route is distributed rather than dominated by a single relay body ID. The strongest observed hDeltaG share of PFNa->hDeltaC->hDeltaG->PFL3 paths is about 26%. At weight >=10 surviving paths collapse onto hDeltaC body 14975 -> hDeltaG body 48642, so threshold-10 survival is robustness evidence, not population-wide coverage.",
+  "selection_guardrail": "Do not re-select hDeltaG, PFN family membership, or body-ID populations based on downstream navigation, lesion, training, or rewire performance.",
+  "claim_boundary": "This authority establishes a body-ID-resolved structural bridge from literature-motivated FB5AB/PFN populations through hDeltaC and the previously frozen hDeltaG relay into PFL3/PFL2. It does not establish odor tuning, wind tuning, synaptic sign, effective connectivity, neural dynamics, necessity, sufficiency, or behavioral navigation."
+}

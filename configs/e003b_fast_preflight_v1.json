@@ -1,0 +1,39 @@
+{
+  "protocol": "E003b-fast-preflight-v1",
+  "dataset": "male-cns:v1.0",
+  "status": "engineering-preflight-not-qualification",
+  "seed": 30331,
+  "trials": 256,
+  "arena": {
+    "width": 10.0,
+    "height": 6.0
+  },
+  "antenna_separation": 0.28,
+  "odorants": {
+    "target": "ethyl acetate",
+    "distractors": [
+      "acetic acid",
+      "ethanol",
+      "1-pentanol"
+    ]
+  },
+  "emission_range": [0.4, 1.0],
+  "distractor_count_range": [1, 3],
+  "plume": {
+    "sigma_cross": 1.0,
+    "sigma_upwind": 0.7,
+    "downwind_decay": 4.0,
+    "note": "Deterministic analytical fast-test field only; not CFD and not the production plume benchmark."
+  },
+  "mixture_models": [
+    "independent-saturating-receptors",
+    "competitive-binding-sensitivity"
+  ],
+  "decoder": {
+    "identity": "fixed cosine similarity to target receptor signature",
+    "training": "none",
+    "claim_status": "external diagnostic readout only"
+  },
+  "selection_rule": "This engineering preflight is frozen before receptor-authority results are inspected. The named odorants are a smoke-test panel, not the preregistered production E003b selection set. Production odorants must be selected by receptor-data coverage/diversity before behavior or intact-vs-rewire results are observed.",
+  "claim_boundary": "This config exercises the vector-odor world and receptor front end. It cannot qualify E003b or support a MaleCNS odor-identification/navigation claim."
+}

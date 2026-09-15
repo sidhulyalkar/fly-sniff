@@ -8,7 +8,7 @@ from .config import ArenaConfig, PlumeConfig, SensorConfig
 from .plume import TurbulentPlume
 
 
-@dataclass
+@dataclass(frozen=True)
 class Observation:
     left_odor: float
     right_odor: float
@@ -48,6 +48,8 @@ class FlySniffEnv:
         self.plume = TurbulentPlume(self.arena, self.plume_config, self.seed)
         self.plume.warmup()
         self.agent = self._new_agent()
+        self._observation_key: tuple[int, float, float, float, float] | None = None
+        self._observation_cache: Observation | None = None
 
     def _new_agent(self) -> AgentState:
         y = float(self.rng.uniform(0.8, self.arena.height - 0.8))
@@ -57,6 +59,11 @@ class FlySniffEnv:
         return state
 
     def _antenna_positions(self) -> tuple[tuple[float, float], tuple[float, float]]:
+        """Return left/right antenna sample points in world coordinates.
+
+        The antenna baseline is perpendicular to the recorded body heading. For
+        heading zero (+x), left lies at +y and right at -y.
+        """
         a = self.agent
         half = 0.5 * self.arena.antenna_separation
         lx = a.x - np.sin(a.heading) * half
@@ -65,21 +72,53 @@ class FlySniffEnv:
         ry = a.y - np.cos(a.heading) * half
         return (lx, ly), (rx, ry)
 
+    def _adaptation_alpha(self) -> float:
+        """Exact zero-order-hold discretization of da/dt=(s-a)/tau."""
+        tau = float(self.sensor_config.adaptation_tau)
+        if tau <= 0.0:
+            return 1.0
+        return float(1.0 - np.exp(-self.arena.dt / tau))
+
     def _transduce(self, concentration: float, side: str) -> float:
         cfg = self.sensor_config
-        raw = cfg.concentration_gain * concentration
+        raw = max(0.0, cfg.concentration_gain * float(concentration))
         sat = raw / (cfg.concentration_half_sat + raw + 1e-12)
-        alpha = self.arena.dt / max(cfg.adaptation_tau, self.arena.dt)
-        attr = "left_adapt" if side == "left" else "right_adapt"
-        adapt = getattr(self.agent, attr)
-        adapt += alpha * (sat - adapt)
-        setattr(self.agent, attr, adapt)
-        return float(np.clip(0.72 * sat + 0.28 * max(sat - adapt, 0.0), 0.0, 1.0))
 
-    def observe(self) -> Observation:
+        attr = "left_adapt" if side == "left" else "right_adapt"
+        adapt = float(getattr(self.agent, attr))
+
+        # Output at time t depends on the current drive and the adaptation state
+        # carried into the sample. This avoids using a future-updated state in
+        # the same observation.
+        response = 0.72 * sat + 0.28 * max(sat - adapt, 0.0)
+
+        # Then advance adaptation for the next sample. The exact zero-order-hold
+        # update solves da/dt=(s-a)/tau for a piecewise-constant drive over dt.
+        alpha = self._adaptation_alpha()
+        next_adapt = adapt + alpha * (sat - adapt)
+        setattr(self.agent, attr, next_adapt)
+
+        # This is an explicit phenomenological benchmark transduction, not a
+        # receptor-kinetics or ORN firing-rate claim.
+        return float(np.clip(response, 0.0, 1.0))
+
+    def _current_observation_key(self) -> tuple[int, float, float, float, float]:
+        a = self.agent
+        return (
+            int(a.steps),
+            float(a.x),
+            float(a.y),
+            float(a.heading),
+            float(self.plume.t),
+        )
+
+    def _compute_observation(self) -> Observation:
         (lx, ly), (rx, ry) = self._antenna_positions()
         left = self._transduce(self.plume.concentration(lx, ly), "left")
         right = self._transduce(self.plume.concentration(rx, ry), "right")
+
+        # Rotate the world-frame downwind vector into body coordinates by -heading.
+        # Controllers therefore receive local airflow, not privileged world heading.
         wind = self.plume.wind_vector
         c, s = np.cos(-self.agent.heading), np.sin(-self.agent.heading)
         wx = c * wind[0] - s * wind[1]
@@ -93,6 +132,22 @@ class FlySniffEnv:
             wind_y_body=float(wy),
             heading=self.agent.heading,
         )
+
+    def observe(self) -> Observation:
+        """Return the sensory state for the current physical simulator state.
+
+        Observation is idempotent at a fixed (agent state, plume time). This is
+        scientifically important because sensory adaptation is stateful: logging,
+        rendering, or debugging must not advance adaptation merely by reading the
+        same observation more than once.
+        """
+        key = self._current_observation_key()
+        if key == self._observation_key and self._observation_cache is not None:
+            return self._observation_cache
+        observation = self._compute_observation()
+        self._observation_key = key
+        self._observation_cache = observation
+        return observation
 
     def step(self, turn_command: float, speed_scale: float = 1.0) -> tuple[Observation, bool]:
         a = self.agent

@@ -1,0 +1,36 @@
+{
+  "protocol": "malecns-integration-sign-audit-v1",
+  "dataset": "male-cns:v1.0",
+  "integration_evidence_authority": "authority/malecns-v1.0-integration-route-evidence.json",
+  "expected_integration_audit_sha256": "393044451445af3c1ba1dd720adcb633e134b407e37a3dfcd42d17ad7d515a13",
+  "required_presynaptic_populations": [
+    "FB5AB",
+    "PFNa_family",
+    "PFNm_family",
+    "PFNp_family",
+    "hDeltaC",
+    "hDeltaG"
+  ],
+  "edge_families": [
+    {"source": "FB5AB", "target": "hDeltaC"},
+    {"source": "PFNa_family", "target": "hDeltaC"},
+    {"source": "PFNm_family", "target": "hDeltaC"},
+    {"source": "PFNp_family", "target": "hDeltaC"},
+    {"source": "hDeltaC", "target": "hDeltaG"},
+    {"source": "hDeltaG", "target": "PFL3"},
+    {"source": "hDeltaG", "target": "PFL2"}
+  ],
+  "thresholds": [1, 3, 5, 10],
+  "model_sign_policy": {
+    "acetylcholine": 1,
+    "ach": 1,
+    "gaba": -1,
+    "glutamate": 0,
+    "glu": 0,
+    "dopamine": 0,
+    "serotonin": 0,
+    "octopamine": 0
+  },
+  "readiness_rule": "All exact body IDs in every required presynaptic population must have a recognized non-zero modeled transmitter sign before the integration route can advance to a signed mechanistic probe. This is a modeling-readiness rule, not proof of receptor-level physiology.",
+  "claim_boundary": "Type/body-level predicted transmitter identity can support an explicit conservative model sign convention, but it is not synapse-specific receptor physiology. Unknown, glutamatergic, modulatory, or missing transmitter annotations remain unresolved and block signed integration modeling rather than being guessed."
+}

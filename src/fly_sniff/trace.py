@@ -83,6 +83,34 @@ def _frontier_depths(
     return depths
 
 
+def _corridor_nodes(annotations: pd.DataFrame, corridor: set[int]) -> pd.DataFrame:
+    """Return one row for every structural corridor node, annotated when possible.
+
+    The edge table can contain body IDs that are absent from the annotation table.
+    Dropping those IDs would break graph closure and silently censor measured
+    structure. We therefore preserve every structural ID and left-join annotations,
+    marking missing metadata explicitly.
+    """
+    annotation_rows = annotations.copy()
+    if "bodyId" not in annotation_rows.columns:
+        raise ValueError("annotations require bodyId")
+    annotation_rows["bodyId"] = annotation_rows.bodyId.astype(int)
+    if not annotation_rows.bodyId.is_unique:
+        raise ValueError("annotations require unique bodyId rows for structural tracing")
+
+    structural = pd.DataFrame({"bodyId": sorted(int(x) for x in corridor)})
+    nodes = structural.merge(
+        annotation_rows,
+        on="bodyId",
+        how="left",
+        validate="one_to_one",
+        indicator="_annotation_merge",
+    )
+    annotation_present = nodes.pop("_annotation_merge").eq("both")
+    nodes.insert(1, "annotation_present", annotation_present.astype(bool))
+    return nodes
+
+
 def trace_corridor(
     annotations: pd.DataFrame,
     weights: pd.DataFrame,
@@ -97,8 +125,9 @@ def trace_corridor(
 
     Forward and reverse searches retain only the strongest local fanout at each
     expansion step. A node survives if its forward distance plus reverse distance
-    can participate in a path no longer than max_hops. This is a discovery tool,
-    not proof of functional influence.
+    can participate in a path no longer than max_hops. Saved edges obey the same
+    ``min_weight`` threshold used during discovery. This is a discovery tool, not
+    proof of functional influence.
     """
     source_col, target_col, weight_col = resolve_edge_columns(weights)
     normalized = weights[[source_col, target_col, weight_col]].rename(
@@ -106,6 +135,8 @@ def trace_corridor(
     )
     normalized["source"] = normalized.source.astype(int)
     normalized["target"] = normalized.target.astype(int)
+    normalized["weight"] = normalized.weight.astype(float)
+
     forward = _frontier_depths(
         normalized,
         source_ids,
@@ -135,19 +166,23 @@ def trace_corridor(
     }
     corridor |= source_ids & set(reverse)
     corridor |= target_ids & set(forward)
-    edges = normalized[
-        normalized.source.isin(corridor) & normalized.target.isin(corridor)
+
+    # The persisted edge table must obey the same edge-strength contract that
+    # created the frontier. Otherwise a trace reported as min_weight=N could
+    # silently contain weaker edges that never participated in discovery.
+    edges = normalized.loc[
+        (normalized.weight >= min_weight)
+        & normalized.source.isin(corridor)
+        & normalized.target.isin(corridor)
     ].copy()
-    edges = edges[
-        edges.apply(
-            lambda row: forward.get(int(row.source), max_hops + 1)
-            + 1
-            + reverse.get(int(row.target), max_hops + 1)
-            <= max_hops,
-            axis=1,
-        )
-    ]
-    nodes = annotations[annotations.bodyId.astype(int).isin(corridor)].copy()
+
+    # Vectorized bounded-path filter. This is equivalent to the former row-wise
+    # apply but substantially faster on the full MaleCNS corridor.
+    source_forward = edges.source.map(forward).fillna(max_hops + 1).astype(int)
+    target_reverse = edges.target.map(reverse).fillna(max_hops + 1).astype(int)
+    edges = edges.loc[(source_forward + 1 + target_reverse) <= max_hops].copy()
+
+    nodes = _corridor_nodes(annotations, corridor)
     provenance = pd.DataFrame(
         {
             "bodyId": sorted(corridor),
@@ -194,16 +229,30 @@ def main() -> None:
     nodes.to_parquet(out / "nodes.parquet", index=False)
     edges.to_parquet(out / "edges.parquet", index=False)
     provenance.to_csv(out / "path_provenance.csv", index=False)
+
+    retained_source_seeds = int(provenance.is_source_seed.sum())
+    retained_target_seeds = int(provenance.is_target_seed.sum())
+    annotated_nodes = int(nodes.annotation_present.sum())
     report = {
         "source_regex": args.source,
         "target_regex": args.target,
+        # Compatibility keys: these are the regex-matched input populations.
         "source_seed_count": len(source_ids),
         "target_seed_count": len(target_ids),
+        "input_source_seed_count": len(source_ids),
+        "input_target_seed_count": len(target_ids),
+        # These are the seed neurons that actually survive the bounded corridor.
+        "retained_source_seed_count": retained_source_seeds,
+        "retained_target_seed_count": retained_target_seeds,
+        # Structural node count includes body IDs lacking an annotation row.
         "corridor_nodes": len(nodes),
+        "corridor_annotated_nodes": annotated_nodes,
+        "corridor_unannotated_nodes": len(nodes) - annotated_nodes,
         "corridor_edges": len(edges),
         "max_hops": args.max_hops,
         "min_weight": args.min_weight,
         "fanout_per_node": args.fanout,
+        "saved_edge_policy": "weight>=min_weight and bounded source-target path",
         "warning": "structural corridor only; not evidence of functional influence",
     }
     (out / "trace_report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
