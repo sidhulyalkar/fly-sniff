@@ -5,7 +5,9 @@ on:
     paths:
       - "src/fly_sniff/physiology_source_fetch.py"
       - "src/fly_sniff/dna02_dataset_readme.py"
+      - "src/fly_sniff/pfn_dataset_readme.py"
       - "authority/program-a-dna02-source-contract-v1.json"
+      - "authority/program-a-pfn-source-contract-v1.json"
       - ".github/workflows/source-evidence-fetch.yml"
   workflow_dispatch:
 
@@ -29,7 +31,7 @@ jobs:
           mkdir -p results/source-ingress/dna02-readme-v1
 
           set +e
-          fly-sniff-source-fetch pfn-readme \
+          fly-sniff-pfn-readme-fetch \
             --out results/source-ingress/pfn-readme-v1 \
             > results/source-ingress/pfn-readme-v1/stdout.txt \
             2> results/source-ingress/pfn-readme-v1/stderr.txt
