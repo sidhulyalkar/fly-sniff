@@ -14,6 +14,7 @@ from .provenance import implementation_fingerprint, runtime_fingerprint
 from .session_benchmark import (
     load_session_batches,
     run_within_animal_ridge,
+    subset_development_batch,
     verify_session_split_lock,
 )
 from .validation_gate import build_validation_unlock, load_acceptance_config
@@ -77,6 +78,10 @@ def validate_final_authorization(
         raise ValueError("development receipt unexpectedly had test-consumption capability")
     if receipt.get("test_metrics_present") is not False:
         raise ValueError("development receipt indicates test metrics were present")
+    if receipt.get("test_target_arrays_deserialized") is not False:
+        raise ValueError("development receipt did not preserve the no-test-deserialization boundary")
+    if qc.get("test_target_arrays_deserialized") is not False:
+        raise ValueError("development QC did not preserve the no-test-deserialization boundary")
     if receipt.get("split_lock_sha256") != split_lock.get("split_lock_sha256"):
         raise ValueError("development receipt does not bind the supplied split lock")
     rebuilt = build_validation_unlock(
@@ -227,16 +232,20 @@ def run_final_protocol(
         raise RuntimeError("batch identity changed after final consumption lock")
     verify_session_split_lock(split_lock, batch, source_batches=source_batches)
 
+    development_batch = subset_development_batch(batch, split_lock)
+    development_sources = bundle["receipt"].get("development_deserialized_batches")
+    if not isinstance(development_sources, list) or not development_sources:
+        raise ValueError("development receipt is missing its deserialized train+validation batch identity")
     current_aligned_development = run_within_animal_ridge(
-        batch,
+        development_batch,
         split_lock,
-        source_batches=source_batches,
+        source_batches=development_sources,
         consume_test=False,
     )
     current_null_development = run_alignment_null(
-        batch,
+        development_batch,
         split_lock,
-        source_batches=source_batches,
+        source_batches=development_sources,
         consume_test=False,
     )
     if current_aligned_development != bundle["aligned"]:
@@ -278,6 +287,7 @@ def run_final_protocol(
         "validation_unlock_sha256": bundle["unlock"]["report_sha256"],
         "consumption_lock_sha256": consumption_lock["consumption_lock_sha256"],
         "test_status": "consumed_once",
+        "test_target_arrays_first_deserialized_after_consumption_lock": True,
         "primary_null_selection": "fraction_selected_on_validation_before_test",
         "animal_effects": effects,
         "median_paired_alignment_effect": float(np.median(paired)) if paired else None,
@@ -287,7 +297,8 @@ def run_final_protocol(
         "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
         "claim_boundary": (
             "This receipt reports the prespecified held-out evaluation against the null fraction selected "
-            "on validation for each animal. A non-computable test metric is retained as null rather than "
+            "on validation for each animal. Held-out test arrays are first deserialized only after the "
+            "one-way consumption marker. A non-computable test metric is retained as null rather than "
             "assigned a score. Other null-fraction test scores are secondary diagnostics only. No post-test "
             "threshold or neural-support mask is introduced here."
         ),
