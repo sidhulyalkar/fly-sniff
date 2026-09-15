@@ -19,6 +19,30 @@ def _edge_pairs(edges: pd.DataFrame) -> set[tuple[int, int]]:
     }
 
 
+def _body_id_column(nodes: pd.DataFrame) -> str:
+    if "bodyId" in nodes.columns:
+        return "bodyId"
+    if "body_id" in nodes.columns:
+        return "body_id"
+    raise ValueError("constrained rewiring requires nodes.bodyId (or legacy body_id)")
+
+
+def _seeded_tie_ranks(
+    candidates: list[tuple[tuple[Any, ...], int]],
+    *,
+    seed: int,
+) -> dict[tuple[tuple[Any, ...], int], int]:
+    """Assign unique deterministic seed-specific ranks to otherwise equivalent edges."""
+    if not candidates:
+        return {}
+    rng = np.random.default_rng(int(seed))
+    permutation = rng.permutation(len(candidates))
+    return {
+        candidate: int(permutation[index])
+        for index, candidate in enumerate(candidates)
+    }
+
+
 def changed_edge_fraction(original: GraphBundle, rewired: GraphBundle) -> float:
     original_pairs = _edge_pairs(original.edges)
     rewired_pairs = _edge_pairs(rewired.edges)
@@ -112,7 +136,7 @@ def degree_preserving_rewire(
     manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
     manifest.update(
         {
-            "rewire_family": "degree_preserving",
+            "rewire_family": "degree_preserving-engineering-swap-chain",
             "rewire_seed": int(seed),
             "rewire_swaps_per_edge": int(swaps_per_edge),
             "rewire_accepted_swaps": int(accepted),
@@ -131,13 +155,12 @@ def _metadata_lookup(
     bundle: GraphBundle,
     columns: tuple[str, ...],
 ) -> dict[int, tuple[str, ...]]:
-    if "body_id" not in bundle.nodes.columns:
-        raise ValueError("constrained rewiring requires nodes.body_id")
+    id_column = _body_id_column(bundle.nodes)
     missing = [column for column in columns if column not in bundle.nodes.columns]
     if missing:
         raise ValueError(f"missing constrained-rewire metadata columns: {missing}")
     lookup: dict[int, tuple[str, ...]] = {}
-    for row in bundle.nodes[["body_id", *columns]].itertuples(index=False, name=None):
+    for row in bundle.nodes[[id_column, *columns]].itertuples(index=False, name=None):
         body_id = int(row[0])
         values = tuple("" if value is None or pd.isna(value) else str(value) for value in row[1:])
         if any(not value for value in values):
@@ -153,15 +176,14 @@ def _attribute_preserving_target_rewire(
     *,
     metadata_columns: tuple[str, ...],
     seed: int,
+    family: str = "metadata_constrained_minimum_overlap",
 ) -> GraphBundle:
-    """Construct a maximum-distance degree-preserving target reassignment.
+    """Construct a seeded maximum-distance degree-preserving target reassignment.
 
-    Target metadata classes are preserved for every source edge. Source identity and each
-    source's number of edges into every target metadata class therefore remain fixed, while
-    min-cost flow minimizes overlap with the intact edge set. Edge-associated weights/signs
-    remain attached to their source rows, preserving their global multisets.
+    The min-cost flow uses a lexicographic objective. One additional intact edge costs
+    more than the maximum possible total seed-specific tie cost, so the primary optimum
+    is always minimum overlap. The seed only selects among equally distant solutions.
     """
-    del seed  # deterministic optimum; seed remains part of the higher-level cohort contract
     metadata = _metadata_lookup(bundle, metadata_columns)
     edges = bundle.edges.copy().reset_index(drop=True)
     for body_id in set(edges.source.astype(int)) | set(edges.target.astype(int)):
@@ -174,31 +196,44 @@ def _attribute_preserving_target_rewire(
         group_supply[(source, metadata[target])] += 1
         target_demand[target] += 1
 
+    targets_by_class: dict[tuple[str, ...], list[int]] = defaultdict(list)
+    for target in sorted(target_demand):
+        targets_by_class[metadata[target]].append(target)
+
+    candidates: list[tuple[tuple[Any, ...], int]] = []
+    for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
+        group_key: tuple[Any, ...] = (source, *target_class)
+        for target in targets_by_class[target_class]:
+            if source != target:
+                candidates.append((group_key, int(target)))
+    tie_ranks = _seeded_tie_ranks(candidates, seed=seed)
+    overlap_scale = len(edges) * max(len(candidates), 1) + 1
+
     flow_graph = nx.DiGraph()
     total_edges = len(edges)
     flow_graph.add_node("source", demand=-total_edges)
     flow_graph.add_node("sink", demand=total_edges)
-
-    targets_by_class: dict[tuple[str, ...], list[int]] = defaultdict(list)
     for target in sorted(target_demand):
-        targets_by_class[metadata[target]].append(target)
         flow_graph.add_node(("target", target), demand=0)
         flow_graph.add_edge(("target", target), "sink", capacity=target_demand[target], weight=0)
 
     intact_pairs = _edge_pairs(bundle.edges)
     for source, target_class in sorted(group_supply, key=lambda item: (item[0], item[1])):
         group = (source, target_class)
+        group_key = (source, *target_class)
         group_node = ("group", source, *target_class)
         flow_graph.add_node(group_node, demand=0)
         flow_graph.add_edge("source", group_node, capacity=group_supply[group], weight=0)
         for target in targets_by_class[target_class]:
             if source == target:
                 continue
+            overlap_cost = overlap_scale if (source, target) in intact_pairs else 0
+            tie_cost = tie_ranks[(group_key, int(target))]
             flow_graph.add_edge(
                 group_node,
                 ("target", target),
                 capacity=1,
-                weight=1 if (source, target) in intact_pairs else 0,
+                weight=int(overlap_cost + tie_cost),
             )
 
     try:
@@ -240,6 +275,14 @@ def _attribute_preserving_target_rewire(
         drop=True
     )
     manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
+    manifest.update(
+        {
+            "rewire_family": family,
+            "rewire_seed": int(seed),
+            "rewire_objective": "minimum-intact-overlap-with-seeded-optimum-tie-break",
+            "qualification_status": "candidate",
+        }
+    )
     rewired = GraphBundle(
         nodes=bundle.nodes.copy(),
         edges=rewired_edges,
@@ -252,18 +295,24 @@ def _attribute_preserving_target_rewire(
     return rewired
 
 
+def minimum_overlap_degree_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
+    return _attribute_preserving_target_rewire(
+        bundle,
+        metadata_columns=(),
+        seed=seed,
+        family="degree_preserving",
+    )
+
+
 def sign_preserving_max_distance_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
     if "sign" not in bundle.edges.columns:
         raise ValueError("sign-preserving rewiring requires an edge sign column")
-    # Edge sign is an edge-associated attribute. Preserve source-specific sign counts by
-    # partitioning rows into temporary sign-specific source groups, then optimize targets.
-    working = bundle.nodes.copy()
     return _attribute_preserving_target_rewire_with_edge_group(
         bundle,
         edge_group=lambda row: (str(int(row.sign)),),
         metadata_columns=(),
         seed=seed,
-        nodes_override=working,
+        nodes_override=bundle.nodes,
         family="degree_sign_preserving",
     )
 
@@ -277,12 +326,16 @@ def _attribute_preserving_target_rewire_with_edge_group(
     nodes_override: pd.DataFrame | None = None,
     family: str,
 ) -> GraphBundle:
-    """General constrained min-cost target assignment with source-row groups."""
-    del seed
+    """General seeded constrained min-cost target assignment with source-row groups."""
     nodes = bundle.nodes if nodes_override is None else nodes_override
-    metadata = _metadata_lookup(GraphBundle(nodes, bundle.edges, bundle.roles, bundle.manifest), metadata_columns) if metadata_columns else {
-        int(body_id): () for body_id in nodes.body_id.astype(int)
-    }
+    id_column = _body_id_column(nodes)
+    if metadata_columns:
+        metadata = _metadata_lookup(
+            GraphBundle(nodes, bundle.edges, bundle.roles, bundle.manifest),
+            metadata_columns,
+        )
+    else:
+        metadata = {int(body_id): () for body_id in nodes[id_column].astype(int)}
     edges = bundle.edges.copy().reset_index(drop=True)
     intact_pairs = _edge_pairs(edges)
     target_demand = Counter(int(x) for x in edges.target)
@@ -292,30 +345,45 @@ def _attribute_preserving_target_rewire_with_edge_group(
         target = int(row.target)
         group_rows[(source, edge_group(row), metadata[target])].append(idx)
 
+    targets_by_metadata: dict[tuple[str, ...], list[int]] = defaultdict(list)
+    for target in sorted(target_demand):
+        targets_by_metadata[metadata[target]].append(target)
+
+    candidates: list[tuple[tuple[Any, ...], int]] = []
+    for key in sorted(group_rows, key=str):
+        source, edge_class, target_class = key
+        group_key: tuple[Any, ...] = (source, *edge_class, "targetclass", *target_class)
+        for target in targets_by_metadata[target_class]:
+            if target != source:
+                candidates.append((group_key, int(target)))
+    tie_ranks = _seeded_tie_ranks(candidates, seed=seed)
+    overlap_scale = len(edges) * max(len(candidates), 1) + 1
+
     flow_graph = nx.DiGraph()
     total_edges = len(edges)
     flow_graph.add_node("source", demand=-total_edges)
     flow_graph.add_node("sink", demand=total_edges)
-    targets_by_metadata: dict[tuple[str, ...], list[int]] = defaultdict(list)
     for target in sorted(target_demand):
-        targets_by_metadata[metadata[target]].append(target)
         target_node = ("target", target)
         flow_graph.add_node(target_node, demand=0)
         flow_graph.add_edge(target_node, "sink", capacity=target_demand[target], weight=0)
 
     for key, row_indices in group_rows.items():
         source, edge_class, target_class = key
+        group_key = (source, *edge_class, "targetclass", *target_class)
         group_node = ("group", source, *edge_class, "targetclass", *target_class)
         flow_graph.add_node(group_node, demand=0)
         flow_graph.add_edge("source", group_node, capacity=len(row_indices), weight=0)
         for target in targets_by_metadata[target_class]:
             if target == source:
                 continue
+            overlap_cost = overlap_scale if (source, target) in intact_pairs else 0
+            tie_cost = tie_ranks[(group_key, int(target))]
             flow_graph.add_edge(
                 group_node,
                 ("target", target),
                 capacity=1,
-                weight=1 if (source, target) in intact_pairs else 0,
+                weight=int(overlap_cost + tie_cost),
             )
 
     try:
@@ -345,7 +413,14 @@ def _attribute_preserving_target_rewire_with_edge_group(
 
     edges = edges.sort_values(["source", "target"], kind="stable").reset_index(drop=True)
     manifest = copy.deepcopy(bundle.manifest) if bundle.manifest else {}
-    manifest.update({"rewire_family": family, "rewire_seed": int(seed), "qualification_status": "candidate"})
+    manifest.update(
+        {
+            "rewire_family": family,
+            "rewire_seed": int(seed),
+            "rewire_objective": "minimum-intact-overlap-with-seeded-optimum-tie-break",
+            "qualification_status": "candidate",
+        }
+    )
     rewired = GraphBundle(
         nodes=nodes.copy(),
         edges=edges,
@@ -358,19 +433,40 @@ def _attribute_preserving_target_rewire_with_edge_group(
     return rewired
 
 
-def hemisphere_preserving_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    return _attribute_preserving_target_rewire(
+def sign_and_metadata_preserving_rewire(
+    bundle: GraphBundle,
+    *,
+    metadata_columns: tuple[str, ...],
+    seed: int,
+    family: str,
+) -> GraphBundle:
+    if "sign" not in bundle.edges.columns:
+        raise ValueError("sign-constrained rewiring requires an edge sign column")
+    return _attribute_preserving_target_rewire_with_edge_group(
         bundle,
-        metadata_columns=("somaSide",),
+        edge_group=lambda row: (str(int(row.sign)),),
+        metadata_columns=metadata_columns,
         seed=seed,
+        nodes_override=bundle.nodes,
+        family=family,
+    )
+
+
+def hemisphere_preserving_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
+    return sign_and_metadata_preserving_rewire(
+        bundle,
+        metadata_columns=("hemisphere_class",),
+        seed=seed,
+        family="degree_sign_hemisphere_preserving",
     )
 
 
 def type_preserving_rewire(bundle: GraphBundle, *, seed: int) -> GraphBundle:
-    return _attribute_preserving_target_rewire(
+    return sign_and_metadata_preserving_rewire(
         bundle,
-        metadata_columns=("type",),
+        metadata_columns=("cell_type",),
         seed=seed,
+        family="within_cell_type_rewire",
     )
 
 
@@ -380,8 +476,9 @@ def spatially_constrained_rewire(
     seed: int,
     spatial_column: str = "spatial_bin",
 ) -> GraphBundle:
-    return _attribute_preserving_target_rewire(
+    return sign_and_metadata_preserving_rewire(
         bundle,
-        metadata_columns=(spatial_column,),
+        metadata_columns=("cell_type", spatial_column),
         seed=seed,
+        family="spatially_constrained_rewire",
     )
