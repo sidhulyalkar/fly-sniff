@@ -32,6 +32,7 @@ REQUIRED_PROGRAM_A_ARTIFACT_KINDS = (
     "environment_ood_contract",
     "final_entropy_commitment",
 )
+DEPENDENCY_MANIFEST_ARTIFACT_KIND = "program_a_dependency_manifest"
 
 
 class DependencyStatus(str, enum.Enum):
@@ -90,9 +91,10 @@ class DependencyManifest:
 
     def _payload_without_hash(self) -> dict[str, Any]:
         self.validate()
+        ordered = sorted(self.dependencies, key=lambda dependency: dependency.artifact.name)
         return {
             "schema": self.schema,
-            "dependencies": [dependency.to_dict() for dependency in self.dependencies],
+            "dependencies": [dependency.to_dict() for dependency in ordered],
         }
 
     @property
@@ -185,6 +187,27 @@ def _validate_sha256(value: str, *, field: str) -> None:
         raise ValueError(f"{field} must be a lowercase 64-character SHA-256 digest")
 
 
+def _validate_git_commit(value: str) -> None:
+    if len(value) != 40 or any(char not in _HEX for char in value):
+        raise ValueError("Program A code_ref must be an immutable 40-character lowercase git commit SHA")
+
+
+def _manifest_binding_blocker(
+    spec: ExperimentSpec,
+    dependency_manifest: DependencyManifest,
+) -> str | None:
+    refs = [
+        artifact
+        for artifact in spec.artifacts
+        if artifact.kind == DEPENDENCY_MANIFEST_ARTIFACT_KIND
+    ]
+    if len(refs) != 1:
+        return "exactly_one_dependency_manifest_artifact_required"
+    if refs[0].sha256 != dependency_manifest.sha256:
+        return "dependency_manifest_hash_not_bound_in_spec"
+    return None
+
+
 def build_readiness_report(
     spec: ExperimentSpec,
     dependency_manifest: DependencyManifest,
@@ -230,6 +253,10 @@ def build_readiness_report(
     if not spec.null_families:
         blockers.append("at_least_one_null_family_required")
 
+    manifest_blocker = _manifest_binding_blocker(spec, dependency_manifest)
+    if manifest_blocker is not None:
+        blockers.append(manifest_blocker)
+
     gates_by_kind: dict[str, list[DependencyGate]] = {}
     for gate in dependency_manifest.dependencies:
         gates_by_kind.setdefault(gate.artifact.kind, []).append(gate)
@@ -241,6 +268,12 @@ def build_readiness_report(
     for required_kind in REQUIRED_PROGRAM_A_ARTIFACT_KINDS:
         if required_kind not in gates_by_kind:
             blockers.append(f"missing_dependency_kind:{required_kind}")
+
+    evidence_gates = gates_by_kind.get("evidence_ledger", [])
+    if evidence_gates and not any(
+        gate.artifact.sha256 == spec.evidence_ledger_sha256 for gate in evidence_gates
+    ):
+        blockers.append("evidence_ledger_hash_not_bound_to_spec_field")
 
     return ProgramAReadinessReport(
         experiment_id=spec.experiment_id,
@@ -263,6 +296,7 @@ def assemble_program_a_lock(
         raise ValueError("readiness report does not match the current spec/dependency manifest")
     if not current.ready_to_lock:
         raise ValueError("Program A experiment is BLOCKED and cannot be locked")
+    _validate_git_commit(code_ref)
     lock = ExperimentLock(spec=spec, code_ref=code_ref, runtime_sha256=runtime_sha256)
     lock.validate()
     return lock
