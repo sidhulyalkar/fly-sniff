@@ -18,6 +18,7 @@ fly-video-neural-qc = "fly_video_neural.data_qc:main"
 fly-video-neural-null = "fly_video_neural.alignment_null:main"
 fly-video-neural-unlock = "fly_video_neural.validation_gate:main"
 fly-video-neural-prepare = "fly_video_neural.prepare_v1:main"
+fly-video-neural-preflight = "fly_video_neural.preparation_audit:main"
 fly-video-neural-develop = "fly_video_neural.development_protocol:main"
 fly-video-neural-final = "fly_video_neural.final_protocol:main"
 
