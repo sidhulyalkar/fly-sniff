@@ -10,8 +10,8 @@ from fly_sniff.dna02_source import (
     BLOCKED_COHORT,
     BLOCKED_FILE_MAP,
     READY,
-    DNa02SourceContract,
     DataverseFileRef,
+    DNa02SourceContract,
     load_contract,
 )
 
