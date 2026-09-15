@@ -12,7 +12,7 @@ import numpy as np
 from .session_benchmark import (
     SessionBenchmarkBatch,
     load_session_batches,
-    verify_session_split_lock,
+    verify_development_projection,
 )
 
 SAMPLE_START = re.compile(r".+:(?P<start>\d+)-\d+$")
@@ -99,10 +99,9 @@ def audit_development_data(
     source_batches: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     validate_qc_config(config)
-    verify_session_split_lock(lock, batch, source_batches=source_batches)
+    verify_development_projection(lock, batch, source_batches=source_batches)
     split_map = lock["sample_to_split"]
     split = np.asarray([split_map[str(sample)] for sample in batch.sample_ids])
-    development = split != "test"
     failures: list[str] = []
     session_rows: list[dict[str, Any]] = []
     autocorrelation_rows: list[dict[str, Any]] = []
@@ -114,38 +113,46 @@ def audit_development_data(
             failures.append(f"session {session!r} crosses split assignments")
             continue
         split_name = session_splits[0]
+        if split_name not in {"train", "validation"}:
+            failures.append(f"development projection unexpectedly contains {split_name!r} session")
+            continue
         sample_count = int(mask.sum())
         row: dict[str, Any] = {
             "session_id": session,
             "animal_id": str(batch.animal_ids[mask][0]),
             "split": split_name,
             "sample_count": sample_count,
-            "target_values_summarized": split_name != "test",
+            "target_values_summarized": True,
         }
-        if split_name != "test":
-            if sample_count < config["minimum_windows_per_development_session"]:
-                failures.append(
-                    f"development session {session!r} has only {sample_count} prediction windows"
-                )
-            starts = np.asarray([_sample_start(str(sample)) for sample in batch.sample_ids[mask]])
-            order = np.argsort(starts)
-            targets = batch.targets[mask][order]
-            row["target_distribution"] = _distribution_summary(targets)
-            for lag in config["autocorrelation_lags_windows"]:
-                autocorrelation_rows.append(
-                    {
-                        "session_id": session,
-                        "animal_id": row["animal_id"],
-                        "split": split_name,
-                        "lag_windows": lag,
-                        "lag_seconds": lag * config["window_stride_s"],
-                        **_target_temporal_correlation(targets, lag),
-                    }
-                )
+        if sample_count < config["minimum_windows_per_development_session"]:
+            failures.append(
+                f"development session {session!r} has only {sample_count} prediction windows"
+            )
+        starts = np.asarray([_sample_start(str(sample)) for sample in batch.sample_ids[mask]])
+        order = np.argsort(starts)
+        targets = batch.targets[mask][order]
+        row["target_distribution"] = _distribution_summary(targets)
+        for lag in config["autocorrelation_lags_windows"]:
+            autocorrelation_rows.append(
+                {
+                    "session_id": session,
+                    "animal_id": row["animal_id"],
+                    "split": split_name,
+                    "lag_windows": lag,
+                    "lag_seconds": lag * config["window_stride_s"],
+                    **_target_temporal_correlation(targets, lag),
+                }
+            )
         session_rows.append(row)
 
-    if not development.any():
+    if len(batch.sample_ids) == 0:
         failures.append("no train/validation samples available for QC")
+    test_sample_count = sum(
+        split_name == "test" for split_name in lock["sample_to_split"].values()
+    )
+    test_session_count = sum(
+        len(assignments["test"]) for assignments in lock["animal_sessions"].values()
+    )
     report: dict[str, Any] = {
         "schema_version": 1,
         "protocol": config["protocol"],
@@ -154,19 +161,23 @@ def audit_development_data(
         "split_lock_sha256": lock["split_lock_sha256"],
         "qc_config_sha256": _sha(config),
         "source_batches": sorted(source_batches or [], key=lambda row: row["path"]),
-        "development_sample_count": int(development.sum()),
-        "test_sample_count_metadata_only": int((split == "test").sum()),
+        "development_sample_count": int(len(batch.sample_ids)),
+        "test_sample_count_metadata_only": int(test_sample_count),
+        "test_session_count_metadata_only": int(test_session_count),
+        "test_target_arrays_deserialized": False,
         "test_target_values_summarized": False,
         "structural_failures": failures,
         "development_diagnostics": {
-            "feature_distribution": _distribution_summary(batch.features[development]),
-            "target_distribution": _distribution_summary(batch.targets[development]),
+            "feature_distribution": _distribution_summary(batch.features),
+            "target_distribution": _distribution_summary(batch.targets),
             "autocorrelation": autocorrelation_rows,
         },
         "sessions": session_rows,
         "interpretation": (
-            "Variance and temporal-autocorrelation diagnostics are descriptive. They cannot change "
-            "the frozen primary metric, model-selection rule, split assignment, or test policy."
+            "Variance and temporal-autocorrelation diagnostics are descriptive and use only train and "
+            "validation arrays. Held-out test batch bytes are authenticated outside this function but "
+            "test target arrays are not deserialized. Diagnostics cannot change the frozen primary "
+            "metric, model-selection rule, split assignment, or test policy."
         ),
     }
     report["report_sha256"] = _sha(report)
@@ -174,7 +185,9 @@ def audit_development_data(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Audit MC2P v1 development data without test peeking")
+    parser = argparse.ArgumentParser(
+        description="Audit an exact MC2P v1 train+validation projection without test deserialization"
+    )
     parser.add_argument("config")
     parser.add_argument("split_lock")
     parser.add_argument("batches", nargs="+")
