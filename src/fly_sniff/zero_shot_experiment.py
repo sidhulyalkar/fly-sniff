@@ -28,6 +28,15 @@ REQUIRED_ACUTE = {
     "wind_removed",
     "sensory_temporal_shuffle",
 }
+REQUIRED_LOCK_ARTIFACTS = {
+    "evidence_ledger",
+    "physiology_calibrated_model",
+    "experimental_plume_receipt",
+    "olfactory_motion_structural_audit",
+    "null_factory_protocol",
+    "connectome_necessity_protocol",
+    "final_seed_commitment",
+}
 
 
 def validate_zero_shot_spec(spec: ExperimentSpec) -> dict[str, Any]:
@@ -104,19 +113,12 @@ def validate_zero_shot_spec(spec: ExperimentSpec) -> dict[str, Any]:
             and final.get("one_way_final") is True
             and final.get("negative_results_retained") is True
             and final.get("paired_episode_conditions") is True
-            and final.get("final_results_may_not_trigger_refit") is True,
+            and final.get("final_results_may_not_trigger_refit") is True
+            and final.get("seed_commitment_must_be_hash_bound_in_lock") is True,
         },
         {
             "name": "required_lock_artifacts_declared",
-            "passed": required_artifacts
-            == {
-                "evidence_ledger",
-                "physiology_calibrated_model",
-                "experimental_plume_receipt",
-                "olfactory_motion_structural_audit",
-                "null_factory_protocol",
-                "connectome_necessity_protocol",
-            },
+            "passed": required_artifacts == REQUIRED_LOCK_ARTIFACTS,
         },
     ]
     return {
