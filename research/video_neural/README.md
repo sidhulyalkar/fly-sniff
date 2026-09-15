@@ -20,7 +20,7 @@ The scored v1 workflow has exactly three phases:
 
 1. **PREPARE** deterministic measured-data artifacts and freeze the split.
 2. **DEVELOP** deserialize train/validation batches only, run QC, select ridge α, run the temporal-null ensemble, freeze the confirmatory animal population, and decide whether the one-way final evaluation is allowed.
-3. **FINAL** verify all frozen evidence, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
+3. **FINAL** verify all frozen evidence, exactly replay train+validation development evidence without opening test batches, write the irreversible consumption marker, reopen the prepared held-out batches, and evaluate once.
 
 Low-level conversion, window, batch, and split commands remain useful for inspection and tests, but they are not an alternative scored v1 workflow.
 
@@ -80,9 +80,11 @@ fly-video-neural-final \
   --output "$RUN/final"
 ```
 
-Before reopening any prepared held-out batch arrays, FINAL verifies the development receipt, QC and validation-unlock self-hashes, exact source-batch hashes, split-lock bytes, acceptance-config bytes, critical implementation fingerprint, and Python/NumPy runtime. It then creates `FINAL_TEST_CONSUMED.json` using exclusive-create semantics with reopening after failure forbidden. Only after that marker does the supported workflow reopen the full prepared batch set.
+Before reopening any prepared held-out batch arrays, FINAL verifies the development receipt, QC and validation-unlock self-hashes, exact source-batch hashes, split-lock bytes, acceptance-config bytes, critical implementation fingerprint, and Python/NumPy runtime. It then loads **only the authenticated train+validation session batches**, reruns the aligned decoder and temporal-null development analyses, and requires exact reproduction of the saved development evidence. A replay mismatch fails before the final namespace is consumed.
 
-PREPARE necessarily reads the raw data to deterministically create every session batch before the split is evaluated. The stronger post-split claim is therefore precise: DEVELOPMENT does not reopen held-out target arrays, and FINAL is the first supported post-split command that does so.
+Only after all test-free checks succeed does FINAL create `FINAL_TEST_CONSUMED.json` using exclusive-create semantics, with reopening after failure forbidden. Only after that marker does the supported workflow reopen the full prepared batch set and evaluate held-out sessions.
+
+PREPARE necessarily reads the raw data to deterministically create every session batch before the split is evaluated. The stronger post-split claim is therefore precise: DEVELOPMENT does not reopen held-out target arrays, and FINAL does not reopen them until the pre-consumption development replay has succeeded and the one-way marker has been written.
 
 ## Prespecified final inference
 
