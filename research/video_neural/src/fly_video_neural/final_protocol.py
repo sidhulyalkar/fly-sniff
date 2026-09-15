@@ -152,11 +152,11 @@ def _development_paths_from_receipt(
     seen: set[str] = set()
     for source in development_sources:
         if not isinstance(source, dict):
-            raise ValueError("development batch receipt entry is malformed")
+            raise TypeError("development batch receipt entry is malformed")
         path = source.get("path")
         digest = source.get("sha256")
         if not isinstance(path, str) or not isinstance(digest, str):
-            raise ValueError("development batch receipt entry is incomplete")
+            raise TypeError("development batch receipt entry is incomplete")
         if path in seen:
             raise ValueError("development receipt contains duplicate batch paths")
         seen.add(path)
