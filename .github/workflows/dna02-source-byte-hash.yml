@@ -1,0 +1,40 @@
+name: dna02-source-byte-hash
+
+on:
+  pull_request:
+    paths:
+      - "src/fly_sniff/dna02_source_bytes.py"
+      - "tests/test_dna02_source_bytes.py"
+      - "authority/program-a-dna02-cohort-adjudication-v1.json"
+      - ".github/workflows/dna02-source-byte-hash.yml"
+  workflow_dispatch:
+
+jobs:
+  hash-source-bytes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e .
+      - name: Stream-hash frozen DNa02 source files
+        shell: bash
+        run: |
+          mkdir -p results/source-ingress/dna02-source-bytes-v1
+          python -m fly_sniff.dna02_source_bytes \
+            --adjudication authority/program-a-dna02-cohort-adjudication-v1.json \
+            --out results/source-ingress/dna02-source-bytes-v1/dna02-source-byte-manifest-v1.json \
+            --timeout-s 300 \
+            > results/source-ingress/dna02-source-bytes-v1/stdout.txt \
+            2> results/source-ingress/dna02-source-bytes-v1/stderr.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dna02-source-byte-hashes-${{ github.sha }}
+          path: results/source-ingress/dna02-source-bytes-v1
+          if-no-files-found: error
+          retention-days: 30
