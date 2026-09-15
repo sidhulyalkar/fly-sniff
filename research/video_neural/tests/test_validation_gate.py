@@ -27,6 +27,7 @@ def _reports(aligned_values: list[float | None], null_values: list[float | None]
     animals = [f"fly{index}" for index in range(len(aligned_values))]
     qc = {
         "status": "pass",
+        "test_target_arrays_deserialized": False,
         "test_target_values_summarized": False,
         "split_lock_sha256": "split",
         "report_sha256": "qc",
@@ -52,20 +53,29 @@ def _reports(aligned_values: list[float | None], null_values: list[float | None]
     return qc, aligned, null
 
 
-def test_validation_gate_unlocks_only_after_positive_majority_and_median_effect():
-    qc, aligned, null = _reports([0.5, 0.4, 0.3, 0.2], [0.1, 0.2, 0.25, 0.1])
+def test_validation_gate_unlocks_only_after_six_animals_positive_majority_and_median_effect():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "unlocked_for_single_test_consumption"
     assert report["test_consumption_allowed"] is True
-    assert report["positive_effect_animals"] == 4
+    assert report["eligible_animals"] == 6
+    assert report["positive_effect_animals"] == 6
     assert report["median_paired_effect"] > 0
     assert report["alignment_null_fractions"] == list(NULL_FRACTIONS)
     assert report["ineligible_animals"] == []
+    assert report["final_inference_prespecified"]["unit"] == "animal"
+    assert report["final_inference_prespecified"]["minimum_scorable_animals"] == 6
     assert all("selected_null_fraction" in row for row in report["animal_effects"])
 
 
 def test_validation_gate_blocks_if_test_was_already_consumed():
-    qc, aligned, null = _reports([0.5, 0.4, 0.3, 0.2], [0.1, 0.2, 0.25, 0.1])
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
     aligned["test_status"] = "consumed_explicitly"
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
@@ -73,15 +83,32 @@ def test_validation_gate_blocks_if_test_was_already_consumed():
     assert any("consumed test" in failure for failure in report["failures"])
 
 
-def test_validation_gate_blocks_nonmajority_effect_against_strongest_null():
-    qc, aligned, null = _reports([0.3, 0.3, 0.1, 0.1], [0.2, 0.2, 0.2, 0.2])
+def test_validation_gate_blocks_if_qc_deserialized_test_targets():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
+    qc["test_target_arrays_deserialized"] = True
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
-    assert report["positive_effect_animals"] == 2
+    assert any("deserialized held-out" in failure for failure in report["failures"])
+
+
+def test_validation_gate_blocks_nonmajority_effect_against_strongest_null():
+    qc, aligned, null = _reports(
+        [0.3, 0.3, 0.3, 0.1, 0.1, 0.1],
+        [0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["positive_effect_animals"] == 3
 
 
 def test_validation_gate_rejects_null_ensemble_contract_drift():
-    qc, aligned, null = _reports([0.5, 0.4, 0.3, 0.2], [0.1, 0.2, 0.25, 0.1])
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
     null["null_fractions"] = [0.5]
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
@@ -90,12 +117,12 @@ def test_validation_gate_rejects_null_ensemble_contract_drift():
 
 def test_noncomputable_validation_metric_makes_animal_ineligible_and_can_block():
     qc, aligned, null = _reports(
-        [0.5, 0.4, 0.3, 0.2],
-        [0.1, 0.2, None, 0.1],
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, None, 0.2, 0.1, 0.15],
     )
     report = build_validation_unlock(qc, aligned, null, _config())
     assert report["status"] == "blocked"
-    assert report["eligible_animals"] == 3
+    assert report["eligible_animals"] == 5
     assert report["test_consumption_allowed"] is False
     assert report["ineligible_animals"] == [
         {
@@ -106,4 +133,4 @@ def test_noncomputable_validation_metric_makes_animal_ineligible_and_can_block()
             "selected_null_fraction": NULL_FRACTIONS[2],
         }
     ]
-    assert any("only 3 eligible animals" in failure for failure in report["failures"])
+    assert any("only 5 eligible animals" in failure for failure in report["failures"])
