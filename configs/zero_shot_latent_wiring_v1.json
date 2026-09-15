@@ -85,7 +85,8 @@
     "one_way_final": true,
     "negative_results_retained": true,
     "paired_episode_conditions": true,
-    "final_results_may_not_trigger_refit": true
+    "final_results_may_not_trigger_refit": true,
+    "seed_commitment_must_be_hash_bound_in_lock": true
   },
   "metadata": {
     "required_artifacts": [
@@ -94,7 +95,8 @@
       "experimental_plume_receipt",
       "olfactory_motion_structural_audit",
       "null_factory_protocol",
-      "connectome_necessity_protocol"
+      "connectome_necessity_protocol",
+      "final_seed_commitment"
     ],
     "claim_boundary": [
       "A sealed run may test whether measured MaleCNS topology outperforms the specified null ensemble under independently calibrated dynamics.",
