@@ -80,6 +80,17 @@ def _write_preparation_receipt(
     split_lock: dict,
 ) -> dict:
     _, source_batches = load_session_batches(batches)
+    sessions = []
+    for batch in batches:
+        session_id = Path(batch).stem
+        animal_id = session_id.split("_")[0]
+        sessions.append(
+            {
+                "animal_id": animal_id,
+                "session_id": session_id,
+                "batch_sha256": _file_sha(Path(batch)),
+            }
+        )
     receipt = {
         "schema_version": 1,
         "protocol": "mc2p-v1-preparation-v1",
@@ -93,12 +104,17 @@ def _write_preparation_receipt(
         "source_batches": source_batches,
         "split_lock_sha256": split_lock["split_lock_sha256"],
         "split_lock_file_sha256": _file_sha(split_path),
+        "sessions": sessions,
         "models_fit": False,
         "test_data_consumed": False,
     }
     receipt["receipt_sha256"] = _sha(receipt)
     path.write_text(json.dumps(receipt))
     return receipt
+
+
+def _package() -> Path:
+    return Path(__file__).resolve().parents[1]
 
 
 def test_development_protocol_requires_preparation_chain_and_never_emits_test_metrics(
@@ -109,24 +125,28 @@ def test_development_protocol_requires_preparation_chain_and_never_emits_test_me
     split.write_text(json.dumps(lock))
     preparation = tmp_path / "preparation-receipt.json"
     preparation_receipt = _write_preparation_receipt(preparation, split, batches, lock)
-    package = Path(__file__).resolve().parents[1]
     report = run_development_protocol(
         split,
         batches,
         tmp_path / "development",
         preparation_receipt_path=preparation,
-        qc_config_path=package / "configs" / "data_qc_v1.json",
-        acceptance_config_path=package / "configs" / "validation_acceptance_v1.json",
+        qc_config_path=_package() / "configs" / "data_qc_v1.json",
+        acceptance_config_path=_package() / "configs" / "validation_acceptance_v1.json",
     )
     assert report["preparation_receipt_sha256"] == preparation_receipt["receipt_sha256"]
     assert report["target_neural_boundary_policy"] == TARGET_NEURAL_BOUNDARY_POLICY
     assert report["test_consumption_capability"] is False
     assert report["test_metrics_present"] is False
+    assert report["test_target_arrays_deserialized"] is False
+    assert len(report["held_out_test_batches_authenticated_not_deserialized"]) == 8
+    assert len(report["development_deserialized_batches"]) == 16
     assert report["implementation_fingerprint"]["sha256"]
     assert report["runtime_fingerprint"]["sha256"]
     assert report["primary_metric_scope"] == "all_measured_dff_pixels_with_finite_correlation"
     aligned = json.loads((tmp_path / "development" / "aligned-ridge-development.json").read_text())
     null = json.loads((tmp_path / "development" / "temporal-null-development.json").read_text())
+    qc = json.loads((tmp_path / "development" / "development-qc.json").read_text())
+    assert qc["test_target_arrays_deserialized"] is False
     assert aligned["test_status"] == "locked_not_consumed"
     assert null["test_status"] == "locked_not_consumed"
     assert all(row["test_metrics"] is None for row in aligned["animals"])
@@ -138,6 +158,41 @@ def test_development_protocol_requires_preparation_chain_and_never_emits_test_me
     )
 
 
+def test_development_never_calls_numpy_load_on_test_batches(tmp_path: Path, monkeypatch):
+    batches, lock = _write_batches(tmp_path)
+    split = tmp_path / "split.json"
+    split.write_text(json.dumps(lock))
+    preparation = tmp_path / "preparation-receipt.json"
+    _write_preparation_receipt(preparation, split, batches, lock)
+    test_sessions = {
+        session
+        for assignments in lock["animal_sessions"].values()
+        for session in assignments["test"]
+    }
+    forbidden = {
+        str(Path(batch).resolve()) for batch in batches if Path(batch).stem in test_sessions
+    }
+
+    import fly_video_neural.session_benchmark as session_benchmark
+
+    original_load = session_benchmark.np.load
+
+    def guarded_load(path, *args, **kwargs):
+        assert str(Path(path).resolve()) not in forbidden
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(session_benchmark.np, "load", guarded_load)
+    report = run_development_protocol(
+        split,
+        batches,
+        tmp_path / "development",
+        preparation_receipt_path=preparation,
+        qc_config_path=_package() / "configs" / "data_qc_v1.json",
+        acceptance_config_path=_package() / "configs" / "validation_acceptance_v1.json",
+    )
+    assert report["test_target_arrays_deserialized"] is False
+
+
 def test_development_rejects_batch_changed_after_preparation_receipt(tmp_path: Path):
     batches, lock = _write_batches(tmp_path)
     split = tmp_path / "split.json"
@@ -145,13 +200,12 @@ def test_development_rejects_batch_changed_after_preparation_receipt(tmp_path: P
     preparation = tmp_path / "preparation-receipt.json"
     _write_preparation_receipt(preparation, split, batches, lock)
     Path(batches[0]).write_bytes(b"changed after prepare")
-    package = Path(__file__).resolve().parents[1]
     with pytest.raises(ValueError, match="session-batch bytes"):
         run_development_protocol(
             split,
             batches,
             tmp_path / "development",
             preparation_receipt_path=preparation,
-            qc_config_path=package / "configs" / "data_qc_v1.json",
-            acceptance_config_path=package / "configs" / "validation_acceptance_v1.json",
+            qc_config_path=_package() / "configs" / "data_qc_v1.json",
+            acceptance_config_path=_package() / "configs" / "validation_acceptance_v1.json",
         )
