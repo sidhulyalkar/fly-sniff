@@ -16,6 +16,12 @@ from fly_sniff.dna02_source import (
 
 AUTHORITY_PATH = Path("authority/program-a-dna02-source-contract-v1.json")
 EXPECTED_COHORT = ("a2_d_08", "a2_d_12", "a2_d_13", "a2_d_14")
+EXPECTED_SHA256 = {
+    "a2_d_08": "f02a345effb2fe722800dd1f43dce2c876878424307cb1fa486b5974f3d5922b",
+    "a2_d_12": "0f9a9251262f528f0b415d67cdb169bc1236a5157029ffeebace6d86136f60f7",
+    "a2_d_13": "a460eb313b503b039b3eeec554efd902b54119aadfd783c72210efaee2daee24",
+    "a2_d_14": "6e5aabc4bc45d76fd24baa81a9351cc6d29530c72e697038b78f07a0da36623f",
+}
 
 
 def _real_contract() -> DNa02SourceContract:
@@ -31,7 +37,7 @@ def _file(alias: str, index: int) -> DataverseFileRef:
     )
 
 
-def _resolved_contract() -> DNa02SourceContract:
+def _synthetic_ready_contract() -> DNa02SourceContract:
     contract = _real_contract()
     return dataclasses.replace(
         contract,
@@ -39,15 +45,16 @@ def _resolved_contract() -> DNa02SourceContract:
     )
 
 
-def test_real_contract_has_resolved_cohort_but_unresolved_file_map() -> None:
+def test_real_contract_is_ready_for_extraction_with_exact_sha_map() -> None:
     contract = _real_contract()
     contract.validate()
 
-    assert contract.status == "BLOCKED"
-    assert contract.blockers == (BLOCKED_FILE_MAP,)
+    assert contract.status == READY
+    assert contract.blockers == ()
     assert contract.figure3c_cohort == EXPECTED_COHORT
     assert contract.figure3c_cohort_authority is not None
-    assert contract.data_file_map == ()
+    assert tuple(ref.fly_alias for ref in contract.data_file_map) == EXPECTED_COHORT
+    assert {ref.fly_alias: ref.sha256 for ref in contract.data_file_map} == EXPECTED_SHA256
     assert contract.navigation_performance_used is False
 
 
@@ -91,11 +98,13 @@ def test_cohort_must_match_published_n_four() -> None:
             contract,
             figure3c_cohort=EXPECTED_COHORT[:3],
             figure3c_cohort_authority="synthetic authority",
+            data_file_map=(),
         ).validate()
 
 
-def test_resolved_cohort_without_dataverse_sha_map_stays_blocked() -> None:
-    contract = _real_contract()
+def test_removing_sha_file_map_returns_contract_to_blocked() -> None:
+    contract = dataclasses.replace(_real_contract(), data_file_map=())
+    contract.validate()
     assert contract.blockers == (BLOCKED_FILE_MAP,)
     assert contract.status == "BLOCKED"
 
@@ -115,14 +124,14 @@ def test_incomplete_dataverse_map_stays_blocked() -> None:
     contract = _real_contract()
     partial = dataclasses.replace(
         contract,
-        data_file_map=tuple(_file(alias, i) for i, alias in enumerate(EXPECTED_COHORT[:-1])),
+        data_file_map=contract.data_file_map[:-1],
     )
     partial.validate()
     assert partial.blockers == (BLOCKED_FILE_MAP,)
 
 
 def test_complete_hypothetical_contract_is_ready_for_extraction_only() -> None:
-    resolved = _resolved_contract()
+    resolved = _synthetic_ready_contract()
     resolved.validate()
 
     assert resolved.status == READY
@@ -165,7 +174,7 @@ def test_navigation_performance_cannot_enter_source_selection() -> None:
 
 
 def test_dataverse_refs_require_content_hashes_and_unique_file_ids() -> None:
-    contract = _resolved_contract()
+    contract = _real_contract()
     first = contract.data_file_map[0]
     invalid = dataclasses.replace(first, sha256="not-a-sha")
     with pytest.raises(ValueError, match="64-character"):
@@ -183,7 +192,7 @@ def test_dataverse_refs_require_content_hashes_and_unique_file_ids() -> None:
 
 
 def test_contract_identity_changes_when_source_selection_changes() -> None:
-    resolved = _resolved_contract()
+    resolved = _real_contract()
     changed = dataclasses.replace(
         resolved,
         data_file_map=(
@@ -195,7 +204,7 @@ def test_contract_identity_changes_when_source_selection_changes() -> None:
 
 
 def test_contract_roundtrip_rejects_tampered_hash() -> None:
-    resolved = _resolved_contract()
+    resolved = _real_contract()
     payload = resolved.to_dict()
     restored = DNa02SourceContract.from_dict(payload)
     assert restored.sha256 == resolved.sha256
@@ -215,7 +224,7 @@ def test_source_fields_preserve_left_right_and_timebases() -> None:
     assert fields["ball_timebase"] == "t_ball"
 
 
-def test_all_four_raw_session_names_are_now_resolved() -> None:
+def test_all_four_raw_session_names_are_resolved() -> None:
     raw = dict(_real_contract().known_raw_session_candidates)
     assert raw == {
         "a2_d_08": ("180410_gfp_3G_ss730_dual_08",),
@@ -223,3 +232,11 @@ def test_all_four_raw_session_names_are_now_resolved() -> None:
         "a2_d_13": ("180501_gfp_3G_ss730_dual_13",),
         "a2_d_14": ("180517_gfp_3G_ss730_dual_14",),
     }
+
+
+def test_ready_for_extraction_does_not_mean_calibrated_or_navigation_ready() -> None:
+    contract = _real_contract()
+    boundary = " ".join(contract.forbidden_interpretation)
+    assert "READY_FOR_EXTRACTION" in boundary
+    assert "calibrated" in boundary
+    assert "odor-navigation" in boundary

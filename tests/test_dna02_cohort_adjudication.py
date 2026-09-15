@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,7 @@ from fly_sniff.dna02_cohort_adjudication import (
     load_adjudication,
     validate_adjudication,
 )
-from fly_sniff.dna02_source import BLOCKED_FILE_MAP, load_contract
+from fly_sniff.dna02_source import BLOCKED_FILE_MAP, READY, load_contract
 
 ADJUDICATION_PATH = Path("authority/program-a-dna02-cohort-adjudication-v1.json")
 SOURCE_PATH = Path("authority/program-a-dna02-source-contract-v1.json")
@@ -71,17 +72,19 @@ def test_navigation_performance_cannot_enter_adjudication() -> None:
         validate_adjudication(payload)
 
 
-def test_adjudication_hash_is_bound_into_source_contract() -> None:
+def test_adjudication_hash_remains_bound_after_separate_sha_evidence() -> None:
     payload = _adjudication()
     source = load_contract(SOURCE_PATH)
     assert source.figure3c_cohort == EXPECTED_COHORT
     assert source.figure3c_cohort_authority == authority_ref(payload)
-    assert source.blockers == (BLOCKED_FILE_MAP,)
-    assert source.status == "BLOCKED"
+    assert source.status == READY
+    assert source.blockers == ()
 
 
-def test_md5_discovery_does_not_promote_source_file_map() -> None:
+def test_cohort_or_md5_evidence_alone_still_cannot_promote_source_map() -> None:
     source = load_contract(SOURCE_PATH)
-    assert source.data_file_map == ()
-    assert source.blockers == (BLOCKED_FILE_MAP,)
+    without_sha_map = dataclasses.replace(source, data_file_map=())
+    without_sha_map.validate()
+    assert without_sha_map.blockers == (BLOCKED_FILE_MAP,)
+    assert without_sha_map.status == "BLOCKED"
     assert any("MD5" in text for text in source.forbidden_interpretation)

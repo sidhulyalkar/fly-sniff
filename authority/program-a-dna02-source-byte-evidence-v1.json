@@ -1,0 +1,59 @@
+{
+  "schema": "fly-sniff-dna02-source-byte-evidence-v1",
+  "evidence_id": "program-a-dna02-source-bytes-v1",
+  "status": "SHA256_BYTE_IDENTITIES_RESOLVED",
+  "persistent_id": "doi:10.7910/DVN/0NCLP1",
+  "cohort_adjudication_sha256": "a7262fe9e82c1898a4ac6dc753aa38a854e05de558d64e466ffdde884dfdde53",
+  "network_manifest_sha256": "d957f1015f1b4d9724ab553f4da1762d817ffced4bd581f02ece6108a97ed2eb",
+  "navigation_performance_used": false,
+  "raw_bytes_retained": false,
+  "files": [
+    {
+      "fly_alias": "a2_d_08",
+      "file_id": 11634638,
+      "filename": "180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat",
+      "byte_count": 458239048,
+      "published_md5": "f3d0d40d7435af8f3d4e73d004bd3f9d",
+      "observed_md5": "f3d0d40d7435af8f3d4e73d004bd3f9d",
+      "observed_sha256": "f02a345effb2fe722800dd1f43dce2c876878424307cb1fa486b5974f3d5922b"
+    },
+    {
+      "fly_alias": "a2_d_12",
+      "file_id": 11634639,
+      "filename": "180430_gfp_3G_ss730_dual_12_data_for_SH_with_lat_vel.mat",
+      "byte_count": 212825201,
+      "published_md5": "71ed13ab29ecd3b3abcf7bf6b77940e4",
+      "observed_md5": "71ed13ab29ecd3b3abcf7bf6b77940e4",
+      "observed_sha256": "0f9a9251262f528f0b415d67cdb169bc1236a5157029ffeebace6d86136f60f7"
+    },
+    {
+      "fly_alias": "a2_d_13",
+      "file_id": 11634640,
+      "filename": "180501_gfp_3G_ss730_dual_13_data_for_SH_with_lat_vel.mat",
+      "byte_count": 71381032,
+      "published_md5": "c3f95c76e9efc1a5b2277e7ee958143e",
+      "observed_md5": "c3f95c76e9efc1a5b2277e7ee958143e",
+      "observed_sha256": "a460eb313b503b039b3eeec554efd902b54119aadfd783c72210efaee2daee24"
+    },
+    {
+      "fly_alias": "a2_d_14",
+      "file_id": 11634641,
+      "filename": "180517_gfp_3G_ss730_dual_14_data_for_SH_with_lat_vel.mat",
+      "byte_count": 186996111,
+      "published_md5": "eb0950ad281d61c4473404ea126b386a",
+      "observed_md5": "eb0950ad281d61c4473404ea126b386a",
+      "observed_sha256": "6e5aabc4bc45d76fd24baa81a9351cc6d29530c72e697038b78f07a0da36623f"
+    }
+  ],
+  "scope": {
+    "resolves": [
+      "exact SHA-256 identity of all four Figure 3C source files"
+    ],
+    "does_not_resolve": [
+      "physiology summary statistics",
+      "model calibration parameters",
+      "odor-navigation performance"
+    ]
+  },
+  "evidence_sha256": "d2e8f2c2bd41ff18b9be6a00c088f6b5c5f61b64bc6bfe42de70975a5dd93d67"
+}
