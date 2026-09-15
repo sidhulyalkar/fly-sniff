@@ -7,7 +7,6 @@ import pytest
 
 from fly_sniff.physiology_calibrated_model import build_calibrated_model_artifact
 
-
 CONFIG = Path("configs/physiology_calibration_v1.json")
 
 
