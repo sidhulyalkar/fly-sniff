@@ -28,6 +28,29 @@ def _rewrite_preparation_receipt(root: Path, mutate) -> dict:
     return _write_self_hashed(path, receipt, "receipt_sha256")
 
 
+def _rewrite_windows_and_bind(root: Path, session_dir: Path, mutate) -> None:
+    windows_path = session_dir / "windows.json"
+    windows = json.loads(windows_path.read_text())
+    mutate(windows)
+    windows_path.write_text(json.dumps(windows, indent=2, sort_keys=True) + "\n")
+
+    batch_receipt_path = session_dir / "pose-neural-batch.json"
+    batch_receipt = json.loads(batch_receipt_path.read_text())
+    batch_receipt.pop("receipt_sha256")
+    batch_receipt["windows_sha256"] = sha256_file(windows_path)
+    batch_receipt = _write_self_hashed(batch_receipt_path, batch_receipt, "receipt_sha256")
+
+    def update_outer(receipt: dict) -> None:
+        for row in receipt["sessions"]:
+            if row["session_id"] == session_dir.name:
+                row["windows_sha256"] = sha256_file(windows_path)
+                row["batch_receipt_sha256"] = batch_receipt["receipt_sha256"]
+                return
+        raise AssertionError("fixture session missing from preparation receipt")
+
+    _rewrite_preparation_receipt(root, update_outer)
+
+
 def _build_prepared_fixture(root: Path) -> dict:
     root.mkdir()
     sessions_root = root / "sessions"
@@ -40,6 +63,7 @@ def _build_prepared_fixture(root: Path) -> dict:
     animal_sessions: dict[str, dict[str, list[str]]] = {}
     sample_to_split: dict[str, str] = {}
     sample_to_animal: dict[str, str] = {}
+    behavior_frame_count = 400
 
     for animal in animals:
         session_ids = [f"{animal}_{trial:03d}" for trial in (1, 2, 3)]
@@ -71,7 +95,7 @@ def _build_prepared_fixture(root: Path) -> dict:
                     "source_sha256": _sha({"source": session_id, "kind": "alignment"}),
                     "output_path": str(alignment_path.resolve()),
                     "output_sha256": sha256_file(alignment_path),
-                    "output_shape": [10],
+                    "output_shape": [behavior_frame_count],
                     "output_dtype": "int64",
                 },
                 "receipt_sha256",
@@ -90,7 +114,7 @@ def _build_prepared_fixture(root: Path) -> dict:
                     "source_sha256": _sha({"source": session_id, "kind": "pose3d"}),
                     "output_path": str(pose_path.resolve()),
                     "output_sha256": sha256_file(pose_path),
-                    "output_shape": [10, 38, 3],
+                    "output_shape": [behavior_frame_count, 38, 3],
                     "output_dtype": "float32",
                 },
                 "receipt_sha256",
@@ -98,14 +122,26 @@ def _build_prepared_fixture(root: Path) -> dict:
 
             window_rows = []
             for window_index in range(2):
+                input_start = window_index * 50
+                input_end = input_start + 300
+                target_end = input_end + 50
+                last_input_neural_index = 10 + 2 * window_index
                 sample_id = f"{session_id}:window:{window_index}"
                 window_rows.append(
                     {
                         "sample": {
+                            "dataset_id": "mc2p_v1",
                             "sample_id": sample_id,
                             "animal_id": animal,
                             "session_id": session_id,
-                        }
+                        },
+                        "input_behavior_frames": [input_start, input_end],
+                        "target_behavior_frames": [input_end, target_end],
+                        "last_input_neural_index": last_input_neural_index,
+                        "target_neural_indices": [
+                            last_input_neural_index + 1,
+                            last_input_neural_index + 2,
+                        ],
                     }
                 )
                 source_sample_rows.append(
@@ -119,7 +155,13 @@ def _build_prepared_fixture(root: Path) -> dict:
                     {
                         "schema_version": 1,
                         "dataset_id": "mc2p_v1",
+                        "session": {"session_id": session_id, "animal_id": animal},
+                        "alignment_path": str(alignment_path.resolve()),
+                        "alignment_length_behavior_frames": behavior_frame_count,
                         "target_neural_boundary_policy": TARGET_NEURAL_BOUNDARY_POLICY,
+                        "history_s": 3.0,
+                        "horizon_s": 0.5,
+                        "stride_s": 0.5,
                         "window_count": len(window_rows),
                         "windows": window_rows,
                     },
@@ -164,7 +206,7 @@ def _build_prepared_fixture(root: Path) -> dict:
                 {
                     "animal_id": animal,
                     "session_id": session_id,
-                    "behavior_frame_count": 10,
+                    "behavior_frame_count": behavior_frame_count,
                     "alignment_conversion_sha256": alignment_receipt["receipt_sha256"],
                     "pose_conversion_sha256": pose_receipt["receipt_sha256"],
                     "windows_sha256": sha256_file(windows_path),
@@ -255,6 +297,7 @@ def test_preflight_verifies_preparation_without_deserializing_batches(tmp_path: 
     assert report["session_count"] == 24
     assert report["verified_session_batches"] == 24
     assert report["verified_prediction_windows"] == 48
+    assert report["preflight_implementation_sha256"]
     assert report["batch_arrays_deserialized"] is False
     assert report["model_metrics_inspected"] is False
     assert report["test_data_consumed"] is False
@@ -294,26 +337,26 @@ def test_preflight_rejects_rehashed_window_identity_drift(tmp_path: Path):
     root = tmp_path / "prepared"
     _build_prepared_fixture(root)
     session_dir = min((root / "sessions").iterdir())
-    windows_path = session_dir / "windows.json"
-    windows = json.loads(windows_path.read_text())
-    windows["windows"][0]["sample"]["animal_id"] = "different_animal"
-    windows_path.write_text(json.dumps(windows, indent=2, sort_keys=True) + "\n")
 
-    batch_receipt_path = session_dir / "pose-neural-batch.json"
-    batch_receipt = json.loads(batch_receipt_path.read_text())
-    batch_receipt.pop("receipt_sha256")
-    batch_receipt["windows_sha256"] = sha256_file(windows_path)
-    batch_receipt = _write_self_hashed(batch_receipt_path, batch_receipt, "receipt_sha256")
+    def mutate(windows: dict) -> None:
+        windows["windows"][0]["sample"]["animal_id"] = "different_animal"
 
-    def update_outer(receipt: dict) -> None:
-        for row in receipt["sessions"]:
-            if row["session_id"] == session_dir.name:
-                row["windows_sha256"] = sha256_file(windows_path)
-                row["batch_receipt_sha256"] = batch_receipt["receipt_sha256"]
-                break
-
-    _rewrite_preparation_receipt(root, update_outer)
+    _rewrite_windows_and_bind(root, session_dir, mutate)
     with pytest.raises(ValueError, match="window sample identity changed"):
+        audit_preparation_directory(root)
+
+
+def test_preflight_rejects_rehashed_strict_future_violation(tmp_path: Path):
+    root = tmp_path / "prepared"
+    _build_prepared_fixture(root)
+    session_dir = min((root / "sessions").iterdir())
+
+    def mutate(windows: dict) -> None:
+        row = windows["windows"][0]
+        row["target_neural_indices"] = [row["last_input_neural_index"]]
+
+    _rewrite_windows_and_bind(root, session_dir, mutate)
+    with pytest.raises(ValueError, match="strict-future neural indices violated"):
         audit_preparation_directory(root)
 
 
