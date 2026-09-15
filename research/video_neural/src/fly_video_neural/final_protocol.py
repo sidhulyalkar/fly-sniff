@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from .alignment_null import run_alignment_null
+from .final_inference import evaluate_final_inference
 from .mc2p_legacy import sha256_file
 from .provenance import implementation_fingerprint, runtime_fingerprint
 from .session_benchmark import (
@@ -150,7 +151,7 @@ def _write_consumption_lock(
         "development_receipt_sha256": development_receipt_sha256,
         "validation_unlock_sha256": validation_unlock_sha256,
         "reopen_after_failure_allowed": False,
-        "batch_deserialization_allowed_after_this_marker_only": True,
+        "prepared_test_batch_reopen_allowed_after_this_marker_only": True,
     }
     payload["consumption_lock_sha256"] = _sha(payload)
     try:
@@ -272,11 +273,7 @@ def run_final_protocol(
         json.dumps(null_final, indent=2, sort_keys=True) + "\n"
     )
     effects = _test_effects(aligned_final, null_final)
-    paired = [
-        float(row["paired_alignment_effect"])
-        for row in effects
-        if row["paired_alignment_effect"] is not None
-    ]
+    final_inference = evaluate_final_inference(effects, acceptance_config)
     receipt: dict[str, Any] = {
         "schema_version": 1,
         "protocol": "mc2p-v1-final-evaluation-v1",
@@ -287,20 +284,23 @@ def run_final_protocol(
         "validation_unlock_sha256": bundle["unlock"]["report_sha256"],
         "consumption_lock_sha256": consumption_lock["consumption_lock_sha256"],
         "test_status": "consumed_once",
-        "test_target_arrays_first_deserialized_after_consumption_lock": True,
+        "prepared_test_batches_first_reopened_post_split_after_consumption_lock": True,
         "primary_null_selection": "fraction_selected_on_validation_before_test",
         "animal_effects": effects,
-        "median_paired_alignment_effect": float(np.median(paired)) if paired else None,
-        "positive_effect_animals": sum(value > 0 for value in paired),
+        "final_inference": final_inference,
+        "median_paired_alignment_effect": final_inference["median_paired_effect"],
+        "positive_effect_animals": final_inference["positive_effect_animals"],
         "eligible_animals": len(effects),
-        "scorable_test_animals": len(paired),
+        "scorable_test_animals": final_inference["scorable_animals"],
         "primary_metric_scope": "all_measured_dff_pixels_with_finite_correlation",
         "claim_boundary": (
             "This receipt reports the prespecified held-out evaluation against the null fraction selected "
-            "on validation for each animal. Held-out test arrays are first deserialized only after the "
-            "one-way consumption marker. A non-computable test metric is retained as null rather than "
-            "assigned a score. Other null-fraction test scores are secondary diagnostics only. No post-test "
-            "threshold or neural-support mask is introduced here."
+            "on validation for each animal. PREPARE necessarily materializes all deterministic session "
+            "batches before the split is evaluated; after that split is frozen, DEVELOPMENT authenticates "
+            "held-out batch bytes without reopening their arrays, and FINAL is the first supported post-split "
+            "command to reopen those prepared held-out arrays, only after the one-way consumption marker. "
+            "Final support is decided only by the prespecified animal-level inference rule. Pixels and "
+            "overlapping windows are not treated as independent biological replicates."
         ),
     }
     receipt["receipt_sha256"] = _sha(receipt)
@@ -329,6 +329,7 @@ def main() -> None:
         json.dumps(
             {
                 "status": report["test_status"],
+                "inference": report["final_inference"]["status"],
                 "animals": report["eligible_animals"],
                 "sha256": report["receipt_sha256"],
             },
