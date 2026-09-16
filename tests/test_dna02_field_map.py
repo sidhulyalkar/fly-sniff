@@ -15,6 +15,8 @@ from fly_sniff.dna02_source import load_contract
 from fly_sniff.dna02_source_inspect import DEFAULT_CONTRACT, DEFAULT_EVIDENCE, _load_byte_evidence
 from fly_sniff.freeze import canonical_sha256
 
+REAL_CONFIRMATION = Path("authority/program-a-dna02-field-map-confirmation-v1.json")
+
 
 def _inspection_payload() -> dict:
     contract = load_contract(DEFAULT_CONTRACT)
@@ -69,6 +71,37 @@ def test_real_field_map_authority_is_frozen_and_navigation_independent() -> None
     assert authority["frozen_channel_mapping"]["ephys_A"]["soma_side"] == "L"
     assert authority["frozen_channel_mapping"]["ephys_B"]["soma_side"] == "R"
     assert list(authority["required_raw_fields"]) == list(_EXPECTED_FIELDS)
+
+
+def test_frozen_real_confirmation_is_content_addressed_and_shape_consistent() -> None:
+    payload = json.loads(REAL_CONFIRMATION.read_text(encoding="utf-8"))
+    claimed = payload.pop("confirmation_sha256")
+    assert canonical_sha256(payload) == claimed
+    assert claimed == "f38dfbabdbfa51c0629f763cb942999bb7d0d71749c845ffd0b51855b9ee6893"
+    assert payload["status"] == "FIELD_MAP_CONFIRMED_PENDING_NUMERIC_EXTRACTION_REVIEW"
+    assert payload["source_inspection_sha256"] == (
+        "68a4b5692f9515c4308c7a86e9e88d4eafb95d2d4a93f0f1b706990ce26817b7"
+    )
+    assert payload["raw_values_read"] is False
+    assert payload["physiology_statistic_computed"] is False
+    assert payload["navigation_performance_used"] is False
+    assert len(payload["files"]) == 4
+
+    for item in payload["files"]:
+        fields = item["required_field_metadata"]
+        assert tuple(fields) == _EXPECTED_FIELDS
+        assert item["mat_format"] == "matlab_v5"
+        assert all(fields[name]["matlab_class"] == "double" for name in _EXPECTED_FIELDS)
+
+        ephys_n = fields["t_ephys"]["shape"][0]
+        ball_n = fields["t_ball"]["shape"][0]
+        assert fields["ephys_A"]["shape"] == [ephys_n, 1]
+        assert fields["ephys_B"]["shape"] == [ephys_n, 1]
+        assert fields["stim"]["shape"] == [1, ephys_n]
+        assert fields["fwd"]["shape"] == [ball_n, 1]
+        assert fields["lat"]["shape"] == [ball_n, 1]
+        assert fields["yaw"]["shape"] == [ball_n, 1]
+        assert ephys_n == 100 * ball_n
 
 
 def test_complete_authenticated_schema_confirms_field_map_without_values(tmp_path: Path) -> None:
