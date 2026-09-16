@@ -4,6 +4,8 @@ set -euo pipefail
 RAW_DIR="${1:-data/raw/dna02}"
 OUT_DIR="${2:-data/cache/dna02-threshold-adjudication-v1}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+DEFAULT_EXISTING_AUDIT="data/cache/dna02-threshold-audit/prominence-audit-v1.json"
+EXISTING_AUDIT="${PROMINENCE_AUDIT:-${3:-}}"
 
 FILES=(
   "${RAW_DIR}/180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat"
@@ -29,9 +31,24 @@ fi
 mkdir -p "${OUT_DIR}"
 PROMINENCE="${OUT_DIR}/prominence-audit-v1.json"
 
-fly-sniff-dna02-prominence-audit \
-  "${FILES[@]}" \
-  --out "${PROMINENCE}"
+if [[ -z "${EXISTING_AUDIT}" && -f "${DEFAULT_EXISTING_AUDIT}" ]]; then
+  EXISTING_AUDIT="${DEFAULT_EXISTING_AUDIT}"
+fi
+
+if [[ -n "${EXISTING_AUDIT}" ]]; then
+  if [[ ! -f "${EXISTING_AUDIT}" ]]; then
+    echo "Requested prominence audit does not exist: ${EXISTING_AUDIT}" >&2
+    exit 3
+  fi
+  cp "${EXISTING_AUDIT}" "${PROMINENCE}"
+  echo "Reusing existing prominence audit: ${EXISTING_AUDIT}"
+  echo "The adjudicator will revalidate its canonical hash and behavior-blind flags."
+else
+  echo "No prior prominence audit found; regenerating neural-only prominence receipt."
+  fly-sniff-dna02-prominence-audit \
+    "${FILES[@]}" \
+    --out "${PROMINENCE}"
+fi
 
 fly-sniff-dna02-threshold-adjudicate \
   "${FILES[@]}" \
