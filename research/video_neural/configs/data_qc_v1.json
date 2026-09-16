@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "protocol": "mc2p-development-data-qc-v1",
+  "benchmark_id": "mc2p_future_neural_v1",
+  "scope": "train_and_validation_targets_only",
+  "window_stride_s": 0.5,
+  "minimum_windows_per_development_session": 2,
+  "autocorrelation_lags_windows": [1, 2, 4, 10, 20],
+  "test_target_values_may_be_summarized": false,
+  "diagnostics_may_redefine_primary_metric": false,
+  "gates": [
+    "split_lock_verifies_against_exact_batch_bytes",
+    "every_session_belongs_to_exactly_one_split",
+    "every_train_or_validation_session_has_at_least_two_windows",
+    "features_and_targets_are_finite",
+    "test_target_values_are_not_summarized_during_development_qc"
+  ],
+  "descriptive_not_gating": [
+    "feature_dimension_variance",
+    "target_dimension_variance",
+    "target_temporal_autocorrelation"
+  ],
+  "interpretation": "QC gates corruption and leakage only. Variance and autocorrelation are reported descriptively and cannot be used to redefine the frozen metric, split, target, or test policy after inspection."
+}

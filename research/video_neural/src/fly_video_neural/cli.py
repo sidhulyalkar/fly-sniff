@@ -1,0 +1,191 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+
+from .alignment import materialize_session_windows
+from .batch import load_batch
+from .benchmark import load_benchmark
+from .mc2p import build_manifest
+from .mc2p_legacy import convert_legacy_pickle
+from .metrics import summarize_metrics
+from .pose_neural import build_session_pose_neural_batch
+from .registry import load_registry
+from .ridge import load_split_lock, run_ridge_baseline
+from .schema import SampleWindow
+from .session_benchmark import build_session_split_lock, load_session_batches
+from .split_lock import build_split_lock, load_window_manifests
+from .splits import validate_animal_disjoint_splits
+
+
+def _load_samples(path: str | Path) -> list[SampleWindow]:
+    payload = json.loads(Path(path).read_text())
+    rows = payload["samples"] if isinstance(payload, dict) else payload
+    return [SampleWindow.from_dict(row) for row in rows]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Fly video-to-neural benchmark utilities")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    registry = sub.add_parser("validate-registry")
+    registry.add_argument("registry")
+
+    benchmark = sub.add_parser("validate-benchmark")
+    benchmark.add_argument("benchmark")
+
+    split = sub.add_parser("validate-splits")
+    split.add_argument("samples")
+    split.add_argument("splits")
+
+    mc2p = sub.add_parser("inspect-mc2p")
+    mc2p.add_argument("root")
+    mc2p.add_argument("--output")
+
+    convert = sub.add_parser("convert-mc2p-legacy")
+    convert.add_argument("source")
+    convert.add_argument("--kind", choices=("alignment", "pose3d"), required=True)
+    convert.add_argument("--output", required=True)
+    convert.add_argument("--receipt", required=True)
+    convert.add_argument("--trust-upstream-pickle", action="store_true")
+
+    windows = sub.add_parser("make-mc2p-windows")
+    windows.add_argument("session")
+    windows.add_argument("alignment")
+    windows.add_argument("--output", required=True)
+
+    batch = sub.add_parser("build-mc2p-session-batch")
+    batch.add_argument("windows")
+    batch.add_argument("pose3d")
+    batch.add_argument("dff")
+    batch.add_argument("--dff-side", required=True, type=int)
+    batch.add_argument("--output", required=True)
+    batch.add_argument("--receipt", required=True)
+
+    v1_split = sub.add_parser(
+        "make-v1-session-split",
+        description=(
+            "Low-level v1 split utility. The canonical scored v1 workflow is "
+            "fly-video-neural-prepare -> fly-video-neural-develop -> fly-video-neural-final."
+        ),
+    )
+    v1_split.add_argument("batches", nargs="+")
+    v1_split.add_argument("--output", required=True)
+
+    lock = sub.add_parser("make-split-lock")
+    lock.add_argument("windows", nargs="+")
+    lock.add_argument("--output", required=True)
+
+    ridge = sub.add_parser(
+        "ridge-baseline",
+        description=(
+            "Historical v0 animal-held-out ridge utility. Its --consume-test option is not part of the "
+            "active v1 protocol and must not be used for v1 MC2P evaluation."
+        ),
+    )
+    ridge.add_argument("batch")
+    ridge.add_argument("split_lock")
+    ridge.add_argument("--output", required=True)
+    ridge.add_argument("--consume-test", action="store_true")
+
+    score = sub.add_parser("score")
+    score.add_argument("truth")
+    score.add_argument("prediction")
+    score.add_argument("--output")
+
+    args = parser.parse_args()
+    if args.command == "validate-registry":
+        document = load_registry(args.registry)
+        print(json.dumps({"status": "valid", "datasets": len(document["datasets"])}, sort_keys=True))
+        return
+    if args.command == "validate-benchmark":
+        document = load_benchmark(args.benchmark)
+        print(json.dumps({"status": "valid", "benchmark_id": document["benchmark_id"]}, sort_keys=True))
+        return
+    if args.command == "validate-splits":
+        samples = _load_samples(args.samples)
+        assignment = json.loads(Path(args.splits).read_text())["animal_to_split"]
+        validate_animal_disjoint_splits(samples, assignment)
+        print(json.dumps({"status": "valid", "samples": len(samples)}, sort_keys=True))
+        return
+    if args.command == "inspect-mc2p":
+        report = build_manifest(args.root)
+        text = json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.output:
+            Path(args.output).write_text(text)
+        print(text, end="")
+        return
+    if args.command == "convert-mc2p-legacy":
+        report = convert_legacy_pickle(
+            args.source,
+            args.output,
+            args.receipt,
+            kind=args.kind,
+            trust_upstream_pickle=args.trust_upstream_pickle,
+        )
+        print(
+            json.dumps(
+                {"status": "converted", "kind": report["kind"], "sha256": report["receipt_sha256"]},
+                sort_keys=True,
+            )
+        )
+        return
+    if args.command == "make-mc2p-windows":
+        report = materialize_session_windows(args.session, args.alignment)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "valid", "windows": report["window_count"]}, sort_keys=True))
+        return
+    if args.command == "build-mc2p-session-batch":
+        report = build_session_pose_neural_batch(
+            args.windows,
+            args.pose3d,
+            args.dff,
+            args.output,
+            args.receipt,
+            dff_side=args.dff_side,
+        )
+        print(
+            json.dumps(
+                {"status": "built", "samples": report["sample_count"], "sha256": report["receipt_sha256"]},
+                sort_keys=True,
+            )
+        )
+        return
+    if args.command == "make-v1-session-split":
+        batch_data, source_files = load_session_batches(args.batches)
+        report = build_session_split_lock(batch_data, source_batches=source_files)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
+        return
+    if args.command == "make-split-lock":
+        samples = load_window_manifests(args.windows)
+        report = build_split_lock(samples)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(json.dumps({"status": "locked", "sha256": report["split_lock_sha256"]}, sort_keys=True))
+        return
+    if args.command == "ridge-baseline":
+        batch_data = load_batch(args.batch)
+        lock_data = load_split_lock(args.split_lock)
+        report = run_ridge_baseline(batch_data, lock_data, consume_test=args.consume_test)
+        Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(
+            json.dumps(
+                {"status": report["test_status"], "selected_alpha": report["selected_alpha"]},
+                sort_keys=True,
+            )
+        )
+        return
+    truth = np.load(args.truth)
+    prediction = np.load(args.prediction)
+    report = summarize_metrics(truth, prediction)
+    text = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.output:
+        Path(args.output).write_text(text)
+    print(text, end="")
+
+
+if __name__ == "__main__":
+    main()

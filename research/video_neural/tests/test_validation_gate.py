@@ -1,0 +1,153 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from fly_video_neural.alignment_null import NULL_FRACTIONS, NULL_NAME, NULL_SELECTION_RULE
+from fly_video_neural.validation_gate import build_validation_unlock, load_acceptance_config
+
+
+def _config() -> dict:
+    path = Path(__file__).resolve().parents[1] / "configs" / "validation_acceptance_v1.json"
+    return load_acceptance_config(path)
+
+
+def _row(animal: str, value: float | None, *, fraction: float | None = None) -> dict:
+    row = {
+        "animal_id": animal,
+        "selected_alpha": 1.0,
+        "selected_validation_metrics": {"median_pearson_r": value},
+        "alpha_candidates": [],
+    }
+    if fraction is not None:
+        row["selected_null_fraction"] = fraction
+    return row
+
+
+def _reports(aligned_values: list[float | None], null_values: list[float | None]):
+    animals = [f"fly{index}" for index in range(len(aligned_values))]
+    qc = {
+        "status": "pass",
+        "test_target_arrays_deserialized": False,
+        "test_target_values_summarized": False,
+        "split_lock_sha256": "split",
+        "report_sha256": "qc",
+    }
+    aligned = {
+        "benchmark_id": "mc2p_future_neural_v1",
+        "test_status": "locked_not_consumed",
+        "split_lock_sha256": "split",
+        "animals": [_row(animal, value) for animal, value in zip(animals, aligned_values, strict=True)],
+    }
+    null = {
+        "benchmark_id": "mc2p_future_neural_v1",
+        "test_status": "locked_not_consumed",
+        "null_name": NULL_NAME,
+        "null_fractions": list(NULL_FRACTIONS),
+        "null_selection_rule": NULL_SELECTION_RULE,
+        "split_lock_sha256": "split",
+        "animals": [
+            _row(animal, value, fraction=NULL_FRACTIONS[index % len(NULL_FRACTIONS)])
+            for index, (animal, value) in enumerate(zip(animals, null_values, strict=True))
+        ],
+    }
+    return qc, aligned, null
+
+
+def test_validation_gate_unlocks_only_after_six_animals_positive_majority_and_median_effect():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "unlocked_for_single_test_consumption"
+    assert report["test_consumption_allowed"] is True
+    assert report["eligible_animals"] == 6
+    assert report["eligible_animal_ids"] == [f"fly{index}" for index in range(6)]
+    assert report["positive_effect_animals"] == 6
+    assert report["median_paired_effect"] > 0
+    assert report["alignment_null_fractions"] == list(NULL_FRACTIONS)
+    assert report["ineligible_animals"] == []
+    assert report["final_inference_prespecified"]["unit"] == "animal"
+    assert report["final_inference_prespecified"]["population"] == "validation_eligible_animals_only"
+    assert report["final_inference_prespecified"]["minimum_scorable_animals"] == 6
+    assert report["final_inference_prespecified"][
+        "require_all_validation_eligible_test_effects_computable"
+    ] is True
+    assert all("selected_null_fraction" in row for row in report["animal_effects"])
+
+
+def test_validation_gate_blocks_if_test_was_already_consumed():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
+    aligned["test_status"] = "consumed_explicitly"
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["test_consumption_allowed"] is False
+    assert any("consumed test" in failure for failure in report["failures"])
+
+
+def test_validation_gate_blocks_if_qc_deserialized_test_targets():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
+    qc["test_target_arrays_deserialized"] = True
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert any("deserialized held-out" in failure for failure in report["failures"])
+
+
+def test_validation_gate_blocks_nonmajority_effect_against_strongest_null():
+    qc, aligned, null = _reports(
+        [0.3, 0.3, 0.3, 0.1, 0.1, 0.1],
+        [0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["positive_effect_animals"] == 3
+
+
+def test_validation_gate_rejects_null_ensemble_contract_drift():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, 0.25, 0.2, 0.1, 0.15],
+    )
+    null["null_fractions"] = [0.5]
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert any("fractions mismatch" in failure for failure in report["failures"])
+
+
+def test_noncomputable_validation_metric_freezes_animal_out_of_final_population():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.22],
+        [0.1, 0.2, None, 0.2, 0.1, 0.15, 0.11],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "unlocked_for_single_test_consumption"
+    assert report["eligible_animals"] == 6
+    assert report["eligible_animal_ids"] == ["fly0", "fly1", "fly3", "fly4", "fly5", "fly6"]
+    assert report["ineligible_animals"] == [
+        {
+            "animal_id": "fly2",
+            "reason": "validation_median_pearson_r_not_computable",
+            "aligned_metric_computable": True,
+            "selected_null_metric_computable": False,
+            "selected_null_fraction": NULL_FRACTIONS[2],
+        }
+    ]
+    assert "fly2" not in report["eligible_animal_ids"]
+
+
+def test_noncomputable_validation_metric_can_block_when_fewer_than_six_remain():
+    qc, aligned, null = _reports(
+        [0.5, 0.45, 0.4, 0.35, 0.3, 0.25],
+        [0.1, 0.2, None, 0.2, 0.1, 0.15],
+    )
+    report = build_validation_unlock(qc, aligned, null, _config())
+    assert report["status"] == "blocked"
+    assert report["eligible_animals"] == 5
+    assert report["test_consumption_allowed"] is False
+    assert any("only 5 eligible animals" in failure for failure in report["failures"])
