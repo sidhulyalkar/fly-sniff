@@ -5,6 +5,7 @@ on:
     paths:
       - "src/fly_sniff/pfn_archive_probe.py"
       - "src/fly_sniff/pfn_analysis_script_probe.py"
+      - "src/fly_sniff/pfn_analysis_script_probe_v2.py"
       - "tests/test_pfn_analysis_script_probe.py"
       - "pyproject.toml"
       - ".github/workflows/pfn-analysis-script-probe.yml"
@@ -27,7 +28,7 @@ jobs:
         run: |
           mkdir -p results/pfn-analysis-script-probe
           set +e
-          fly-sniff-pfn-analysis-script-probe \
+          python -m fly_sniff.pfn_analysis_script_probe_v2 \
             --out results/pfn-analysis-script-probe/analysis-scripts-v1.json \
             > results/pfn-analysis-script-probe/stdout.txt \
             2> results/pfn-analysis-script-probe/stderr.txt
