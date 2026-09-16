@@ -1,0 +1,93 @@
+{
+  "confirmation_sha256": "f38dfbabdbfa51c0629f763cb942999bb7d0d71749c845ffd0b51855b9ee6893",
+  "field_map_authority_sha256": "55679a444be57d110a4b0ad26f1fa7a90b4e4c2b1d422c42b78e7d9a9ea55f67",
+  "files": [
+    {
+      "filename": "180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_08",
+      "mat_format": "matlab_v5",
+      "required_field_metadata": {
+        "ball_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "ephys_A": {"matlab_class": "double", "shape": [34500000, 1]},
+        "ephys_B": {"matlab_class": "double", "shape": [34500000, 1]},
+        "ephys_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "fwd": {"matlab_class": "double", "shape": [345000, 1]},
+        "lat": {"matlab_class": "double", "shape": [345000, 1]},
+        "stim": {"matlab_class": "double", "shape": [1, 34500000]},
+        "t_ball": {"matlab_class": "double", "shape": [345000, 1]},
+        "t_ephys": {"matlab_class": "double", "shape": [34500000, 1]},
+        "yaw": {"matlab_class": "double", "shape": [345000, 1]}
+      },
+      "sha256": "f02a345effb2fe722800dd1f43dce2c876878424307cb1fa486b5974f3d5922b"
+    },
+    {
+      "filename": "180430_gfp_3G_ss730_dual_12_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_12",
+      "mat_format": "matlab_v5",
+      "required_field_metadata": {
+        "ball_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "ephys_A": {"matlab_class": "double", "shape": [14950000, 1]},
+        "ephys_B": {"matlab_class": "double", "shape": [14950000, 1]},
+        "ephys_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "fwd": {"matlab_class": "double", "shape": [149500, 1]},
+        "lat": {"matlab_class": "double", "shape": [149500, 1]},
+        "stim": {"matlab_class": "double", "shape": [1, 14950000]},
+        "t_ball": {"matlab_class": "double", "shape": [149500, 1]},
+        "t_ephys": {"matlab_class": "double", "shape": [14950000, 1]},
+        "yaw": {"matlab_class": "double", "shape": [149500, 1]}
+      },
+      "sha256": "0f9a9251262f528f0b415d67cdb169bc1236a5157029ffeebace6d86136f60f7"
+    },
+    {
+      "filename": "180501_gfp_3G_ss730_dual_13_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_13",
+      "mat_format": "matlab_v5",
+      "required_field_metadata": {
+        "ball_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "ephys_A": {"matlab_class": "double", "shape": [5750000, 1]},
+        "ephys_B": {"matlab_class": "double", "shape": [5750000, 1]},
+        "ephys_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "fwd": {"matlab_class": "double", "shape": [57500, 1]},
+        "lat": {"matlab_class": "double", "shape": [57500, 1]},
+        "stim": {"matlab_class": "double", "shape": [1, 5750000]},
+        "t_ball": {"matlab_class": "double", "shape": [57500, 1]},
+        "t_ephys": {"matlab_class": "double", "shape": [5750000, 1]},
+        "yaw": {"matlab_class": "double", "shape": [57500, 1]}
+      },
+      "sha256": "a460eb313b503b039b3eeec554efd902b54119aadfd783c72210efaee2daee24"
+    },
+    {
+      "filename": "180517_gfp_3G_ss730_dual_14_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_14",
+      "mat_format": "matlab_v5",
+      "required_field_metadata": {
+        "ball_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "ephys_A": {"matlab_class": "double", "shape": [14490000, 1]},
+        "ephys_B": {"matlab_class": "double", "shape": [14490000, 1]},
+        "ephys_SR": {"matlab_class": "double", "shape": [1, 1]},
+        "fwd": {"matlab_class": "double", "shape": [144900, 1]},
+        "lat": {"matlab_class": "double", "shape": [144900, 1]},
+        "stim": {"matlab_class": "double", "shape": [1, 14490000]},
+        "t_ball": {"matlab_class": "double", "shape": [144900, 1]},
+        "t_ephys": {"matlab_class": "double", "shape": [14490000, 1]},
+        "yaw": {"matlab_class": "double", "shape": [144900, 1]}
+      },
+      "sha256": "6e5aabc4bc45d76fd24baa81a9351cc6d29530c72e697038b78f07a0da36623f"
+    }
+  ],
+  "frozen_channel_mapping": {
+    "ephys_A": {"role": "left DNa02 physiology channel", "secondary_label": "a2_l", "soma_side": "L"},
+    "ephys_B": {"role": "right DNa02 physiology channel", "secondary_label": "a2_r", "soma_side": "R"},
+    "yaw": {"role": "raw rotational/yaw behavior channel"}
+  },
+  "navigation_performance_used": false,
+  "next_allowed_action": "Implement the prespecified DNa02 numeric extraction against this confirmed field mapping; do not alter channel laterality or raw-field selection based on extracted or navigation results.",
+  "physiology_statistic_computed": false,
+  "raw_values_read": false,
+  "required_raw_fields": ["ball_SR", "t_ball", "fwd", "yaw", "lat", "ephys_SR", "t_ephys", "stim", "ephys_A", "ephys_B"],
+  "schema": "fly-sniff-dna02-field-map-confirmation-v1",
+  "source_byte_evidence_sha256": "d2e8f2c2bd41ff18b9be6a00c088f6b5c5f61b64bc6bfe42de70975a5dd93d67",
+  "source_contract_sha256": "5e513c180e97f6b7ccb5cc37f9b5977da651ecfd43cb66e578f04f083315b1bf",
+  "source_inspection_sha256": "68a4b5692f9515c4308c7a86e9e88d4eafb95d2d4a93f0f1b706990ce26817b7",
+  "status": "FIELD_MAP_CONFIRMED_PENDING_NUMERIC_EXTRACTION_REVIEW"
+}
