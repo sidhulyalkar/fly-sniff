@@ -24,5 +24,6 @@ jobs:
       - run: fly-sniff-dna02-inspect --help
       - run: fly-sniff-dna02-field-map --help
       - run: fly-sniff-dna02-field-map > /tmp/dna02-field-map-authority.json
+      - run: fly-sniff-dna02-prominence-audit --help
       - run: ruff check src tests
       - run: pytest -q

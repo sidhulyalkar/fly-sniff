@@ -61,6 +61,7 @@ fly-sniff-pfn-readme-fetch = "fly_sniff.pfn_dataset_readme:main"
 fly-sniff-dna02-download = "fly_sniff.dna02_source_download:main"
 fly-sniff-dna02-inspect = "fly_sniff.dna02_source_inspect:main"
 fly-sniff-dna02-field-map = "fly_sniff.dna02_field_map:main"
+fly-sniff-dna02-prominence-audit = "fly_sniff.dna02_threshold_audit:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
