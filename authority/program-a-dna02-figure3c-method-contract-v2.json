@@ -24,9 +24,7 @@
   },
   "remaining_before_behavior_opening": [
     "qualify the pinned PyMC3/Theano gaussian-random-walk smoother numerically, or execute the original pinned environment",
-    "qualify portable SciPy prominence detections against MATLAB-style prominence semantics on synthetic fixtures; project thresholds remain fixed regardless",
-    "implement deterministic transform-only tests for 10 ms binning, EMA recurrence, 150 ms alignment, 50 ms windowing, and sign without loading yaw",
-    "seal an extractor code commit and consume the behavior-opening gate exactly once"
+    "implement and test a behavior-opening receipt that binds the exact extractor code commit and consumes the yaw gate exactly once"
   ],
   "schema": "fly-sniff-dna02-figure3c-method-contract-v2",
   "secondary_code_evidence": {
@@ -144,5 +142,61 @@
     "figure_window_neural_bins": 5,
     "partial_final_window_policy": "drop incomplete trailing windows",
     "spike_bin_samples": 100
+  },
+  "prominence_conformance": {
+    "portable_primary_implementation": "scipy.signal.find_peaks with frozen prominence threshold",
+    "qualification_scope": "strict interior local maxima with non-flat peaks",
+    "synthetic_fixtures": [
+      {
+        "signal": [
+          0,
+          1,
+          0
+        ],
+        "expected_peak_indices": [
+          1
+        ],
+        "expected_prominences": [
+          1
+        ]
+      },
+      {
+        "signal": [
+          0,
+          3,
+          1,
+          2,
+          0
+        ],
+        "expected_peak_indices": [
+          1,
+          3
+        ],
+        "expected_prominences": [
+          3,
+          1
+        ]
+      },
+      {
+        "signal": [
+          0,
+          1,
+          0,
+          2,
+          0
+        ],
+        "expected_peak_indices": [
+          1,
+          3
+        ],
+        "expected_prominences": [
+          1,
+          2
+        ]
+      }
+    ],
+    "edge_policy": "endpoint maxima are not accepted as spikes",
+    "plateau_policy": "portable conformance does not assert MATLAB equivalence for flat-topped peaks; extractor must surface any plateau case rather than silently resolving it",
+    "threshold_policy": "the eight frozen project thresholds remain unchanged regardless of conformance outcome"
   }
 }
