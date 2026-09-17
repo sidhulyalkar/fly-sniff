@@ -75,18 +75,8 @@ def _candidate(channel: dict[str, Any], quantile: float) -> dict[str, Any]:
         raise ValueError(f"freeze evidence lacks q={quantile:g}") from exc
 
 
-def _candidate_summary(candidate: dict[str, Any]) -> dict[str, float]:
-    return {
-        "refractory_violation_fraction_lt_1ms": float(
-            candidate["refractory_violation_fraction_lt_1ms"]
-        ),
-        "short_isi_fraction_lt_2ms": float(candidate["short_isi_fraction_lt_2ms"]),
-        "block_rate_cv": float(candidate["block_rate_cv"]),
-        "waveform_median_template_correlation": float(
-            candidate["waveform_median_template_correlation"]
-        ),
-        "waveform_fwhm_ms": float(candidate["waveform_fwhm_ms"]),
-    }
+def _candidate_evidence(candidate: dict[str, Any]) -> dict[str, float]:
+    return {"threshold": float(candidate["threshold"])}
 
 
 def _compact_distribution(channel: dict[str, Any]) -> dict[str, Any]:
@@ -263,7 +253,7 @@ def freeze_manifest_v2(
                 "selected_threshold": threshold,
                 "selection_basis": basis,
                 "rationale": rationale,
-                "selected_candidate_qc": _candidate_summary(candidate),
+                "selected_candidate_evidence": _candidate_evidence(candidate),
                 "distribution_evidence": _compact_distribution(distribution_channel),
             }
         )
