@@ -138,4 +138,4 @@ def test_status_exposes_remaining_gate_without_opening_behavior() -> None:
     status = method_status(CONTRACT, HASH)
     assert status["status"] == "METHOD_CONTRACT_FROZEN_BEHAVIOR_STILL_SEALED"
     assert status["gates"]["behavior_opening_allowed"] is False
-    assert len(status["remaining_before_behavior_opening"]) == 4
+    assert len(status["remaining_before_behavior_opening"]) == 2
