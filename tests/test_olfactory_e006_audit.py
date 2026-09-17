@@ -7,6 +7,7 @@ import pytest
 from fly_sniff.olfactory_door import sha256_file
 from fly_sniff.olfactory_e006_audit import (
     _canonical_sha,
+    _dataset_metadata,
     _development_subset_candidates,
     _mapping_summary,
     _validate_receipt,
@@ -28,6 +29,31 @@ def test_mapping_summary_preserves_one_to_many_identity() -> None:
     assert report["multiple_mapping_units"] == ["ab4B"]
     assert report["multiple_mapping_count"] == 1
     assert len(report["multiple_mapping_records"]["ab4B"]) == 3
+
+
+def test_dataset_metadata_joins_on_dataset_id_not_citation(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "door_dataset_info.csv").write_text(
+        '"dataset";"study";"technique";"data.type";"concentration";"DOI"\n'
+        '"1";"Hallem.2006.EN";"Hallem et.al. 2006";"electrophysiology";'
+        '"spikes";"10^-2";"10.1016/j.cell.2006.01.050"\n'
+    )
+    study = pd.DataFrame(
+        [
+            {
+                "study_id": "Hallem.2006.EN",
+                "observed_cells": 2664,
+                "responding_units": 24,
+                "odor_names": 111,
+            }
+        ]
+    ).set_index("study_id")
+    joined, report = _dataset_metadata(tmp_path, study)
+    assert report["complete_join"] is True
+    assert report["missing_metadata_for_response_studies"] == []
+    assert joined.loc[0, "dataset"] == "Hallem.2006.EN"
+    assert joined.loc[0, "study"] == "Hallem et.al. 2006"
 
 
 def test_development_subset_selection_is_performance_blind() -> None:
