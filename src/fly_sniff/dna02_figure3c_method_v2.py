@@ -32,7 +32,7 @@ def load_method_contract(
     expected_hash = Path(hash_path).read_text(encoding="utf-8").strip()
     observed_hash = canonical_sha256(payload)
     if observed_hash != expected_hash:
-        raise ValueError("Figure 3C method contract canonical hash does not match")
+        raise ValueError(\n            "Figure 3C method contract canonical hash does not match: "\n            f"expected={expected_hash} observed={observed_hash}"\n        )
     if payload.get("schema") != _EXPECTED_SCHEMA:
         raise ValueError("unsupported Figure 3C method-contract schema")
     if payload.get("status") != _EXPECTED_STATUS:
@@ -72,6 +72,22 @@ def load_method_contract(
         "raw_yaw * 0.000395 / 0.000436"
     ):
         raise ValueError("yaw scaling provenance has drifted")
+
+    gp = payload.get("gp_map_conformance", {})
+    source = gp.get("pymc3_source", {})
+    if source.get("commit") != "081e7f4a55ce45ef50a03f8062611051d9c00ce8":
+        raise ValueError("PyMC3 3.6 GP source authority has drifted")
+    if source.get("gaussian_random_walk_blob") != "9c5847271ae70ca26f2fef544d806bb58bf968ed":
+        raise ValueError("GaussianRandomWalk source blob has drifted")
+    if source.get("find_map_blob") != "491c38b8502e486d287566e29cbd71c9fe7177b0":
+        raise ValueError("find_MAP source blob has drifted")
+    matrix = gp.get("matrix_structure", {})
+    if matrix != {
+        "endpoint_diagonal": 1.25,
+        "interior_diagonal": 1.5,
+        "off_diagonal": -0.25,
+    }:
+        raise ValueError("GP MAP linear-system coefficients have drifted")
 
     sign = payload.get("sign_convention", {})
     if sign.get("published_lab_convention") != (
@@ -144,6 +160,46 @@ def firing_rate_hz_from_counts(counts: np.ndarray) -> np.ndarray:
     if counts.ndim != 1:
         raise ValueError("spike counts must be one-dimensional")
     return counts / 0.010
+
+
+def gp_random_walk_map_v2(values: np.ndarray) -> np.ndarray:
+    """Source-equivalent MAP for the pinned PyMC3 3.6 gp_smooth(alpha=0.2).
+
+    The original code optimizes only the latent trajectory z. With zero drift
+    and common fixed precision tau, tau cancels and the MAP solves
+    (I + 0.25 D.T D) z = y.
+    """
+    y = np.asarray(values, dtype=float)
+    if y.ndim != 1:
+        raise ValueError("GP smoother input must be one-dimensional")
+    n = y.size
+    if n <= 1:
+        return y.copy()
+
+    lam = 0.25
+    diagonal = np.full(n, 1.0 + 2.0 * lam, dtype=float)
+    diagonal[0] = diagonal[-1] = 1.0 + lam
+    off = np.full(n - 1, -lam, dtype=float)
+
+    c_prime = np.empty(n - 1, dtype=float)
+    d_prime = np.empty(n, dtype=float)
+    denom = diagonal[0]
+    c_prime[0] = off[0] / denom
+    d_prime[0] = y[0] / denom
+
+    for index in range(1, n):
+        denom = diagonal[index] - off[index - 1] * c_prime[index - 1]
+        if denom <= 0 or not np.isfinite(denom):
+            raise ValueError("GP MAP tridiagonal system lost positive definiteness")
+        if index < n - 1:
+            c_prime[index] = off[index] / denom
+        d_prime[index] = (y[index] - off[index - 1] * d_prime[index - 1]) / denom
+
+    result = np.empty(n, dtype=float)
+    result[-1] = d_prime[-1]
+    for index in range(n - 2, -1, -1):
+        result[index] = d_prime[index] - c_prime[index] * result[index + 1]
+    return result
 
 
 def bilateral_right_minus_left(right_hz: np.ndarray, left_hz: np.ndarray) -> np.ndarray:
