@@ -176,19 +176,17 @@ def _dataset_metadata(door: Path, study: pd.DataFrame) -> tuple[pd.DataFrame, di
     _, rows = read_r_csv2(path)
     metadata = pd.DataFrame(rows)
     response_studies = set(map(str, study.index.tolist()))
-    metadata_studies = set(metadata["study"].astype(str))
+    metadata_studies = set(metadata["dataset"].astype(str))
     missing = sorted(response_studies - metadata_studies)
     extra = sorted(metadata_studies - response_studies)
 
     joined = study.reset_index().merge(
         metadata,
         left_on="study_id",
-        right_on="study",
+        right_on="dataset",
         how="left",
         validate="one_to_one",
     )
-    joined.to_csv(path.parent / ".e006-unused", index=False) if False else None
-
     return joined, {
         "source_path": "data/door_dataset_info.csv",
         "source_sha256": sha256_file(path),
