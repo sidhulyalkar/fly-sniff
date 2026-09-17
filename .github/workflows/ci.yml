@@ -29,5 +29,6 @@ jobs:
       - run: fly-sniff-dna02-threshold-waveform-review --help
       - run: fly-sniff-dna02-threshold-distribution-review --help
       - run: fly-sniff-dna02-threshold-freeze --help
+      - run: fly-sniff-dna02-threshold-freeze-v2 --help
       - run: ruff check src tests
       - run: pytest -q
