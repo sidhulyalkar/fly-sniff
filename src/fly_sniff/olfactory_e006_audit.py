@@ -8,7 +8,13 @@ from typing import Any
 
 import pandas as pd
 
-from .olfactory_door import EXPECTED_COMMIT, EXPECTED_TREE, sha256_file, verify_checkout
+from .olfactory_door import (
+    EXPECTED_COMMIT,
+    EXPECTED_TREE,
+    read_r_csv2,
+    sha256_file,
+    verify_checkout,
+)
 
 SENSITIVE_PREFIXES = ("authority/", "src/", "tests/", "scripts/", ".github/")
 SENSITIVE_FILES = {"pyproject.toml"}
@@ -165,6 +171,84 @@ def _mapping_summary(mapping: dict[str, list[dict[str, Any]]]) -> dict[str, Any]
     }
 
 
+def _dataset_metadata(door: Path, study: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+    path = door / "data" / "door_dataset_info.csv"
+    _, rows = read_r_csv2(path)
+    metadata = pd.DataFrame(rows)
+    response_studies = set(map(str, study.index.tolist()))
+    metadata_studies = set(metadata["study"].astype(str))
+    missing = sorted(response_studies - metadata_studies)
+    extra = sorted(metadata_studies - response_studies)
+
+    joined = study.reset_index().merge(
+        metadata,
+        left_on="study_id",
+        right_on="study",
+        how="left",
+        validate="one_to_one",
+    )
+    joined.to_csv(path.parent / ".e006-unused", index=False) if False else None
+
+    return joined, {
+        "source_path": "data/door_dataset_info.csv",
+        "source_sha256": sha256_file(path),
+        "response_studies": len(response_studies),
+        "metadata_studies": len(metadata_studies),
+        "missing_metadata_for_response_studies": missing,
+        "metadata_rows_without_response_study": extra,
+        "complete_join": not missing,
+    }
+
+
+def _development_subset_candidates(joined: pd.DataFrame) -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
+    for row in joined.to_dict(orient="records"):
+        if (
+            row.get("technique") == "electrophysiology"
+            and row.get("data.type") == "spikes"
+            and int(row["observed_cells"]) >= 500
+            and int(row["responding_units"]) >= 20
+            and int(row["odor_names"]) >= 25
+            and isinstance(row.get("concentration"), str)
+            and bool(row["concentration"].strip())
+        ):
+            candidates.append(
+                {
+                    "study_id": str(row["study_id"]),
+                    "observed_cells": int(row["observed_cells"]),
+                    "responding_units": int(row["responding_units"]),
+                    "odor_names": int(row["odor_names"]),
+                    "technique": str(row["technique"]),
+                    "data_type": str(row["data.type"]),
+                    "concentration": str(row["concentration"]),
+                    "doi": str(row.get("DOI") or ""),
+                    "selection_basis": (
+                        "source_coverage_and_metadata_only; no model, decoding, navigation, or behavior "
+                        "outcome inspected"
+                    ),
+                }
+            )
+    candidates.sort(key=lambda item: (-item["observed_cells"], item["study_id"]))
+    return {
+        "rule": {
+            "technique": "electrophysiology",
+            "data_type": "spikes",
+            "minimum_observed_cells": 500,
+            "minimum_responding_units": 20,
+            "minimum_odor_names": 25,
+            "concentration_metadata_required": True,
+            "performance_blind": True,
+        },
+        "candidates": candidates,
+        "default_development_subset": candidates[0] if candidates else None,
+        "claim_boundary": (
+            "These are development-only within-study candidates selected from source coverage and assay "
+            "metadata before model performance. Selection does not qualify E006 globally or authorize "
+            "cross-study aggregation."
+        ),
+    }
+
+
 def audit_e006(
     artifact_dir: str | Path,
     *,
@@ -196,6 +280,8 @@ def audit_e006(
     scales = _study_scales(df)
     mapping = json.loads(mapping_path.read_text())
     mapping_report = _mapping_summary(mapping)
+    metadata_joined, metadata_report = _dataset_metadata(door, study)
+    subsets = _development_subset_candidates(metadata_joined)
 
     observed = df["response_status"].eq("observed")
     geosmin = df[
@@ -206,7 +292,11 @@ def audit_e006(
     units.to_csv(output / "responding-unit-coverage.csv")
     odors.to_csv(output / "odor-coverage.csv")
     scales.to_csv(output / "study-response-scales.csv")
+    metadata_joined.to_csv(output / "study-metadata-joined.csv", index=False)
     geosmin.to_csv(output / "geosmin-observations.csv", index=False)
+    (output / "candidate-development-subsets.json").write_text(
+        json.dumps(subsets, indent=2, sort_keys=True) + "\n"
+    )
     (output / "ambiguous-unit-mappings.json").write_text(
         json.dumps(mapping_report["multiple_mapping_records"], indent=2, sort_keys=True) + "\n"
     )
@@ -220,11 +310,21 @@ def audit_e006(
         {
             "id": "cross_study_assay_comparability_unqualified",
             "reason": (
-                "The ingestion preserves study-specific raw response scales; no authority currently "
-                "establishes that all study columns are numerically commensurable."
+                "The ingestion preserves study-specific raw response scales; source metadata describes "
+                "assays but does not by itself establish that all study columns are numerically commensurable."
             ),
         }
     ]
+    if metadata_report["missing_metadata_for_response_studies"]:
+        blockers.append(
+            {
+                "id": "study_metadata_join_incomplete",
+                "reason": (
+                    "Some response study IDs do not exactly join to the frozen dataset-info table: "
+                    + ", ".join(metadata_report["missing_metadata_for_response_studies"])
+                ),
+            }
+        )
     if mapping_report["multiple_mapping_count"]:
         blockers.append(
             {
@@ -248,22 +348,24 @@ def audit_e006(
         )
 
     gate = {
-        "status": "BLOCKED_METADATA_ADJUDICATION" if blockers else "READY_FOR_E006_QUALIFICATION",
+        "status": "BLOCKED_METADATA_ADJUDICATION",
         "development_analysis_allowed": True,
+        "within_study_development_subset_allowed": bool(subsets["default_development_subset"]),
         "global_cross_study_matrix_allowed": False,
         "receptor_level_identity_collapse_allowed": False,
         "confirmatory_use_allowed": False,
         "blockers": blockers,
         "allowed_next_actions": [
-            "adjudicate study/assay metadata and concentration provenance",
+            "run the frozen performance-blind within-study development subset",
+            "adjudicate exact study-ID metadata mismatches",
             "freeze a responding-unit identity policy without downstream model performance",
-            "define within-study or explicitly commensurable development subsets",
+            "qualify assay/concentration provenance before any cross-study synthesis",
         ],
         "forbidden_next_actions": [
             "average raw responses across studies without assay comparability authority",
             "fill source missingness with zero and treat it as measured non-response",
             "choose ambiguous mappings using decoding or navigation performance",
-            "promote this audit to confirmatory O003 evidence",
+            "promote a development subset to confirmatory O003 evidence",
         ],
     }
 
@@ -279,6 +381,8 @@ def audit_e006(
             "long_form_sha256": sha256_file(long_path),
             "mapping_sha256": sha256_file(mapping_path),
         },
+        "dataset_metadata": metadata_report,
+        "development_subsets": subsets,
         "summary": {
             "responding_units": int(df["responding_unit"].nunique()),
             "studies": int(df["study_id"].nunique()),
@@ -297,14 +401,15 @@ def audit_e006(
         },
         "gate": gate,
         "claim_boundary": (
-            "This audit characterizes E006 provenance, missingness, study coverage, numerical scale "
-            "heterogeneity, and identity ambiguity. It does not establish cross-study assay comparability, "
-            "dose response, receptor-level identity for ambiguous units, or biological mechanism."
+            "This audit characterizes E006 provenance, missingness, study coverage, source assay metadata, "
+            "numerical scale heterogeneity, and identity ambiguity. It does not establish cross-study assay "
+            "comparability, dose response, receptor-level identity for ambiguous units, or mechanism."
         ),
     }
     report["audit_sha256"] = _canonical_sha(report)
     (output / "e006-audit.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
+    default_subset = subsets["default_development_subset"]
     lines = [
         "E006 AUDIT V1",
         f"status: {gate['status']}",
@@ -316,8 +421,12 @@ def audit_e006(
         f"missing_fraction: {report['summary']['missing_fraction']:.6f}",
         f"geosmin_observed_cells: {len(geosmin)}",
         f"multiple_mapping_units: {mapping_report['multiple_mapping_count']}",
+        f"metadata_join_complete: {metadata_report['complete_join']}",
         f"scientific_tree_clean: {provenance['scientific_tree_clean']}",
         f"audit_sha256: {report['audit_sha256']}",
+        "",
+        "DEFAULT DEVELOPMENT SUBSET",
+        json.dumps(default_subset, sort_keys=True) if default_subset else "none",
         "",
         "BLOCKERS",
         *[f"- {item['id']}: {item['reason']}" for item in blockers],
