@@ -1,0 +1,51 @@
+{
+  "allowed_next_action": "Obtain an authoritative smoothts numerical fixture or source-equivalent recurrence/edge semantics, then freeze a conformance-tested exponential smoother before opening Figure 3C behavior.",
+  "contract_id": "program-a-dna02-figure3c-method-v1",
+  "forbidden_actions": [
+    "guess the recurrence initialization",
+    "assume the historical 1.5 correction belongs to the final pipeline without conformance evidence",
+    "use Figure 3C fit quality to choose smoothing semantics",
+    "use navigation performance to choose smoothing semantics"
+  ],
+  "gates": {
+    "figure3c_behavior_allowed": false,
+    "navigation_performance_used": false,
+    "numeric_smoothing_implementation_allowed": false,
+    "thresholds_must_be_frozen_first": true
+  },
+  "historical_matlab_context": {
+    "authority_scope": "contextual implementation evidence only; historical helper also uses a spike-detection path that differs from the version-of-record relative-prominence Methods, so the 1.5 correction is not automatically promoted into the final reproduction contract",
+    "commit": "55e30c19b1a18f601df1803295f0c401aec3c167",
+    "observation": "historical DNa02 helper applies smoothts(cur_psth, 'e', 3) / 1.5 and labels 1.5 an integral correction",
+    "path": "calculate_psth_A2.m",
+    "repository": "SashaRayshubskiy/eLife_102230_analysis_code"
+  },
+  "resolved_smoothing_parameters": {
+    "alpha": 0.5,
+    "alpha_formula": "alpha = 2 / (period_length + 1) for smoothts exponential mode when n > 1",
+    "output_length_policy": "same length as input according to legacy smoothts documentation",
+    "period_bins": 3,
+    "period_bins_derivation": "30 ms smoothing window / 10 ms spike-count bins"
+  },
+  "schema": "fly-sniff-dna02-figure3c-method-contract-v1",
+  "status": "PARAMETERS_RESOLVED_EDGE_SEMANTICS_PENDING",
+  "unresolved_before_numeric_extraction": [
+    "exact MATLAB smoothts exponential recurrence initialization at the first sample",
+    "exact edge handling for the beginning of the time series",
+    "whether the historical 1.5 integral correction belongs to the final Figure 3C production pipeline",
+    "a MATLAB-or-equivalent numerical fixture proving Python output on a short known vector"
+  ],
+  "version_of_record": {
+    "doi": "10.7554/eLife.102230.3",
+    "figure": "Figure 3B-C",
+    "figure_average_bin_ms": 50,
+    "neural_to_behavior_alignment_ms": 150,
+    "primary_outcome": "rotational_velocity_deg_per_s",
+    "primary_predictor": "right_firing_rate_hz - left_firing_rate_hz",
+    "smoothing_function": "MATLAB smoothts",
+    "smoothing_method": "exponential",
+    "smoothing_window_ms": 30,
+    "spike_bin_ms": 10,
+    "spike_detection": "relative-prominence peak detection using MATLAB findpeaks"
+  }
+}
