@@ -135,7 +135,38 @@ The audit never authorizes:
 
 E001, E002, and E006 may remain blocked while development diagnostics proceed.
 
-## 7. Full qualification check
+## 7. One-command O002 development
+
+After the E006 audit path is green, run the complete permitted development cycle with:
+
+```bash
+./scripts/run_olfactory_development_mac.sh
+```
+
+This reruns the fail-closed E006 audit at the current code identity and then executes only the frozen
+performance-blind within-study O002 subset. It creates one combined bundle:
+
+```text
+~/fly-sniff-data/artifacts/olfactory-dev-cycle-<source>-<code>.zip
+```
+
+The O002 v1 experiment keeps the original DoOR responding-unit IDs as features. It does not collapse
+ambiguous units to receptor identities. It excludes the SFR pseudo-odor, never imputes missing response
+cells, and restricts multivariate geometry to odor rows observed for every selected responding unit.
+
+Because the selected source contains one aggregate vector per odor, v1 does not claim held-out odor-identity
+decoding. It reports:
+
+- PCA explained variance and effective rank;
+- leave-one-responding-unit-out stability of pairwise odor geometry;
+- an explicitly exploratory chemical-class nearest-centroid probe with a fixed permutation null;
+- unsupported analyses, including concentration generalization, valence decoding, cross-study
+  generalization, receptor-specific interpretation, and topology effects, as blocked/not estimated.
+
+These metrics are development diagnostics. They may inform the design of a later frozen experiment, but they
+cannot be promoted directly into O003 confirmatory evidence.
+
+## 8. Full qualification check
 
 Before a claim-bearing artifact or merge:
 
@@ -149,7 +180,7 @@ git status --short
 
 A negative or blocked scientific result must not be turned green by loosening an evidence threshold.
 
-## 8. Manual CLI use
+## 9. Manual CLI use
 
 The integrated command can also be run directly against an existing immutable ingestion:
 
@@ -164,7 +195,7 @@ fly-sniff-olfactory audit-e006 \
 
 Use this only when debugging the audit. The Mac runner is the preferred routine workflow.
 
-## 9. What to send back
+## 10. What to send back
 
 Normally send only the generated:
 
@@ -177,7 +208,7 @@ If the command fails before creating the bundle, send the complete terminal trac
 The ZIP contains enough information to distinguish source/provenance failures, metadata limitations, mapping
 ambiguity, sparse coverage, and a legitimate scientific block without uploading the full DoOR tables.
 
-## 10. Current claim boundary
+## 11. Current claim boundary
 
 Passing the command means the preregistration and source/audit machinery worked at that exact code/source
 state. It does not mean E001/E002/E006 are qualified, O001 calibration passed, biological topology has an
