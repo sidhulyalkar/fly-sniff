@@ -74,7 +74,7 @@ def test_freezer_rejects_event_rate_selection(tmp_path: Path) -> None:
     )
     receipt = json.loads(RECEIPT.read_text())
 
-    with pytest.raises(ValueError, match="event rate"):
+    with pytest.raises(ValueError, match="event_rate_used_for_selection"):
         freeze_manifest_v2(
             freeze_evidence_path=FREEZE_EVIDENCE,
             distribution_evidence_path=DISTRIBUTION_EVIDENCE,
