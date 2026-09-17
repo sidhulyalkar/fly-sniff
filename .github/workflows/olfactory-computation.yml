@@ -1,0 +1,79 @@
+name: olfactory-computation-study
+
+on:
+  pull_request:
+    paths:
+      - "authority/olfactory-*.json"
+      - "authority/geosmin-o001-development-v0.json"
+      - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/door-e006-source-v0.json"
+      - "authority/flywire-da2-e002-v0.json"
+      - "docs/OLFACTORY_*.md"
+      - "src/fly_sniff/olfactory_program.py"
+      - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_structure.py"
+      - "src/fly_sniff/olfactory_geosmin.py"
+      - "tests/test_olfactory_program.py"
+      - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_structure.py"
+      - "tests/test_olfactory_geosmin.py"
+      - ".github/workflows/olfactory-computation.yml"
+  push:
+    paths:
+      - "authority/olfactory-*.json"
+      - "authority/geosmin-o001-development-v0.json"
+      - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/door-e006-source-v0.json"
+      - "authority/flywire-da2-e002-v0.json"
+      - "docs/OLFACTORY_*.md"
+      - "src/fly_sniff/olfactory_program.py"
+      - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_structure.py"
+      - "src/fly_sniff/olfactory_geosmin.py"
+      - "tests/test_olfactory_program.py"
+      - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_structure.py"
+      - "tests/test_olfactory_geosmin.py"
+      - ".github/workflows/olfactory-computation.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Validate study contract
+        run: >-
+          python -m fly_sniff.olfactory_program
+          authority/olfactory-computation-program-v0.json
+          authority/olfactory-evidence-requirements-v0.json
+          --source-registry authority/olfactory-source-registry-v0.json
+          --o001 authority/geosmin-o001-development-v0.json
+      - name: Validate E001 published evidence
+        run: python -m fly_sniff.olfactory_geosmin authority/geosmin-e001-evidence-v0.json
+      - name: Validate E002 identity authority
+        run: python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
+      - name: Smoke DoOR E006 ingester
+        run: python -m fly_sniff.olfactory_door --help
+      - name: Ruff
+        run: >-
+          ruff check
+          src/fly_sniff/olfactory_program.py
+          src/fly_sniff/olfactory_door.py
+          src/fly_sniff/olfactory_structure.py
+          src/fly_sniff/olfactory_geosmin.py
+          tests/test_olfactory_program.py
+          tests/test_olfactory_door.py
+          tests/test_olfactory_structure.py
+          tests/test_olfactory_geosmin.py
+      - name: Focused tests
+        run: >-
+          pytest -q
+          tests/test_olfactory_program.py
+          tests/test_olfactory_door.py
+          tests/test_olfactory_structure.py
+          tests/test_olfactory_geosmin.py

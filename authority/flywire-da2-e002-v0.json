@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "authority_id": "E002_da2_pathway_identity",
+  "program_id": "olfactory-computation-v0",
+  "dataset": {
+    "name": "FlyWire FAFB",
+    "materialization": 783,
+    "sex": "female",
+    "annotation_repository": "flyconnectome/flywire_annotations",
+    "annotation_release": "v2.1.0",
+    "annotation_commit": "ebd66db2596fcc39c6950fb54ea3efa00f7fe8a0",
+    "annotation_tree": "0487505ae0638638b8871ed120d74b56c339bdc6",
+    "annotation_table_path": "supplemental_files/Supplemental_file1_neuron_annotations.tsv",
+    "annotation_table_git_blob": "1a3168731618ee62a47392252d3af7664e739e9e"
+  },
+  "known_anchors": [
+    {
+      "role": "DA2_lPN",
+      "root_id": "720575940624106442",
+      "side": "right",
+      "identity_grade": "direct_public_cross_reference",
+      "authority": "Virtual Fly Brain VFB_fw032296 cross-reference to FlyWire v783",
+      "cell_type": "DA2_lPN",
+      "hemibrain_type": "DA2_lPN",
+      "neurotransmitter_note": "VFB describes this neuron as cholinergic; transmitter evidence must be independently graded before dynamic use"
+    }
+  ],
+  "population_constraints": [
+    {
+      "population_id": "or56a_osn_to_right_DA2",
+      "role": "sensory_input",
+      "expected_total": 41,
+      "expected_ipsilateral": 22,
+      "expected_contralateral": 19,
+      "count_authority": "2025 type-specific Or56a/Or22a FlyWire ultrastructure study",
+      "body_records": [],
+      "enumeration_complete": false
+    },
+    {
+      "population_id": "DA2_lPN_publication_matched",
+      "role": "projection_neuron",
+      "candidate_discovery_rule": "exact publication-matched annotation hemibrain_type/cell_type DA2_lPN only",
+      "body_records": [
+        {
+          "root_id": "720575940624106442",
+          "side": "right",
+          "identity_grade": "direct_public_cross_reference",
+          "identity_authority": "Virtual Fly Brain VFB_fw032296 cross-reference to FlyWire v783"
+        }
+      ],
+      "enumeration_complete": false
+    }
+  ],
+  "qualification_rules": {
+    "all_required_population_body_ids_frozen": true,
+    "candidate_discovery_rule_cannot_be_used_as_runtime_selector": true,
+    "every_body_id_requires_identity_authority": true,
+    "hemisphere_recorded_for_every_body": true,
+    "population_counts_reconciled_or_discrepancy_explained": true,
+    "connectivity_snapshot_frozen_separately_before_synapse_claim": true,
+    "transmitter_prediction_not_promoted_to_measured_synaptic_sign": true,
+    "cross_dataset_type_mapping_uncertainty_explicit": true
+  },
+  "status": "blocked_incomplete_body_id_adjudication",
+  "claim_boundary": "This artifact freezes the v783 publication-matched annotation authority and currently known DA2 anchor/count constraints. It does not yet define a complete Or56a/DA2 cohort and cannot be used for confirmatory connectivity or dynamics claims."
+}

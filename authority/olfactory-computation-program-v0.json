@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "program_id": "olfactory-computation-v0",
+  "status": "pre_data_preregistration",
+  "north_star": "Which computations let Drosophila transform unreliable chemical evidence into robust odor detection, behavioral meaning, and source-directed action, and which of those computations transfer to engineered smell sensors?",
+  "program_a_rules": {
+    "behavioral_reward_allowed_for_calibration": false,
+    "topology_specific_fit_allowed": false,
+    "whole_graph_backprop_allowed": false,
+    "equal_budget_across_topologies": true,
+    "negative_results_retained": true
+  },
+  "aims": [
+    {
+      "id": "O001",
+      "name": "geosmin-specialist-calibration",
+      "role": "calibration",
+      "headline_topology_claim_allowed": false,
+      "question": "Can independently measured Or56a/DA2 biology and audited downstream wiring reproduce known geosmin-channel phenomena without fitting to the headline behavioral benchmark?",
+      "primary_outputs": ["calibration_error", "pathway_identity_audit", "perturbation_direction_checks"]
+    },
+    {
+      "id": "O002",
+      "name": "multi-odor-representation",
+      "role": "development",
+      "headline_topology_claim_allowed": false,
+      "question": "How do odor identity, concentration, and valence become represented across receptor and downstream olfactory stages?",
+      "primary_outputs": ["odor_identity_decodability", "concentration_generalization", "valence_decodability"]
+    },
+    {
+      "id": "O003",
+      "name": "odor-conflict-temporal-computation",
+      "role": "candidate_flagship",
+      "headline_topology_claim_allowed": true,
+      "question": "Do independently constrained biological wiring and synaptic dynamics explain held-out odor-conflict and time-resolved behavioral responses better than receptor-only, generic, and matched topology controls?",
+      "primary_outputs": ["heldout_behavior_log_loss", "time_resolved_response_error", "paired_topology_effect"]
+    },
+    {
+      "id": "O004",
+      "name": "plume-evidence-to-action",
+      "role": "candidate_flagship_extension",
+      "headline_topology_claim_allowed": true,
+      "question": "Does biological olfactory/navigation circuitry improve held-out plume cue integration and source-directed action under independently calibrated dynamics?",
+      "primary_outputs": ["heldout_navigation_metric", "cue_generalization", "paired_topology_effect"]
+    },
+    {
+      "id": "O005",
+      "name": "engineered-sensor-translation",
+      "role": "engineering_translation",
+      "headline_topology_claim_allowed": false,
+      "question": "Do frozen fly-derived transformations improve odor sensing under concentration, mixture, interferent, drift, and domain shift?",
+      "primary_outputs": ["ood_detection", "ood_classification", "calibration_error", "sensor_efficiency"]
+    }
+  ],
+  "required_model_comparators": [
+    "receptor_only",
+    "static_biological_topology",
+    "biological_topology_plus_independent_physiology",
+    "capacity_matched_generic_model",
+    "matched_topology_nulls"
+  ],
+  "required_topology_null_families": [
+    "directed_degree_preserving",
+    "cell_type_constrained",
+    "hemisphere_constrained",
+    "glomerulus_output_identity_shuffle"
+  ],
+  "confirmatory_policy": {
+    "preferred_topology_null_count": 63,
+    "minimum_topology_null_count": 31,
+    "paired_conditions_required": true,
+    "hidden_final_entropy_required": true,
+    "one_way_final_required": true,
+    "topology_level_inference_required": true,
+    "episode_level_pseudoreplication_forbidden": true,
+    "heldout_conditions_frozen_before_final": true,
+    "prospective_validation_target": "at_least_one_nontrivial_novel_prediction"
+  },
+  "claim_boundaries": [
+    "Connectivity alone does not establish neural dynamics or causal effect strength.",
+    "O001 geosmin presence/absence detection cannot be promoted into the flagship topology-advantage claim.",
+    "Engineering transfer in O005 cannot validate the biological mechanism in O001-O004.",
+    "Modeled neural activity must never be called recorded or measured neural activity.",
+    "A topology advantage supports a constrained computational claim, not a complete simulation of a fly brain."
+  ]
+}

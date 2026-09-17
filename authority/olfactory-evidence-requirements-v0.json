@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "program_id": "olfactory-computation-v0",
+  "confirmatory_execution_status": "blocked_pending_evidence",
+  "authorities": [
+    {
+      "id": "E001_geosmin_receptor_physiology",
+      "required_for": ["O001", "O003"],
+      "evidence_class": "measured_physiology",
+      "subject": "Or56a_geosmin_channel",
+      "requirements": ["odor identity", "concentration or stimulus definition", "response measurement", "experimental provenance"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E002_da2_pathway_identity",
+      "required_for": ["O001", "O003"],
+      "evidence_class": "measured_structure",
+      "subject": "Or56a_DA2_projection_pathway",
+      "requirements": ["dataset snapshot", "body or cell-type identity", "hemisphere", "synapse-level provenance", "cross-dataset mapping uncertainty"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E003_olfactory_connectome_subgraph",
+      "required_for": ["O002", "O003", "O004"],
+      "evidence_class": "measured_structure",
+      "subject": "olfactory_connectome_subgraph",
+      "requirements": ["frozen connectome snapshot", "cell-type membership", "edge weights", "hemisphere", "neuropil", "completeness notes"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E004_synaptic_and_cellular_dynamics",
+      "required_for": ["O003", "O004"],
+      "evidence_class": "measured_physiology",
+      "subject": "PN_to_LHN_and_downstream_dynamics",
+      "requirements": ["target-specific dynamics where available", "adaptation mechanism", "stimulus timing", "cross-dataset uncertainty"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E005_odor_conflict_behavior",
+      "required_for": ["O003"],
+      "evidence_class": "behavioral_output",
+      "subject": "heldout_odor_conflict_behavior",
+      "requirements": ["raw or reconstructable trials", "odor identities", "concentrations", "timing", "animal/sample identity", "preprocessing contract"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E006_odor_panel_receptor_responses",
+      "required_for": ["O002", "O003", "O005"],
+      "evidence_class": "measured_physiology",
+      "subject": "multi_odor_receptor_response_matrix",
+      "requirements": ["raw or source-resolved response values", "odor concentration", "receptor identity", "replicates", "missingness", "assay type"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E007_plume_recordings_and_behavior",
+      "required_for": ["O004"],
+      "evidence_class": "behavioral_output",
+      "subject": "validated_plume_and_navigation_recordings",
+      "requirements": ["physical calibration", "native timebase", "odor cue reconstruction", "sensor geometry", "behavior trajectories"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E008_sensor_translation_dataset",
+      "required_for": ["O005"],
+      "evidence_class": "measured_physiology",
+      "subject": "engineered_sensor_measurements",
+      "requirements": ["independent train/test conditions", "concentration", "interferents", "sensor drift or batch identity", "ground-truth labels"],
+      "status": "unresolved"
+    },
+    {
+      "id": "E009_prospective_validation_plan",
+      "required_for": ["O003", "O004"],
+      "evidence_class": "model_assumption",
+      "subject": "novel_prediction_validation",
+      "requirements": ["prediction frozen before new experiment", "experimental intervention", "primary endpoint", "sample-size rationale", "analysis plan"],
+      "status": "unresolved"
+    }
+  ],
+  "rules": {
+    "all_required_authorities_must_be_content_addressed_before_confirmatory_lock": true,
+    "unresolved_authority_blocks_confirmatory_execution": true,
+    "cross_dataset_evidence_must_be_labeled": true,
+    "predicted_annotation_cannot_be_promoted_to_measured_structure": true,
+    "connectivity_cannot_be_promoted_to_measured_physiology": true
+  }
+}
