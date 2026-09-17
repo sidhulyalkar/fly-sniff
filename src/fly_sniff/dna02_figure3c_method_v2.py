@@ -164,7 +164,7 @@ def alignment_slices(
     if n_samples < 0:
         raise ValueError("n_samples must be non-negative")
     lag_float = sample_rate_hz * lag_ms / 1000.0
-    lag = int(round(lag_float))
+    lag = round(lag_float)
     if abs(lag - lag_float) > 1e-12:
         raise ValueError("alignment must map to an integer sample count")
     if lag >= n_samples and n_samples:
@@ -177,7 +177,7 @@ def nonoverlap_mean_50ms(values: np.ndarray, *, sample_rate_hz: int = 100) -> np
     if x.ndim != 1:
         raise ValueError("window input must be one-dimensional")
     samples_per_window_float = sample_rate_hz * 0.050
-    samples_per_window = int(round(samples_per_window_float))
+    samples_per_window = round(samples_per_window_float)
     if abs(samples_per_window - samples_per_window_float) > 1e-12:
         raise ValueError("50 ms must map to an integer sample count")
     complete = x.size // samples_per_window
