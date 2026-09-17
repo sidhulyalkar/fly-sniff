@@ -5,17 +5,23 @@ on:
     paths:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
+      - "authority/door-e006-source-v0.json"
       - "docs/OLFACTORY_*.md"
       - "src/fly_sniff/olfactory_program.py"
+      - "src/fly_sniff/olfactory_door.py"
       - "tests/test_olfactory_program.py"
+      - "tests/test_olfactory_door.py"
       - ".github/workflows/olfactory-computation.yml"
   push:
     paths:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
+      - "authority/door-e006-source-v0.json"
       - "docs/OLFACTORY_*.md"
       - "src/fly_sniff/olfactory_program.py"
+      - "src/fly_sniff/olfactory_door.py"
       - "tests/test_olfactory_program.py"
+      - "tests/test_olfactory_door.py"
       - ".github/workflows/olfactory-computation.yml"
 
 jobs:
@@ -35,7 +41,14 @@ jobs:
           authority/olfactory-evidence-requirements-v0.json
           --source-registry authority/olfactory-source-registry-v0.json
           --o001 authority/geosmin-o001-development-v0.json
+      - name: Smoke DoOR E006 ingester
+        run: python -m fly_sniff.olfactory_door --help
       - name: Ruff
-        run: ruff check src/fly_sniff/olfactory_program.py tests/test_olfactory_program.py
+        run: >-
+          ruff check
+          src/fly_sniff/olfactory_program.py
+          src/fly_sniff/olfactory_door.py
+          tests/test_olfactory_program.py
+          tests/test_olfactory_door.py
       - name: Focused tests
-        run: pytest -q tests/test_olfactory_program.py
+        run: pytest -q tests/test_olfactory_program.py tests/test_olfactory_door.py

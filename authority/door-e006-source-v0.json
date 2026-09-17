@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "authority_id": "E006_odor_panel_receptor_responses",
+  "source_id": "S002_door_data",
+  "repository": "ropensci/DoOR.data",
+  "commit": "db323a496577c4b4a72b5c2fcd1859e07521ffb5",
+  "tree": "2b673e851cd0760715c1b74d6b3a6035c1af72cd",
+  "checkout_policy": "clean_git_checkout_at_exact_commit",
+  "required_index_git_blobs": {
+    "data/ORs.csv": "b88dc16a9cb417d3fb8587a9434359eee1ecf55c",
+    "data/door_mappings.csv": "2f5d9c6fcac5b450b152401072e6f86a440dfb3a"
+  },
+  "expected_responding_units": 78,
+  "response_file_rule": "data/<responding_unit>.csv for each responding unit listed in data/ORs.csv",
+  "raw_format": {
+    "delimiter": ";",
+    "quotechar": "\"",
+    "r_rownames_column": "unnamed leading column present in data rows but omitted from header",
+    "missing_tokens": ["NA", ""],
+    "odor_metadata_columns": ["Class", "Name", "InChIKey", "CID", "CAS"],
+    "all_remaining_columns": "study_or_assay_specific_response_columns"
+  },
+  "normalization_policy": "none_during_ingestion",
+  "aggregation_policy": "none_during_ingestion",
+  "mapping_policy": "preserve responding-unit identity and separately attach all matching receptor/sensillum/OSN/glomerulus mapping rows from door_mappings.csv",
+  "geosmin_calibration_note": "DoOR ab4B contains Stensmyr.2012.WT and other assay-specific geosmin values. Preserve them by assay. They are not a dose-response curve unless source metadata establish concentrations.",
+  "qualification_requirements": [
+    "exact commit and clean checkout verified",
+    "all 78 responding-unit files present",
+    "Git blob identity of frozen index files verified",
+    "SHA-256 computed for every ingested response file",
+    "R row-name offset validated for every CSV",
+    "study columns preserved without averaging",
+    "missing responses preserved as missingness rather than zero",
+    "response-unit mappings preserved with ambiguity/comments",
+    "normalized long-form artifact and receipt content-addressed",
+    "study-level concentration/assay metadata adjudicated before evidence qualification"
+  ],
+  "status": "source_frozen_ingestion_not_yet_executed"
+}
