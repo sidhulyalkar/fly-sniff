@@ -1,0 +1,258 @@
+{
+  "allowed_next_action": "Seal the behavior-opening receipt and extractor code commit. Do not load numeric yaw until that one-way receipt is qualified.",
+  "authority_order": [
+    "version-of-record Methods and author clarification",
+    "pinned secondary analysis code operating on the released MAT schema",
+    "historical MATLAB code as contextual/sensitivity evidence only"
+  ],
+  "contract_id": "program-a-dna02-figure3c-method-v2",
+  "forbidden_actions": [
+    "change any of the eight primary prominence thresholds after yaw is opened",
+    "flip the right-minus-left or yaw sign because the observed Figure 3 relationship is inconvenient",
+    "choose between primary and /1.5 historical sensitivity using Figure 3 fit quality",
+    "change kinematic preprocessing based on Figure 3 outcome",
+    "drop a2_d_14 because its downstream relationship is inconvenient",
+    "use odor-navigation performance to alter any physiology preprocessing"
+  ],
+  "gates": {
+    "behavior_fields_opened": false,
+    "behavior_opening_allowed": false,
+    "figure3c_statistic_computed": false,
+    "navigation_performance_used": false,
+    "thresholds_frozen": true,
+    "yaw_numeric_values_inspected": false
+  },
+  "remaining_before_behavior_opening": [
+    "implement and test a behavior-opening receipt that binds the exact extractor code commit and consumes the yaw gate exactly once"
+  ],
+  "schema": "fly-sniff-dna02-figure3c-method-contract-v2",
+  "secondary_code_evidence": {
+    "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+    "environment_blob": "a41641b880dae14323e271f795a1278a6e2d8e44",
+    "environment_path": "environment.yml",
+    "gaussian_random_walk": {
+      "function": "gp_smooth",
+      "implementation_policy": "v2 qualifies a source-equivalent deterministic tridiagonal MAP solver from pinned PyMC3 3.6 semantics; the original environment remains provenance, not a runtime requirement",
+      "prior_std": 10000,
+      "smooth_ratio_alpha": 0.2,
+      "source": "a2lib/gp_smooth.py"
+    },
+    "light_smoothing": {
+      "direction": "forward and reversed convolutions averaged",
+      "function": "safe_interp_conv_smooth_ball_data",
+      "kernel": "Gaussian evaluated from -3.5 to +3.5 sigma and normalized",
+      "kernel_len_ball_samples": 5,
+      "pad_len_ball_samples": 20,
+      "source": "a2lib/proc_utils.py",
+      "upsample_factor": 10
+    },
+    "numpy": "1.16.3",
+    "offset_correction": {
+      "offset": "median over selected samples",
+      "operation": "subtract one global offset per experiment",
+      "selection": "samples where abs(diff(processed_yaw, append=0)) < 0.025",
+      "source": "import_preprocess_data.ipynb",
+      "threshold_deg_per_s_per_sample": 0.025
+    },
+    "pymc3": "3.6",
+    "python": "3.7.3",
+    "raw_field_map": {
+      "ephys_A": "left DNa02",
+      "ephys_B": "right DNa02",
+      "yaw": "raw rotational/yaw channel"
+    },
+    "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+    "scipy": "1.2.1",
+    "theano": "1.0.4",
+    "yaw_scale_to_deg_per_s": {
+      "operation": "raw_yaw * 0.000395 / 0.000436",
+      "source": "import_preprocess_data.ipynb"
+    }
+  },
+  "sign_convention": {
+    "authority_note": "sign is frozen from published author clarification plus ipsilateral DNa02 steering results; it may not be flipped after numeric extraction",
+    "expected_relational_sign": "positive predictor corresponds to positive/rightward rotational velocity",
+    "predictor_positive_direction": "right DNa02 minus left DNa02",
+    "published_lab_convention": "clockwise/rightward rotational velocity is positive"
+  },
+  "smoothts_conformance": {
+    "alpha": 0.5,
+    "historical_integral_correction": {
+      "authority": "historical exploratory implementation only",
+      "operation": "divide smoothts output by 1.5",
+      "predeclared_sensitivity": "report a /1.5 firing-rate-scale sensitivity separately; it may not replace the primary method based on Figure 3 outcome",
+      "primary_policy": "do not apply in v2 primary reconstruction because it is absent from the version-of-record method description and occurs in a superseded derivative-threshold spike path",
+      "source_commit": "55e30c19b1a18f601df1803295f0c401aec3c167",
+      "source_path": "calculate_psth_A2.m"
+    },
+    "period_bins": 3,
+    "recurrence": "y[0] = x[0]; y[t] = alpha*x[t] + (1-alpha)*y[t-1] for t>0",
+    "reference_fixture": {
+      "alpha": 0.5,
+      "expected": [
+        1,
+        1.5,
+        2.25,
+        3.125,
+        4.0625
+      ],
+      "input": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "same_length": true
+  },
+  "status": "METHOD_CONTRACT_FROZEN_BEHAVIOR_STILL_SEALED",
+  "threshold_freeze": {
+    "canonical_main_commit": "7faf77ecfc9808c8520c2e3fcf4b3c074b840a42",
+    "manifest_sha256": "1367113491adc3625d52a9fdc7214820677d19495df8c56066aacd991711d082",
+    "receipt_sha256": "a308eb18cef1d5e524243457e5cae3d3caf0803855b43ae722e643548f11aad8",
+    "status": "THRESHOLDS_FROZEN_BEFORE_BEHAVIOR_V2"
+  },
+  "version_of_record": {
+    "alignment_direction": "neural data shifted forward so activity at t is paired with behavior at t+150 ms",
+    "doi": "10.7554/eLife.102230.3",
+    "figure": "Figure 3B-C",
+    "figure_average_bin_ms": 50,
+    "kinematic_preprocessing": "offset correction, 50 ms Gaussian smoothing, then Gaussian-random-walk MAP smoothing before Figure 3 colormap/binning analyses",
+    "neural_to_behavior_alignment_ms": 150,
+    "primary_outcome": "rotational_velocity_deg_per_s",
+    "primary_predictor": "right_firing_rate_hz - left_firing_rate_hz",
+    "smoothing_alpha": 0.5,
+    "smoothing_alpha_formula": "2 / (period_bins + 1)",
+    "smoothing_function": "MATLAB smoothts",
+    "smoothing_method": "exponential",
+    "smoothing_period_bins": 3,
+    "smoothing_window_ms": 30,
+    "spike_bin_ms": 10,
+    "spike_bin_policy": "non-overlapping; integer 10 kHz sample indices map to 100-sample bins",
+    "spike_detection": "relative-prominence peak detection using MATLAB findpeaks"
+  },
+  "windowing_contract": {
+    "alignment_samples_at_100hz": 15,
+    "ball_sampling_rate_hz_expected": 100,
+    "ephys_sampling_rate_hz": 10000,
+    "figure_window_ball_samples_expected": 5,
+    "figure_window_ms": 50,
+    "figure_window_neural_bins": 5,
+    "partial_final_window_policy": "drop incomplete trailing windows",
+    "spike_bin_samples": 100
+  },
+  "prominence_conformance": {
+    "portable_primary_implementation": "scipy.signal.find_peaks with frozen prominence threshold",
+    "qualification_scope": "strict interior local maxima with non-flat peaks",
+    "synthetic_fixtures": [
+      {
+        "signal": [
+          0,
+          1,
+          0
+        ],
+        "expected_peak_indices": [
+          1
+        ],
+        "expected_prominences": [
+          1
+        ]
+      },
+      {
+        "signal": [
+          0,
+          3,
+          1,
+          2,
+          0
+        ],
+        "expected_peak_indices": [
+          1,
+          3
+        ],
+        "expected_prominences": [
+          3,
+          1
+        ]
+      },
+      {
+        "signal": [
+          0,
+          1,
+          0,
+          2,
+          0
+        ],
+        "expected_peak_indices": [
+          1,
+          3
+        ],
+        "expected_prominences": [
+          1,
+          2
+        ]
+      }
+    ],
+    "edge_policy": "endpoint maxima are not accepted as spikes",
+    "plateau_policy": "portable conformance does not assert MATLAB equivalence for flat-topped peaks; extractor must surface any plateau case rather than silently resolving it",
+    "threshold_policy": "the eight frozen project thresholds remain unchanged regardless of conformance outcome"
+  },
+  "gp_map_conformance": {
+    "alpha": 0.2,
+    "derivation": "With find_MAP(vars=[z]), only z is optimized. mu and mu_0 remain at zero test points. The common fixed positive tau cancels between observation precision tau/alpha and random-walk precision tau/(1-alpha). The MAP minimizes sum((y-z)^2) + lambda*sum(diff(z)^2), lambda=alpha/(1-alpha)=0.25.",
+    "linear_system": "(I + 0.25 * D^T D) z = y",
+    "matrix_structure": {
+      "endpoint_diagonal": 1.25,
+      "interior_diagonal": 1.5,
+      "off_diagonal": -0.25
+    },
+    "original_secondary_function": "a2lib/gp_smooth.py::gp_smooth",
+    "pymc3_source": {
+      "commit": "081e7f4a55ce45ef50a03f8062611051d9c00ce8",
+      "distribution_blob": "0dcb6bdb489638ae09c7498f30da8059274b91ec",
+      "distribution_path": "pymc3/distributions/distribution.py",
+      "find_map_blob": "491c38b8502e486d287566e29cbd71c9fe7177b0",
+      "find_map_path": "pymc3/tuning/starting.py",
+      "gaussian_random_walk_blob": "9c5847271ae70ca26f2fef544d806bb58bf968ed",
+      "gaussian_random_walk_path": "pymc3/distributions/timeseries.py",
+      "tag": "v3.6"
+    },
+    "qualification_scope": "source-equivalent MAP trajectory for fixed alpha=0.2 and the original find_MAP(vars=[z]) call; no behavior values were used",
+    "solver_policy": "use a deterministic O(n) tridiagonal solve of the frozen linear system",
+    "synthetic_fixtures": [
+      {
+        "input": [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "expected": [
+          0.142136248948696,
+          0.710681244743482,
+          0.121951219512195,
+          0.021026072329689,
+          0.004205214465938
+        ]
+      },
+      {
+        "input": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "expected": [
+          1.206896551724138,
+          2.03448275862069,
+          3,
+          3.96551724137931,
+          4.793103448275862
+        ]
+      }
+    ]
+  }
+}
