@@ -10,15 +10,18 @@ on:
       - "authority/flywire-da2-e002-v0.json"
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
+      - "scripts/run_olfactory_development_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
+      - "src/fly_sniff/olfactory_o002.py"
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
+      - "tests/test_olfactory_o002.py"
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
@@ -71,6 +74,7 @@ jobs:
         run: |
           fly-sniff-olfactory --help
           fly-sniff-olfactory audit-e006 --help
+          fly-sniff-olfactory run-o002-dev --help
           python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
@@ -78,12 +82,14 @@ jobs:
           src/fly_sniff/olfactory_program.py
           src/fly_sniff/olfactory_door.py
           src/fly_sniff/olfactory_e006_audit.py
+          src/fly_sniff/olfactory_o002.py
           src/fly_sniff/olfactory_cli.py
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
           tests/test_olfactory_e006_audit.py
+          tests/test_olfactory_o002.py
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
