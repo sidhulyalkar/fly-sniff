@@ -32,9 +32,7 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temp_path, path)
 
 
-def _validated_hashed_json(
-    path: Path, *, schema: str, hash_field: str
-) -> dict[str, Any]:
+def _validated_hashed_json(path: Path, *, schema: str, hash_field: str) -> dict[str, Any]:
     payload = json.loads(path.read_text())
     if payload.get("schema") != schema:
         raise ValueError(f"unexpected schema for {path}: {payload.get('schema')!r}")
@@ -52,81 +50,32 @@ def _require_false(payload: dict[str, Any], fields: tuple[str, ...], *, label: s
             raise ValueError(f"{label} violates frozen false flag: {field}")
 
 
-def _evidence_channel_map(
-    evidence: dict[str, Any],
-) -> dict[tuple[str, str], dict[str, Any]]:
+def _channel_map(payload: dict[str, Any], *, label: str) -> dict[tuple[str, str], dict[str, Any]]:
     result: dict[tuple[str, str], dict[str, Any]] = {}
-    for file_item in evidence.get("files", []):
+    for file_item in payload.get("files", []):
         alias = str(file_item["fly_alias"])
         for channel in file_item.get("channels", []):
             key = (alias, str(channel["soma_side"]))
             if key in result:
-                raise ValueError(f"duplicate freeze-evidence channel: {key}")
+                raise ValueError(f"duplicate {label} channel: {key}")
             result[key] = {
                 **channel,
                 "filename": str(file_item["filename"]),
                 "source_sha256": str(file_item["source_sha256"]),
             }
     if len(result) != 8:
-        raise ValueError("freeze evidence must contain exactly eight fly/side channels")
-    return result
-
-
-def _distribution_channel_map(
-    review: dict[str, Any],
-) -> dict[tuple[str, str], dict[str, Any]]:
-    result: dict[tuple[str, str], dict[str, Any]] = {}
-    for file_item in review.get("files", []):
-        alias = str(file_item["fly_alias"])
-        for channel in file_item.get("channels", []):
-            key = (alias, str(channel["soma_side"]))
-            if key in result:
-                raise ValueError(f"duplicate distribution-review channel: {key}")
-            result[key] = {
-                **channel,
-                "filename": str(file_item["filename"]),
-                "source_sha256": str(file_item["source_sha256"]),
-            }
-    if len(result) != 8:
-        raise ValueError("distribution review must contain exactly eight fly/side channels")
+        raise ValueError(f"{label} must contain exactly eight fly/side channels")
     return result
 
 
 def _candidate(channel: dict[str, Any], quantile: float) -> dict[str, Any]:
-    key = str(float(quantile))
     try:
-        return channel["candidates"][key]
+        return channel["candidates"][str(float(quantile))]
     except KeyError as exc:
         raise ValueError(f"freeze evidence lacks q={quantile:g}") from exc
 
 
-def _compact_band(band: dict[str, Any]) -> dict[str, Any]:
-    corr = band["anchor_correlation_quantiles"]
-    amp = band["peak_amplitude_quantiles"]
-    return {
-        "label": str(band["label"]),
-        "total_event_count_descriptive_only": int(band["total_event_count"]),
-        "anchor_correlation_p10": corr["p10"],
-        "anchor_correlation_p50": corr["p50"],
-        "anchor_correlation_fraction_ge_0p90": band[
-            "anchor_correlation_fraction_ge_0p90"
-        ],
-        "anchor_correlation_fraction_ge_0p95": band[
-            "anchor_correlation_fraction_ge_0p95"
-        ],
-        "peak_amplitude_p10": amp["p10"],
-        "peak_amplitude_p50": amp["p50"],
-    }
-
-
-def _distribution_evidence(channel: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "anchor_quantile": float(channel["anchor_quantile"]),
-        "bands": [_compact_band(item) for item in channel["bands"]],
-    }
-
-
-def _candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
+def _candidate_summary(candidate: dict[str, Any]) -> dict[str, float]:
     return {
         "refractory_violation_fraction_lt_1ms": float(
             candidate["refractory_violation_fraction_lt_1ms"]
@@ -140,11 +89,17 @@ def _candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _compact_distribution(channel: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "anchor_quantile": float(channel["anchor_quantile"]),
+        "bands": [dict(band) for band in channel["bands"]],
+    }
+
+
 def _profile_entry(channel: dict[str, Any], quantile: float) -> dict[str, float]:
-    candidate = _candidate(channel, quantile)
     return {
         "prominence_quantile": float(quantile),
-        "threshold": float(candidate["threshold"]),
+        "threshold": float(_candidate(channel, quantile)["threshold"]),
     }
 
 
@@ -152,26 +107,23 @@ def _sensitivity_profiles(
     selected: dict[tuple[str, str], float],
     channels: dict[tuple[str, str], dict[str, Any]],
 ) -> dict[str, dict[str, dict[str, float]]]:
-    profiles: dict[str, dict[str, dict[str, float]]] = {
+    result: dict[str, dict[str, dict[str, float]]] = {
         "lower_one_step": {},
         "primary": {},
         "higher_one_step": {},
     }
     for key in sorted(selected):
         quantile = selected[key]
-        try:
-            index = _Q_ORDER.index(quantile)
-        except ValueError as exc:
-            raise ValueError(f"selected quantile is outside frozen v2 grid: {key}") from exc
+        index = _Q_ORDER.index(quantile)
         label = f"{key[0]}:{key[1]}"
-        profiles["primary"][label] = _profile_entry(channels[key], quantile)
-        profiles["lower_one_step"][label] = _profile_entry(
+        result["lower_one_step"][label] = _profile_entry(
             channels[key], _Q_ORDER[max(0, index - 1)]
         )
-        profiles["higher_one_step"][label] = _profile_entry(
+        result["primary"][label] = _profile_entry(channels[key], quantile)
+        result["higher_one_step"][label] = _profile_entry(
             channels[key], _Q_ORDER[min(len(_Q_ORDER) - 1, index + 1)]
         )
-    return profiles
+    return result
 
 
 def freeze_manifest_v2(
@@ -190,11 +142,17 @@ def freeze_manifest_v2(
         schema="fly-sniff-dna02-threshold-freeze-evidence-v2",
         hash_field="evidence_sha256",
     )
-    distribution_evidence = _validated_hashed_json(
+    distribution = _validated_hashed_json(
         Path(distribution_evidence_path),
         schema="fly-sniff-dna02-threshold-distribution-freeze-evidence-v2",
         hash_field="evidence_sha256",
     )
+    decisions = _validated_hashed_json(
+        Path(decisions_path),
+        schema="fly-sniff-dna02-threshold-decisions-v2",
+        hash_field="decisions_sha256",
+    )
+
     _require_false(
         evidence,
         (
@@ -209,7 +167,7 @@ def freeze_manifest_v2(
         label="freeze evidence",
     )
     _require_false(
-        distribution_evidence,
+        distribution,
         (
             "behavior_fields_loaded",
             "yaw_loaded",
@@ -220,37 +178,6 @@ def freeze_manifest_v2(
         ),
         label="distribution freeze evidence",
     )
-    if distribution_evidence.get("prominence_audit_sha256") != evidence.get(
-        "prominence_audit_sha256"
-    ):
-        raise ValueError("distribution and threshold freeze evidence reference different audits")
-
-    channels = _evidence_channel_map(evidence)
-    review_channels = _distribution_channel_map(distribution_evidence)
-    if set(channels) != set(review_channels):
-        raise ValueError("freeze-evidence and distribution-review channel sets differ")
-    for key in channels:
-        ech = channels[key]
-        rch = review_channels[key]
-        for field in ("filename", "source_sha256", "source_field"):
-            if str(ech[field]) != str(rch[field]):
-                raise ValueError(f"{field} mismatch between evidence sources for {key}")
-
-    decisions = _validated_hashed_json(
-        Path(decisions_path),
-        schema="fly-sniff-dna02-threshold-decisions-v2",
-        hash_field="decisions_sha256",
-    )
-    if decisions.get("prominence_audit_sha256") != evidence.get("prominence_audit_sha256"):
-        raise ValueError("decisions reference a different prominence audit")
-    if decisions.get("threshold_qc_sha256") != evidence.get("parent_threshold_qc_sha256"):
-        raise ValueError("decisions reference a different threshold QC")
-    if decisions.get("distribution_review_sha256") != distribution_evidence.get(
-        "parent_distribution_review_sha256"
-    ):
-        raise ValueError("decisions reference a different distribution review")
-    if decisions.get("event_rate_used_for_selection") is not False:
-        raise ValueError("event rate may not be used for threshold selection")
     _require_false(
         decisions,
         (
@@ -258,9 +185,30 @@ def freeze_manifest_v2(
             "yaw_reviewed",
             "navigation_performance_used",
             "figure3c_statistic_reviewed",
+            "event_rate_used_for_selection",
         ),
         label="threshold decisions",
     )
+
+    if distribution.get("prominence_audit_sha256") != evidence.get("prominence_audit_sha256"):
+        raise ValueError("distribution and threshold freeze evidence reference different audits")
+    if decisions.get("prominence_audit_sha256") != evidence.get("prominence_audit_sha256"):
+        raise ValueError("decisions reference a different prominence audit")
+    if decisions.get("threshold_qc_sha256") != evidence.get("parent_threshold_qc_sha256"):
+        raise ValueError("decisions reference a different threshold QC")
+    if decisions.get("distribution_review_sha256") != distribution.get(
+        "parent_distribution_review_sha256"
+    ):
+        raise ValueError("decisions reference a different distribution review")
+
+    channels = _channel_map(evidence, label="freeze evidence")
+    distribution_channels = _channel_map(distribution, label="distribution evidence")
+    if set(channels) != set(distribution_channels):
+        raise ValueError("threshold and distribution evidence channel sets differ")
+    for key in channels:
+        for field in ("filename", "source_sha256", "source_field"):
+            if str(channels[key][field]) != str(distribution_channels[key][field]):
+                raise ValueError(f"{field} mismatch between evidence sources for {key}")
 
     entries = decisions.get("decisions")
     if not isinstance(entries, list) or len(entries) != 8:
@@ -277,16 +225,16 @@ def freeze_manifest_v2(
             raise ValueError(f"duplicate threshold decision: {key}")
         if key not in channels:
             raise ValueError(f"unknown threshold decision channel: {key}")
-        ech = channels[key]
-        rch = review_channels[key]
+        channel = channels[key]
+        distribution_channel = distribution_channels[key]
         for field in ("filename", "source_sha256", "source_field"):
-            if str(entry[field]) != str(ech[field]):
+            if str(entry[field]) != str(channel[field]):
                 raise ValueError(f"{field} mismatch for {key}")
 
         quantile = float(entry["selected_prominence_quantile"])
         if quantile not in _DISTRIBUTION_Q:
             raise ValueError(f"v2 primary threshold must be distribution-reviewed for {key}")
-        candidate = _candidate(ech, quantile)
+        candidate = _candidate(channel, quantile)
         threshold = float(entry["selected_threshold"])
         if abs(threshold - float(candidate["threshold"])) > 1e-12:
             raise ValueError(f"selected threshold is not the exact audited candidate for {key}")
@@ -303,24 +251,20 @@ def freeze_manifest_v2(
         if len(rationale) < 40:
             raise ValueError(f"rationale must be at least 40 characters for {key}")
 
-        expected_distribution = _distribution_evidence(rch)
-        if entry.get("distribution_evidence") != expected_distribution:
-            raise ValueError(f"distribution evidence mismatch for {key}")
-
         selected[key] = quantile
         frozen.append(
             {
                 "fly_alias": key[0],
                 "soma_side": key[1],
-                "filename": ech["filename"],
-                "source_sha256": ech["source_sha256"],
-                "source_field": ech["source_field"],
+                "filename": channel["filename"],
+                "source_sha256": channel["source_sha256"],
+                "source_field": channel["source_field"],
                 "selected_prominence_quantile": quantile,
                 "selected_threshold": threshold,
                 "selection_basis": basis,
                 "rationale": rationale,
                 "selected_candidate_qc": _candidate_summary(candidate),
-                "distribution_evidence": expected_distribution,
+                "distribution_evidence": _compact_distribution(distribution_channel),
             }
         )
 
@@ -336,10 +280,8 @@ def freeze_manifest_v2(
         "prominence_audit_sha256": evidence["prominence_audit_sha256"],
         "threshold_qc_sha256": evidence["parent_threshold_qc_sha256"],
         "freeze_evidence_sha256": evidence["evidence_sha256"],
-        "distribution_review_sha256": distribution_evidence[
-            "parent_distribution_review_sha256"
-        ],
-        "distribution_freeze_evidence_sha256": distribution_evidence["evidence_sha256"],
+        "distribution_review_sha256": distribution["parent_distribution_review_sha256"],
+        "distribution_freeze_evidence_sha256": distribution["evidence_sha256"],
         "threshold_decisions_sha256": decisions["decisions_sha256"],
         "reviewer": reviewer,
         "adjudication_method": decisions["adjudication_method"],
@@ -350,9 +292,7 @@ def freeze_manifest_v2(
         "event_rate_used_for_selection": False,
         "thresholds_frozen": True,
         "threshold_count": 8,
-        "thresholds": sorted(
-            frozen, key=lambda item: (item["fly_alias"], item["soma_side"])
-        ),
+        "thresholds": sorted(frozen, key=lambda item: (item["fly_alias"], item["soma_side"])),
         "pre_behavior_sensitivity_profiles": _sensitivity_profiles(selected, channels),
         "sensitivity_policy": (
             "Primary, one-step-lower, and one-step-higher prominence profiles are frozen "
@@ -377,9 +317,7 @@ def freeze_manifest_v2(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Freeze eight DNa02 thresholds after the individual-waveform distribution gate"
-        )
+        description="Freeze eight DNa02 thresholds after the individual-waveform distribution gate"
     )
     parser.add_argument("--freeze-evidence", required=True)
     parser.add_argument("--distribution-evidence", required=True)
