@@ -1,5 +1,5 @@
 {
-  "allowed_next_action": "Implement and qualify the transform-only Figure 3C extractor skeleton plus the pinned-environment kinematic-conformance harness without loading yaw numeric values.",
+  "allowed_next_action": "Seal the behavior-opening receipt and extractor code commit. Do not load numeric yaw until that one-way receipt is qualified.",
   "authority_order": [
     "version-of-record Methods and author clarification",
     "pinned secondary analysis code operating on the released MAT schema",
@@ -23,7 +23,6 @@
     "yaw_numeric_values_inspected": false
   },
   "remaining_before_behavior_opening": [
-    "qualify the pinned PyMC3/Theano gaussian-random-walk smoother numerically, or execute the original pinned environment",
     "implement and test a behavior-opening receipt that binds the exact extractor code commit and consumes the yaw gate exactly once"
   ],
   "schema": "fly-sniff-dna02-figure3c-method-contract-v2",
@@ -33,7 +32,7 @@
     "environment_path": "environment.yml",
     "gaussian_random_walk": {
       "function": "gp_smooth",
-      "implementation_policy": "for exact reproduction, run or numerically qualify against the pinned PyMC3/Theano environment before substituting a modern closed-form/alternative implementation",
+      "implementation_policy": "v2 qualifies a source-equivalent deterministic tridiagonal MAP solver from pinned PyMC3 3.6 semantics; the original environment remains provenance, not a runtime requirement",
       "prior_std": 10000,
       "smooth_ratio_alpha": 0.2,
       "source": "a2lib/gp_smooth.py"
@@ -198,5 +197,62 @@
     "edge_policy": "endpoint maxima are not accepted as spikes",
     "plateau_policy": "portable conformance does not assert MATLAB equivalence for flat-topped peaks; extractor must surface any plateau case rather than silently resolving it",
     "threshold_policy": "the eight frozen project thresholds remain unchanged regardless of conformance outcome"
+  },
+  "gp_map_conformance": {
+    "alpha": 0.2,
+    "derivation": "With find_MAP(vars=[z]), only z is optimized. mu and mu_0 remain at zero test points. The common fixed positive tau cancels between observation precision tau/alpha and random-walk precision tau/(1-alpha). The MAP minimizes sum((y-z)^2) + lambda*sum(diff(z)^2), lambda=alpha/(1-alpha)=0.25.",
+    "linear_system": "(I + 0.25 * D^T D) z = y",
+    "matrix_structure": {
+      "endpoint_diagonal": 1.25,
+      "interior_diagonal": 1.5,
+      "off_diagonal": -0.25
+    },
+    "original_secondary_function": "a2lib/gp_smooth.py::gp_smooth",
+    "pymc3_source": {
+      "commit": "081e7f4a55ce45ef50a03f8062611051d9c00ce8",
+      "distribution_blob": "0dcb6bdb489638ae09c7498f30da8059274b91ec",
+      "distribution_path": "pymc3/distributions/distribution.py",
+      "find_map_blob": "491c38b8502e486d287566e29cbd71c9fe7177b0",
+      "find_map_path": "pymc3/tuning/starting.py",
+      "gaussian_random_walk_blob": "9c5847271ae70ca26f2fef544d806bb58bf968ed",
+      "gaussian_random_walk_path": "pymc3/distributions/timeseries.py",
+      "tag": "v3.6"
+    },
+    "qualification_scope": "source-equivalent MAP trajectory for fixed alpha=0.2 and the original find_MAP(vars=[z]) call; no behavior values were used",
+    "solver_policy": "use a deterministic O(n) tridiagonal solve of the frozen linear system",
+    "synthetic_fixtures": [
+      {
+        "input": [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "expected": [
+          0.142136248948696,
+          0.710681244743482,
+          0.121951219512195,
+          0.021026072329689,
+          0.004205214465938
+        ]
+      },
+      {
+        "input": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "expected": [
+          1.206896551724138,
+          2.03448275862069,
+          3,
+          3.96551724137931,
+          4.793103448275862
+        ]
+      }
+    ]
   }
 }
