@@ -1,10 +1,16 @@
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from fly_sniff.olfactory_door import sha256_file
-from fly_sniff.olfactory_e006_audit import _canonical_sha, _mapping_summary, _validate_receipt
+from fly_sniff.olfactory_e006_audit import (
+    _canonical_sha,
+    _development_subset_candidates,
+    _mapping_summary,
+    _validate_receipt,
+)
 
 
 def test_mapping_summary_preserves_one_to_many_identity() -> None:
@@ -22,6 +28,37 @@ def test_mapping_summary_preserves_one_to_many_identity() -> None:
     assert report["multiple_mapping_units"] == ["ab4B"]
     assert report["multiple_mapping_count"] == 1
     assert len(report["multiple_mapping_records"]["ab4B"]) == 3
+
+
+def test_development_subset_selection_is_performance_blind() -> None:
+    joined = pd.DataFrame(
+        [
+            {
+                "study_id": "Hallem.2006.EN",
+                "observed_cells": 2664,
+                "responding_units": 24,
+                "odor_names": 111,
+                "technique": "electrophysiology",
+                "data.type": "spikes",
+                "concentration": "10^-2",
+                "DOI": "10.1016/j.cell.2006.01.050",
+            },
+            {
+                "study_id": "Large.But.No.Concentration",
+                "observed_cells": 9999,
+                "responding_units": 50,
+                "odor_names": 500,
+                "technique": "electrophysiology",
+                "data.type": "spikes",
+                "concentration": "",
+                "DOI": "",
+            },
+        ]
+    )
+    report = _development_subset_candidates(joined)
+    assert report["rule"]["performance_blind"] is True
+    assert report["default_development_subset"]["study_id"] == "Hallem.2006.EN"
+    assert [row["study_id"] for row in report["candidates"]] == ["Hallem.2006.EN"]
 
 
 def _write_receipt(tmp_path: Path) -> Path:
