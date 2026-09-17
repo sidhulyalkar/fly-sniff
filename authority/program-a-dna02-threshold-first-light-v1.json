@@ -1,0 +1,27 @@
+{
+  "adjudication_code_ref": "6cf5cb9e17ad617b0673190b44560af7c97544a8",
+  "automatic_threshold_selection": false,
+  "behavior_fields_reviewed": false,
+  "figure3c_statistic_reviewed": false,
+  "forbidden_actions": [
+    "freeze a threshold because it gives an expected firing rate",
+    "open yaw or compute Figure 3C to break a threshold tie",
+    "use navigation performance to select or revise a threshold",
+    "substitute a historical preprocessing implementation for the version-of-record Figure 3B-C method without explicit authority adjudication"
+  ],
+  "navigation_performance_used": false,
+  "next_allowed_action": "Render deterministic raw-window detections at q0.995, q0.999, and q0.9995 plus waveform-family overlays from the frozen QC. Keep behavior, Figure 3C fit, and navigation sealed.",
+  "observations": [
+    "The ephys-only QC is internally content-addressed and preserves the behavior firewall.",
+    "Several channels show a material waveform-amplitude/stereotypy transition above q0.995 in the numeric QC.",
+    "The v1 raw-window renderer anchors only the first, middle, and last candidates; with seven candidates this shows q0.95, q0.995, and q0.9999, leaving q0.999 and q0.9995 unvisualized.",
+    "The existing evidence is therefore insufficient to freeze all eight thresholds without an additional neural-only visual comparison."
+  ],
+  "prominence_audit_sha256": "4c421c803a696c5193b645412f674875c0746509043b835b11b8501d49fc2c9a",
+  "receipt_sha256": "b49184ffb816014d3864b0305ecde2c3d195c6b26fb3d0f887e8017e6762bec0",
+  "schema": "fly-sniff-dna02-threshold-first-light-v1",
+  "status": "BLOCKED_PENDING_HIGH_THRESHOLD_VISUAL_REVIEW",
+  "threshold_qc_sha256": "da7b8d837c5c8116847a9f58b281516500bf7f7bbb775d5a8f0aea783c864958",
+  "thresholds_frozen": false,
+  "yaw_reviewed": false
+}
