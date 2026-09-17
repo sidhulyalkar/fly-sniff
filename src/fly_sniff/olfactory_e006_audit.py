@@ -19,6 +19,11 @@ from .olfactory_door import (
 SENSITIVE_PREFIXES = ("authority/", "src/", "tests/", "scripts/", ".github/")
 SENSITIVE_FILES = {"pyproject.toml"}
 
+DATASET_INFO_ALIASES = {
+    "Muench.2016.AntGC1": "Muench.2015.AntGC1",
+    "Muench.2016.AntGC3": "Muench.2015.AntGC3",
+}
+
 
 def _canonical_sha(payload: Any) -> str:
     return hashlib.sha256(
@@ -94,40 +99,43 @@ def _validate_receipt(artifact_dir: Path) -> dict[str, Any]:
 
 def _coverage_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     observed = df["response_status"].eq("observed")
+    annotated = df.assign(
+        observed=observed,
+        observed_unit=df["responding_unit"].where(observed),
+        observed_odor=df["odor_name"].where(observed),
+        observed_study=df["study_id"].where(observed),
+    )
     study = (
-        df.assign(observed=observed)
-        .groupby("study_id")
+        annotated.groupby("study_id")
         .agg(
             cells=("observed", "size"),
             observed_cells=("observed", "sum"),
             observed_fraction=("observed", "mean"),
-            responding_units=("responding_unit", "nunique"),
-            odor_names=("odor_name", "nunique"),
+            responding_units=("observed_unit", "nunique"),
+            odor_names=("observed_odor", "nunique"),
         )
         .sort_values(["observed_cells", "observed_fraction"], ascending=False)
     )
     units = (
-        df.assign(observed=observed)
-        .groupby("responding_unit")
+        annotated.groupby("responding_unit")
         .agg(
             cells=("observed", "size"),
             observed_cells=("observed", "sum"),
             observed_fraction=("observed", "mean"),
-            studies=("study_id", "nunique"),
-            odor_names=("odor_name", "nunique"),
+            studies=("observed_study", "nunique"),
+            odor_names=("observed_odor", "nunique"),
         )
         .sort_values("observed_cells", ascending=False)
     )
     odors = (
-        df[df["odor_name"].notna()]
-        .assign(observed=lambda x: x["response_status"].eq("observed"))
+        annotated[annotated["odor_name"].notna()]
         .groupby("odor_name")
         .agg(
             cells=("observed", "size"),
             observed_cells=("observed", "sum"),
             observed_fraction=("observed", "mean"),
-            responding_units=("responding_unit", "nunique"),
-            studies=("study_id", "nunique"),
+            responding_units=("observed_unit", "nunique"),
+            studies=("observed_study", "nunique"),
         )
         .sort_values("observed_cells", ascending=False)
     )
@@ -175,23 +183,38 @@ def _dataset_metadata(door: Path, study: pd.DataFrame) -> tuple[pd.DataFrame, di
     path = door / "data" / "door_dataset_info.csv"
     _, rows = read_r_csv2(path)
     metadata = pd.DataFrame(rows)
+    metadata["response_study_id"] = metadata["dataset"].astype(str)
+    reverse_aliases = {metadata_id: response_id for response_id, metadata_id in DATASET_INFO_ALIASES.items()}
+    metadata["response_study_id"] = metadata["response_study_id"].replace(reverse_aliases)
+
     response_studies = set(map(str, study.index.tolist()))
-    metadata_studies = set(metadata["dataset"].astype(str))
+    metadata_studies = set(metadata["response_study_id"].astype(str))
     missing = sorted(response_studies - metadata_studies)
     extra = sorted(metadata_studies - response_studies)
 
     joined = study.reset_index().merge(
         metadata,
         left_on="study_id",
-        right_on="dataset",
+        right_on="response_study_id",
         how="left",
         validate="one_to_one",
     )
+
+    resolved_aliases = {
+        response_id: metadata_id
+        for response_id, metadata_id in DATASET_INFO_ALIASES.items()
+        if response_id in response_studies and metadata_id in set(metadata["dataset"].astype(str))
+    }
     return joined, {
         "source_path": "data/door_dataset_info.csv",
         "source_sha256": sha256_file(path),
         "response_studies": len(response_studies),
         "metadata_studies": len(metadata_studies),
+        "resolved_source_aliases": resolved_aliases,
+        "alias_policy": (
+            "Only explicit aliases frozen in code are allowed. Aliases reconcile identifiers within the "
+            "same pinned DoOR source tree and never make different studies scientifically commensurable."
+        ),
         "missing_metadata_for_response_studies": missing,
         "metadata_rows_without_response_study": extra,
         "complete_join": not missing,
@@ -299,7 +322,7 @@ def audit_e006(
         json.dumps(mapping_report["multiple_mapping_records"], indent=2, sort_keys=True) + "\n"
     )
 
-    response_cells = int(len(df))
+    response_cells = len(df)
     observed_cells = int(observed.sum())
     missing_cells = response_cells - observed_cells
     observed_fraction = float(observed.mean()) if response_cells else 0.0
@@ -323,16 +346,14 @@ def audit_e006(
                 ),
             }
         )
-    if mapping_report["multiple_mapping_count"]:
-        blockers.append(
-            {
-                "id": "one_to_many_responding_unit_identity",
-                "reason": (
-                    f"{mapping_report['multiple_mapping_count']} responding units have multiple receptor/"
-                    "OSN/glomerulus mapping records; receptor-level collapse requires a frozen identity policy."
-                ),
-            }
-        )
+    identity_notice = {
+        "id": "one_to_many_responding_unit_identity",
+        "reason": (
+            f"{mapping_report['multiple_mapping_count']} responding units have multiple receptor/"
+            "OSN/glomerulus mapping records. O002 development is restricted to source responding-unit "
+            "features, so no receptor-level identity is inferred or collapsed."
+        ),
+    }
     if not provenance["scientific_tree_clean"]:
         blockers.append(
             {
@@ -349,6 +370,8 @@ def audit_e006(
         "status": "BLOCKED_METADATA_ADJUDICATION",
         "development_analysis_allowed": True,
         "within_study_development_subset_allowed": bool(subsets["default_development_subset"]),
+        "development_feature_identity": "source_responding_unit",
+        "identity_notice": identity_notice,
         "global_cross_study_matrix_allowed": False,
         "receptor_level_identity_collapse_allowed": False,
         "confirmatory_use_allowed": False,
@@ -356,7 +379,7 @@ def audit_e006(
         "allowed_next_actions": [
             "run the frozen performance-blind within-study development subset",
             "adjudicate exact study-ID metadata mismatches",
-            "freeze a responding-unit identity policy without downstream model performance",
+            "retain source responding-unit identities for O002 development; separately adjudicate receptor-level mappings before receptor-specific claims",
             "qualify assay/concentration provenance before any cross-study synthesis",
         ],
         "forbidden_next_actions": [
@@ -390,7 +413,7 @@ def audit_e006(
             "missing_cells": missing_cells,
             "observed_fraction": observed_fraction,
             "missing_fraction": 1.0 - observed_fraction,
-            "geosmin_observed_cells": int(len(geosmin)),
+            "geosmin_observed_cells": len(geosmin),
             "multiple_mapping_units": mapping_report["multiple_mapping_count"],
         },
         "mapping": {
