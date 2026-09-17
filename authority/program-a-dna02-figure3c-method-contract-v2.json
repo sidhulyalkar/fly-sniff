@@ -1,0 +1,148 @@
+{
+  "allowed_next_action": "Implement and qualify the transform-only Figure 3C extractor skeleton plus the pinned-environment kinematic-conformance harness without loading yaw numeric values.",
+  "authority_order": [
+    "version-of-record Methods and author clarification",
+    "pinned secondary analysis code operating on the released MAT schema",
+    "historical MATLAB code as contextual/sensitivity evidence only"
+  ],
+  "contract_id": "program-a-dna02-figure3c-method-v2",
+  "forbidden_actions": [
+    "change any of the eight primary prominence thresholds after yaw is opened",
+    "flip the right-minus-left or yaw sign because the observed Figure 3 relationship is inconvenient",
+    "choose between primary and /1.5 historical sensitivity using Figure 3 fit quality",
+    "change kinematic preprocessing based on Figure 3 outcome",
+    "drop a2_d_14 because its downstream relationship is inconvenient",
+    "use odor-navigation performance to alter any physiology preprocessing"
+  ],
+  "gates": {
+    "behavior_fields_opened": false,
+    "behavior_opening_allowed": false,
+    "figure3c_statistic_computed": false,
+    "navigation_performance_used": false,
+    "thresholds_frozen": true,
+    "yaw_numeric_values_inspected": false
+  },
+  "remaining_before_behavior_opening": [
+    "qualify the pinned PyMC3/Theano gaussian-random-walk smoother numerically, or execute the original pinned environment",
+    "qualify portable SciPy prominence detections against MATLAB-style prominence semantics on synthetic fixtures; project thresholds remain fixed regardless",
+    "implement deterministic transform-only tests for 10 ms binning, EMA recurrence, 150 ms alignment, 50 ms windowing, and sign without loading yaw",
+    "seal an extractor code commit and consume the behavior-opening gate exactly once"
+  ],
+  "schema": "fly-sniff-dna02-figure3c-method-contract-v2",
+  "secondary_code_evidence": {
+    "commit": "7e2895349266b5cc5fa1bf53ad56e8ecc6c842e8",
+    "environment_blob": "a41641b880dae14323e271f795a1278a6e2d8e44",
+    "environment_path": "environment.yml",
+    "gaussian_random_walk": {
+      "function": "gp_smooth",
+      "implementation_policy": "for exact reproduction, run or numerically qualify against the pinned PyMC3/Theano environment before substituting a modern closed-form/alternative implementation",
+      "prior_std": 10000,
+      "smooth_ratio_alpha": 0.2,
+      "source": "a2lib/gp_smooth.py"
+    },
+    "light_smoothing": {
+      "direction": "forward and reversed convolutions averaged",
+      "function": "safe_interp_conv_smooth_ball_data",
+      "kernel": "Gaussian evaluated from -3.5 to +3.5 sigma and normalized",
+      "kernel_len_ball_samples": 5,
+      "pad_len_ball_samples": 20,
+      "source": "a2lib/proc_utils.py",
+      "upsample_factor": 10
+    },
+    "numpy": "1.16.3",
+    "offset_correction": {
+      "offset": "median over selected samples",
+      "operation": "subtract one global offset per experiment",
+      "selection": "samples where abs(diff(processed_yaw, append=0)) < 0.025",
+      "source": "import_preprocess_data.ipynb",
+      "threshold_deg_per_s_per_sample": 0.025
+    },
+    "pymc3": "3.6",
+    "python": "3.7.3",
+    "raw_field_map": {
+      "ephys_A": "left DNa02",
+      "ephys_B": "right DNa02",
+      "yaw": "raw rotational/yaw channel"
+    },
+    "repository": "wilson-lab/rayshubskiy_elife_102230_secondary_analysis_code",
+    "scipy": "1.2.1",
+    "theano": "1.0.4",
+    "yaw_scale_to_deg_per_s": {
+      "operation": "raw_yaw * 0.000395 / 0.000436",
+      "source": "import_preprocess_data.ipynb"
+    }
+  },
+  "sign_convention": {
+    "authority_note": "sign is frozen from published author clarification plus ipsilateral DNa02 steering results; it may not be flipped after numeric extraction",
+    "expected_relational_sign": "positive predictor corresponds to positive/rightward rotational velocity",
+    "predictor_positive_direction": "right DNa02 minus left DNa02",
+    "published_lab_convention": "clockwise/rightward rotational velocity is positive"
+  },
+  "smoothts_conformance": {
+    "alpha": 0.5,
+    "historical_integral_correction": {
+      "authority": "historical exploratory implementation only",
+      "operation": "divide smoothts output by 1.5",
+      "predeclared_sensitivity": "report a /1.5 firing-rate-scale sensitivity separately; it may not replace the primary method based on Figure 3 outcome",
+      "primary_policy": "do not apply in v2 primary reconstruction because it is absent from the version-of-record method description and occurs in a superseded derivative-threshold spike path",
+      "source_commit": "55e30c19b1a18f601df1803295f0c401aec3c167",
+      "source_path": "calculate_psth_A2.m"
+    },
+    "period_bins": 3,
+    "recurrence": "y[0] = x[0]; y[t] = alpha*x[t] + (1-alpha)*y[t-1] for t>0",
+    "reference_fixture": {
+      "alpha": 0.5,
+      "expected": [
+        1,
+        1.5,
+        2.25,
+        3.125,
+        4.0625
+      ],
+      "input": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "same_length": true
+  },
+  "status": "METHOD_CONTRACT_FROZEN_BEHAVIOR_STILL_SEALED",
+  "threshold_freeze": {
+    "canonical_main_commit": "7faf77ecfc9808c8520c2e3fcf4b3c074b840a42",
+    "manifest_sha256": "1367113491adc3625d52a9fdc7214820677d19495df8c56066aacd991711d082",
+    "receipt_sha256": "a308eb18cef1d5e524243457e5cae3d3caf0803855b43ae722e643548f11aad8",
+    "status": "THRESHOLDS_FROZEN_BEFORE_BEHAVIOR_V2"
+  },
+  "version_of_record": {
+    "alignment_direction": "neural data shifted forward so activity at t is paired with behavior at t+150 ms",
+    "doi": "10.7554/eLife.102230.3",
+    "figure": "Figure 3B-C",
+    "figure_average_bin_ms": 50,
+    "kinematic_preprocessing": "offset correction, 50 ms Gaussian smoothing, then Gaussian-random-walk MAP smoothing before Figure 3 colormap/binning analyses",
+    "neural_to_behavior_alignment_ms": 150,
+    "primary_outcome": "rotational_velocity_deg_per_s",
+    "primary_predictor": "right_firing_rate_hz - left_firing_rate_hz",
+    "smoothing_alpha": 0.5,
+    "smoothing_alpha_formula": "2 / (period_bins + 1)",
+    "smoothing_function": "MATLAB smoothts",
+    "smoothing_method": "exponential",
+    "smoothing_period_bins": 3,
+    "smoothing_window_ms": 30,
+    "spike_bin_ms": 10,
+    "spike_bin_policy": "non-overlapping; integer 10 kHz sample indices map to 100-sample bins",
+    "spike_detection": "relative-prominence peak detection using MATLAB findpeaks"
+  },
+  "windowing_contract": {
+    "alignment_samples_at_100hz": 15,
+    "ball_sampling_rate_hz_expected": 100,
+    "ephys_sampling_rate_hz": 10000,
+    "figure_window_ball_samples_expected": 5,
+    "figure_window_ms": 50,
+    "figure_window_neural_bins": 5,
+    "partial_final_window_policy": "drop incomplete trailing windows",
+    "spike_bin_samples": 100
+  }
+}
