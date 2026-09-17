@@ -8,6 +8,7 @@ from typing import Any
 from .olfactory_door import ingest_door, validate_source_authority
 from .olfactory_e006_audit import audit_e006
 from .olfactory_geosmin import validate_geosmin_evidence
+from .olfactory_o002 import run_o002_development
 from .olfactory_program import validate_study
 from .olfactory_structure import validate_da2_authority
 
@@ -145,6 +146,37 @@ def _e006_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _o002_command(args: argparse.Namespace) -> int:
+    report = run_o002_development(
+        args.artifact_dir,
+        audit_path=args.audit,
+        output_dir=args.output,
+        study_id=args.study,
+    )
+    print(
+        json.dumps(
+            {
+                "status": report["status"],
+                "study": report["selected_study"]["study_id"],
+                "receipt_sha256": report["receipt_sha256"],
+                "matrix": report["matrix"],
+                "pca": report["pca"],
+                "geometry_stability": {
+                    key: value
+                    for key, value in report["geometry_stability"].items()
+                    if key != "per_unit"
+                },
+                "chemical_class_probe": report["chemical_class_probe"],
+                "output": str(Path(args.output).expanduser().resolve()),
+                "claim_boundary": report["claim_boundary"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="fly-sniff-olfactory",
@@ -185,6 +217,19 @@ def main() -> None:
     e006.add_argument("--door-checkout", required=True, help="exact pinned clean DoOR checkout")
     e006.add_argument("--output", required=True, help="directory for audit outputs")
     e006.set_defaults(func=_e006_audit_command)
+
+    o002 = sub.add_parser(
+        "run-o002-dev",
+        help="run frozen performance-blind within-study O002 representation development",
+    )
+    o002.add_argument("artifact_dir", help="directory containing the audited E006 ingestion")
+    o002.add_argument("--audit", required=True, help="path to e006-audit.json")
+    o002.add_argument("--output", required=True, help="new output directory")
+    o002.add_argument(
+        "--study",
+        help="optional frozen candidate study id; defaults to audit-selected development subset",
+    )
+    o002.set_defaults(func=_o002_command)
 
     args = parser.parse_args()
     raise SystemExit(args.func(args))
