@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from fly_sniff.freeze import canonical_sha256
 
 
-RECEIPT = Path("authority/program-a-dna02-threshold-first-light-v1.json")
+RECEIPT = "authority/program-a-dna02-threshold-first-light-v1.json"
 
 
 def test_threshold_first_light_receipt_is_content_addressed_and_blocked() -> None:
-    payload = json.loads(RECEIPT.read_text())
+    with open(RECEIPT, encoding="utf-8") as handle:
+        payload = json.load(handle)
     observed = payload.pop("receipt_sha256")
     assert observed == canonical_sha256(payload)
     assert payload["schema"] == "fly-sniff-dna02-threshold-first-light-v1"
