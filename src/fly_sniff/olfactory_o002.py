@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -272,7 +271,7 @@ def _chemical_class_probe(
         "minimum_class_count": MIN_CLASS_COUNT,
         "eligible_classes": eligible_classes,
         "class_counts": {label: int(counts[label]) for label in eligible_classes},
-        "eligible_odors": int(len(y)),
+        "eligible_odors": len(y),
         "balanced_accuracy": observed_score,
         "permutation_count": PERMUTATION_COUNT,
         "permutation_seed": PERMUTATION_SEED,
