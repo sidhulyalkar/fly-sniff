@@ -66,6 +66,7 @@ fly-sniff-dna02-threshold-adjudicate = "fly_sniff.dna02_threshold_adjudication:m
 fly-sniff-dna02-threshold-waveform-review = "fly_sniff.dna02_threshold_waveform_review:main"
 fly-sniff-dna02-threshold-distribution-review = "fly_sniff.dna02_threshold_distribution_review:main"
 fly-sniff-dna02-threshold-freeze = "fly_sniff.dna02_threshold_manifest:main"
+fly-sniff-dna02-figure3c-method = "fly_sniff.dna02_figure3c_method:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
