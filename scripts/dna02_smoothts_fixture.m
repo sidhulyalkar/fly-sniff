@@ -6,7 +6,7 @@ function dna02_smoothts_fixture(output_path)
 % so Python reproduction code can be qualified against actual MATLAB
 % behavior before Figure 3C behavior is opened.
 
-if nargin < 1 || strlength(string(output_path)) == 0
+if nargin < 1 || isempty(output_path)
     output_path = fullfile('data', 'cache', 'dna02-smoothts-fixture-v1', ...
         'smoothts-fixture-v1.json');
 end
@@ -15,6 +15,11 @@ if exist('smoothts', 'file') == 0
     error('fly_sniff:smoothts_missing', ...
         ['smoothts is not available on the MATLAB path. ', ...
          'Install/use a MATLAB release with Financial Toolbox smoothts support.']);
+end
+
+if exist('jsonencode', 'builtin') == 0 && exist('jsonencode', 'file') == 0
+    error('fly_sniff:jsonencode_missing', ...
+        'This fixture requires a MATLAB release that provides jsonencode.');
 end
 
 out_dir = fileparts(output_path);
@@ -105,14 +110,14 @@ fixture.interpretation_boundary = [ ...
     'or decide whether the historical /1.5 correction belongs to the final pipeline.' ...
 ];
 
-encoded = jsonencode(fixture, 'PrettyPrint', true);
+encoded = jsonencode(fixture);
 fid = fopen(output_path, 'w');
 if fid < 0
     error('fly_sniff:fixture_write_failed', 'Could not open output path: %s', output_path);
 end
 cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
 fwrite(fid, encoded, 'char');
-fwrite(fid, newline, 'char');
+fwrite(fid, sprintf('\n'), 'char');
 
 fprintf('Wrote synthetic smoothts fixture: %s\n', output_path);
 fprintf('max |period-3 - alpha-0.5| = %.17g\n', max_period_alpha_difference);
