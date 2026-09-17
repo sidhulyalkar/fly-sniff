@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .olfactory_door import ingest_door, validate_source_authority
+from .olfactory_e006_audit import audit_e006
 from .olfactory_geosmin import validate_geosmin_evidence
 from .olfactory_program import validate_study
 from .olfactory_structure import validate_da2_authority
@@ -119,6 +120,31 @@ def _door_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _e006_audit_command(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    report = audit_e006(
+        args.artifact_dir,
+        door_checkout=args.door_checkout,
+        repo_root=root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": report["gate"]["status"],
+                "audit_sha256": report["audit_sha256"],
+                "summary": report["summary"],
+                "blockers": report["gate"]["blockers"],
+                "output": str(Path(args.output).expanduser().resolve()),
+                "claim_boundary": report["claim_boundary"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="fly-sniff-olfactory",
@@ -150,6 +176,15 @@ def main() -> None:
     door.add_argument("--output", required=True)
     door.add_argument("--authority")
     door.set_defaults(func=_door_command)
+
+    e006 = sub.add_parser(
+        "audit-e006",
+        help="run the complete fail-closed E006 provenance, coverage, scale, and identity audit",
+    )
+    e006.add_argument("artifact_dir", help="directory containing door-e006-receipt.json")
+    e006.add_argument("--door-checkout", required=True, help="exact pinned clean DoOR checkout")
+    e006.add_argument("--output", required=True, help="directory for audit outputs")
+    e006.set_defaults(func=_e006_audit_command)
 
     args = parser.parse_args()
     raise SystemExit(args.func(args))
