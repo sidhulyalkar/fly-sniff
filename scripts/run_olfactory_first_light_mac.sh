@@ -14,6 +14,8 @@ DATA_ROOT="${FLY_SNIFF_DATA_DIR:-${HOME}/fly-sniff-data}"
 DOOR_ROOT="${FLY_SNIFF_DOOR_DIR:-${DATA_ROOT}/DoOR.data}"
 DOOR_COMMIT="db323a496577c4b4a72b5c2fcd1859e07521ffb5"
 OUT_ROOT="${FLY_SNIFF_OUTPUT_DIR:-${DATA_ROOT}/artifacts/e006-door-${DOOR_COMMIT:0:12}}"
+CODE_REF="$(git rev-parse HEAD)"
+AUDIT_ROOT="${FLY_SNIFF_AUDIT_DIR:-${DATA_ROOT}/artifacts/e006-audit-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}}"
 
 if ! "${PYTHON_BIN}" - <<'PY'
 import sys
@@ -26,17 +28,24 @@ fi
 
 if [[ ! -d "${VENV}" ]]; then
   "${PYTHON_BIN}" -m venv "${VENV}"
+  source "${VENV}/bin/activate"
+  python -m pip install --upgrade pip
+  python -m pip install -e '.[dev]'
+else
+  source "${VENV}/bin/activate"
+  if [[ "${FLY_SNIFF_REFRESH_ENV:-0}" == "1" ]] || ! command -v fly-sniff-olfactory >/dev/null 2>&1; then
+    python -m pip install -e '.[dev]'
+  fi
 fi
-source "${VENV}/bin/activate"
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
 
 printf '\n== Focused scientific-regression tests ==\n'
 python -m pytest -q \
   tests/test_olfactory_program.py \
   tests/test_olfactory_geosmin.py \
   tests/test_olfactory_structure.py \
-  tests/test_olfactory_door.py
+  tests/test_olfactory_door.py \
+  tests/test_olfactory_e006_audit.py \
+  tests/test_olfactory_cli.py
 
 printf '\n== Study preflight ==\n'
 fly-sniff-olfactory --root "${ROOT}" status
@@ -70,53 +79,53 @@ fi
 
 printf '\n== E006 source-resolved DoOR ingestion ==\n'
 if [[ -d "${OUT_ROOT}" ]] && [[ -n "$(find "${OUT_ROOT}" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
-  echo "Existing non-empty output found: ${OUT_ROOT}"
-  echo "Not overwriting it. Set FLY_SNIFF_OUTPUT_DIR to a new directory to create another receipt."
+  echo "Existing immutable ingestion found: ${OUT_ROOT}"
+  echo "The audit will verify its receipt and content hashes before using it."
 else
   fly-sniff-olfactory --root "${ROOT}" ingest-door \
     "${DOOR_ROOT}" \
     --output "${OUT_ROOT}"
 fi
 
-printf '\n== Artifact summary ==\n'
-echo "Repository: ${ROOT}"
+printf '\n== E006 fail-closed adjudication audit ==\n'
+rm -rf "${AUDIT_ROOT}"
+fly-sniff-olfactory --root "${ROOT}" audit-e006 \
+  "${OUT_ROOT}" \
+  --door-checkout "${DOOR_ROOT}" \
+  --output "${AUDIT_ROOT}"
+
+printf '\n== Build compact review bundle ==\n'
+SHARE_ZIP="${AUDIT_ROOT}-share.zip"
+rm -f "${SHARE_ZIP}"
+(
+  cd "$(dirname "${AUDIT_ROOT}")"
+  zip -qr "$(basename "${SHARE_ZIP}")" "$(basename "${AUDIT_ROOT}")"
+)
+
+printf '\n== Final summary ==\n'
+cat "${AUDIT_ROOT}/SUMMARY.txt"
+echo
+echo "Repository: ${ROOT} @ ${CODE_REF}"
 echo "DoOR source: ${DOOR_ROOT} @ ${DOOR_COMMIT}"
-echo "E006 output: ${OUT_ROOT}"
-if [[ -f "${OUT_ROOT}/door-e006-receipt.json" ]]; then
-  OUT_ROOT_PY="${OUT_ROOT}" python - <<'PY'
-import json
-import os
-from pathlib import Path
-p = Path(os.environ["OUT_ROOT_PY"]) / "door-e006-receipt.json"
-r = json.loads(p.read_text())
-for key in (
-    "responding_unit_count",
-    "study_column_count",
-    "response_cells",
-    "observed_response_cells",
-    "missing_response_cells",
-    "geosmin_observed_cells",
-    "receipt_sha256",
-):
-    print(f"{key}: {r[key]}")
-PY
-fi
+echo "E006 immutable ingestion: ${OUT_ROOT}"
+echo "E006 audit: ${AUDIT_ROOT}"
+echo "Share bundle: ${SHARE_ZIP}"
 
 cat <<'EOF'
 
-FIRST-LIGHT INTERPRETATION
---------------------------
-Passing this script means:
-  * the preregistered study contracts are internally valid;
-  * E001 and E002 have not been silently promoted beyond their evidence state;
-  * the exact frozen DoOR source was ingested without normalization/aggregation;
-  * an E006 content-addressed receipt exists.
+INTERPRETATION
+--------------
+A successful shell exit means the source and derived-artifact integrity checks ran successfully.
+The audit may still report BLOCKED_METADATA_ADJUDICATION. That is a scientific state, not a
+software failure.
 
-It does NOT mean:
-  * E001/E002/E006 are scientifically qualified;
-  * O001 calibration has passed;
-  * O003 may be run confirmatorily;
-  * biological topology has shown any advantage.
+The command intentionally does not:
+  * normalize or aggregate raw DoOR studies;
+  * resolve one-to-many receptor identities from downstream performance;
+  * fill missing responses with zero;
+  * authorize O003/O004 confirmatory execution.
 
-The next scientific action is evidence adjudication, then a separately frozen O003 development lock.
+For a claim-bearing qualification run, use a clean isolated worktree. Untracked files under
+authority/, src/, tests/, scripts/, .github/, or pyproject.toml are reported as a scientific
+worktree blocker.
 EOF
