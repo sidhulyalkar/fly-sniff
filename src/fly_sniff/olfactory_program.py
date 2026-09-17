@@ -43,7 +43,6 @@ def validate_program(program: dict[str, Any]) -> None:
         raise ValueError("unsupported olfactory computation program schema")
     if program.get("status") != "pre_data_preregistration":
         raise ValueError("v0 must remain a pre-data preregistration until explicitly versioned")
-
     rules = program.get("program_a_rules")
     if not isinstance(rules, dict):
         raise TypeError("program_a_rules must be an object")
@@ -137,31 +136,79 @@ def validate_evidence_requirements(evidence: dict[str, Any]) -> list[str]:
             unresolved.append(record_id)
         elif not isinstance(record.get("artifact_sha256"), str) or len(record["artifact_sha256"]) != 64:
             raise ValueError(f"qualified authority {record_id} requires a content-addressed artifact")
-
     rules = evidence.get("rules")
     if not isinstance(rules, dict) or any(value is not True for value in rules.values()):
         raise ValueError("evidence anti-promotion rules may not be weakened")
     expected_status = "blocked_pending_evidence" if unresolved else "ready_for_confirmatory_lock"
     if evidence.get("confirmatory_execution_status") != expected_status:
-        raise ValueError(
-            "confirmatory execution status does not match unresolved evidence authorities"
-        )
+        raise ValueError("confirmatory execution status does not match unresolved evidence authorities")
     return sorted(unresolved)
 
 
-def validate_study(program_path: str | Path, evidence_path: str | Path) -> dict[str, Any]:
+def validate_source_registry(registry: dict[str, Any]) -> None:
+    if registry.get("schema_version") != 1 or registry.get("program_id") != "olfactory-computation-v0":
+        raise ValueError("unsupported olfactory source registry")
+    sources = registry.get("sources")
+    if not isinstance(sources, list) or len(sources) < 7:
+        raise ValueError("source registry is incomplete")
+    ids: set[str] = set()
+    for source in sources:
+        if not isinstance(source, dict):
+            raise TypeError("source record must be an object")
+        source_id = source.get("id")
+        if not isinstance(source_id, str) or not source_id or source_id in ids:
+            raise ValueError("source ids must be unique and non-empty")
+        ids.add(source_id)
+        if source.get("status") != "source_identified_not_frozen":
+            raise ValueError("v0 source records remain candidates until exact bytes are frozen")
+        if not source.get("citation") or not source.get("role") or not source.get("evidence_use"):
+            raise ValueError(f"source {source_id} lacks citation, evidence role, or use boundary")
+    rules = registry.get("rules")
+    if not isinstance(rules, dict) or any(value is not True for value in rules.values()):
+        raise ValueError("source-provenance rules may not be weakened")
+
+
+def validate_o001(protocol: dict[str, Any]) -> None:
+    if protocol.get("schema_version") != 1 or protocol.get("experiment_id") != "O001-geosmin-calibration-v0":
+        raise ValueError("unsupported O001 protocol")
+    if protocol.get("role") != "calibration_not_headline_topology_claim":
+        raise ValueError("O001 cannot be promoted to the headline topology claim")
+    forbidden = set(protocol.get("forbidden_calibration_targets", []))
+    required_forbidden = {"O003_heldout_behavior_score", "O004_navigation_reward", "source_finding_success"}
+    if not required_forbidden <= forbidden:
+        raise ValueError("O001 failed to exclude downstream behavioral/task objectives")
+    comparators = set(protocol.get("required_comparators", []))
+    if "receptor_only" not in comparators or "audited_biological_pathway" not in comparators:
+        raise ValueError("O001 requires receptor-only and audited-pathway comparators")
+    perturbations = set(protocol.get("required_perturbation_checks", []))
+    if not {"remove_or56a_input", "remove_or_isolate_da2_projection_path"} <= perturbations:
+        raise ValueError("O001 requires prespecified Or56a and DA2 perturbation checks")
+    if protocol.get("promotion_rule") != "A new version is required for any change informed by downstream performance.":
+        raise ValueError("O001 downstream-performance versioning rule changed")
+
+
+def validate_study(
+    program_path: str | Path,
+    evidence_path: str | Path,
+    *,
+    source_registry_path: str | Path | None = None,
+    o001_path: str | Path | None = None,
+) -> dict[str, Any]:
     program = _load(program_path)
     evidence = _load(evidence_path)
     validate_program(program)
     unresolved = validate_evidence_requirements(evidence)
+    if source_registry_path is not None:
+        validate_source_registry(_load(source_registry_path))
+    if o001_path is not None:
+        validate_o001(_load(o001_path))
     return {
         "status": "blocked" if unresolved else "ready_for_confirmatory_lock",
         "program_id": program["program_id"],
         "unresolved_authorities": unresolved,
         "unresolved_count": len(unresolved),
         "message": (
-            "Development planning may proceed, but confirmatory execution is blocked until every "
-            "required authority is qualified."
+            "Development planning may proceed, but confirmatory execution is blocked until every required authority is qualified."
             if unresolved
             else "All declared authorities are qualified; construct a content-addressed ExperimentSpec/Lock."
         ),
@@ -172,8 +219,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Validate the olfactory computation study contract")
     parser.add_argument("program")
     parser.add_argument("evidence")
+    parser.add_argument("--source-registry")
+    parser.add_argument("--o001")
     args = parser.parse_args()
-    print(json.dumps(validate_study(args.program, args.evidence), indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            validate_study(
+                args.program,
+                args.evidence,
+                source_registry_path=args.source_registry,
+                o001_path=args.o001,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "program_id": "olfactory-computation-v0",
+  "sources": [
+    {
+      "id": "S001_stensmyr_2012_geosmin",
+      "citation": "Stensmyr et al., Cell 151:1345-1357 (2012)",
+      "doi": "10.1016/j.cell.2012.09.046",
+      "role": ["E001_geosmin_receptor_physiology", "E002_da2_pathway_identity", "E005_odor_conflict_behavior"],
+      "evidence_use": "published physiology and behavior authority; raw-data availability must be adjudicated separately",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S002_door_data",
+      "citation": "Muench et al., Scientific Reports 6:21841 (2016); DoOR.data open-source package",
+      "doi": "10.1038/srep21841",
+      "role": ["E006_odor_panel_receptor_responses"],
+      "evidence_use": "source-resolved receptor/odor response compilation; preserve study-level heterogeneity and assay provenance",
+      "source_repository": "https://github.com/ropensci/DoOR.data",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S003_flywire_2024",
+      "citation": "Schlegel et al., Nature 634:139-152 (2024) and FlyWire whole-brain connectome resources",
+      "doi": "10.1038/s41586-024-07686-5",
+      "role": ["E002_da2_pathway_identity", "E003_olfactory_connectome_subgraph"],
+      "evidence_use": "measured structure and cell-type annotation; snapshot/version and identity confidence must be frozen",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S004_kim_2025_lhn_dynamics",
+      "citation": "Kim et al., Current Biology 35:3146-3162.e8 (2025)",
+      "doi": "10.1016/j.cub.2025.05.051",
+      "role": ["E004_synaptic_and_cellular_dynamics"],
+      "evidence_use": "target-specific PN-to-LHN synaptic and cellular dynamics; applicability to each modeled pathway must be graded",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S005_brudner_2026_plumes",
+      "citation": "Brudner et al., PNAS 123:e2608896123 (2026)",
+      "doi": "10.1073/pnas.2608896123",
+      "role": ["E007_plume_recordings_and_behavior"],
+      "evidence_use": "behavioral plume-cue benchmark and environmental statistics; exact released data/preprocessing must be frozen independently",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S006_santana_2026_olfactory_motion",
+      "citation": "Santana et al., bioRxiv 2026.07.13.738327 (2026)",
+      "doi": "10.64898/2026.07.13.738327",
+      "role": ["E003_olfactory_connectome_subgraph", "E004_synaptic_and_cellular_dynamics", "E007_plume_recordings_and_behavior"],
+      "evidence_use": "recent olfactory-motion circuit evidence; preprint status and cross-dataset mapping uncertainty must remain explicit",
+      "status": "source_identified_not_frozen"
+    },
+    {
+      "id": "S007_mitsuno_2026_sensor",
+      "citation": "Mitsuno et al., Scientific Reports 16:12577 (2026)",
+      "doi": "10.1038/s41598-026-41786-8",
+      "role": ["E008_sensor_translation_dataset"],
+      "evidence_use": "proof-of-principle insect-receptor geosmin biosensing; independent benchmark bytes and train/test design must be acquired before O005",
+      "status": "source_identified_not_frozen"
+    }
+  ],
+  "rules": {
+    "source_identification_is_not_evidence_qualification": true,
+    "raw_or_reconstructable_data_preferred": true,
+    "study_level_provenance_preserved": true,
+    "preprints_labeled_as_preprints": true,
+    "cross_dataset_applicability_explicit": true
+  }
+}
