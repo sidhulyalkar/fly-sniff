@@ -32,7 +32,10 @@ def load_method_contract(
     expected_hash = Path(hash_path).read_text(encoding="utf-8").strip()
     observed_hash = canonical_sha256(payload)
     if observed_hash != expected_hash:
-        raise ValueError(\n            "Figure 3C method contract canonical hash does not match: "\n            f"expected={expected_hash} observed={observed_hash}"\n        )
+        raise ValueError(
+            "Figure 3C method contract canonical hash does not match: "
+            f"expected={expected_hash} observed={observed_hash}"
+        )
     if payload.get("schema") != _EXPECTED_SCHEMA:
         raise ValueError("unsupported Figure 3C method-contract schema")
     if payload.get("status") != _EXPECTED_STATUS:
