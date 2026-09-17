@@ -1,0 +1,24 @@
+{
+  "automatic_threshold_selection": false,
+  "behavior_fields_reviewed": false,
+  "code_ref": "8b951742346deba5869fa5d442cefe0745f81034",
+  "exact_global_qc_sha256": "f70c9dcc5b718e66423812ac1616ccc53c5c57bd77881c191b96958bfa8f0485",
+  "figure3c_statistic_reviewed": false,
+  "first_light_qc_sha256": "da7b8d837c5c8116847a9f58b281516500bf7f7bbb775d5a8f0aea783c864958",
+  "navigation_performance_used": false,
+  "observations": [
+    "q0.999/q0.9995 often yields a cleaner high-amplitude waveform family than q0.995",
+    "deterministic raw windows also contain lower-prominence events that can remain visually spike-like",
+    "median waveform cleanliness alone could therefore favor over-stringent thresholds",
+    "individual-event waveform distributions must be reviewed before freezing thresholds"
+  ],
+  "prominence_audit_sha256": "4c421c803a696c5193b645412f674875c0746509043b835b11b8501d49fc2c9a",
+  "receipt_sha256": "fc3e27fc4c36719991a38a2f5168e300ed5294f997fb2d99028f7fd6703ec314",
+  "required_next_action": "Score individual q0.995/q0.999/q0.9995 event waveforms against a high-confidence within-channel anchor template and review nested prominence bands without behavior.",
+  "schema": "fly-sniff-dna02-threshold-high-review-v1",
+  "source_bundle_sha256": "24a3a887e2c40d4e2703007efaf3e87d3fb630824cfa96a02568e387ff767bd0",
+  "status": "BLOCKED_PENDING_WAVEFORM_DISTRIBUTION_REVIEW",
+  "thresholds_frozen": false,
+  "waveform_review_sha256": "20f8e985d467aada3a32e821c4dc0a5180d1a7a331105cfbe5bb360a8e8dd0ea",
+  "yaw_reviewed": false
+}
