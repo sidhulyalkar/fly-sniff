@@ -1,0 +1,39 @@
+name: olfactory-computation-study
+
+on:
+  pull_request:
+    paths:
+      - "authority/olfactory-computation-program-v0.json"
+      - "authority/olfactory-evidence-requirements-v0.json"
+      - "docs/OLFACTORY_COMPUTATION_PROGRAM_V0.md"
+      - "src/fly_sniff/olfactory_program.py"
+      - "tests/test_olfactory_program.py"
+      - ".github/workflows/olfactory-computation.yml"
+  push:
+    paths:
+      - "authority/olfactory-computation-program-v0.json"
+      - "authority/olfactory-evidence-requirements-v0.json"
+      - "docs/OLFACTORY_COMPUTATION_PROGRAM_V0.md"
+      - "src/fly_sniff/olfactory_program.py"
+      - "tests/test_olfactory_program.py"
+      - ".github/workflows/olfactory-computation.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Validate study contract
+        run: >-
+          python -m fly_sniff.olfactory_program
+          authority/olfactory-computation-program-v0.json
+          authority/olfactory-evidence-requirements-v0.json
+      - name: Ruff
+        run: ruff check src/fly_sniff/olfactory_program.py tests/test_olfactory_program.py
+      - name: Focused tests
+        run: pytest -q tests/test_olfactory_program.py
