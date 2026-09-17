@@ -177,7 +177,7 @@ def _sensitivity_profiles(
 def freeze_manifest_v2(
     *,
     freeze_evidence_path: str | Path,
-    distribution_review_path: str | Path,
+    distribution_evidence_path: str | Path,
     decisions_path: str | Path,
     output_path: str | Path,
     code_ref: str,
@@ -190,10 +190,10 @@ def freeze_manifest_v2(
         schema="fly-sniff-dna02-threshold-freeze-evidence-v2",
         hash_field="evidence_sha256",
     )
-    review = _validated_hashed_json(
-        Path(distribution_review_path),
-        schema="fly-sniff-dna02-threshold-distribution-review-v1",
-        hash_field="review_sha256",
+    distribution_evidence = _validated_hashed_json(
+        Path(distribution_evidence_path),
+        schema="fly-sniff-dna02-threshold-distribution-freeze-evidence-v2",
+        hash_field="evidence_sha256",
     )
     _require_false(
         evidence,
@@ -209,7 +209,7 @@ def freeze_manifest_v2(
         label="freeze evidence",
     )
     _require_false(
-        review,
+        distribution_evidence,
         (
             "behavior_fields_loaded",
             "yaw_loaded",
@@ -218,13 +218,15 @@ def freeze_manifest_v2(
             "thresholds_frozen",
             "automatic_threshold_selection",
         ),
-        label="distribution review",
+        label="distribution freeze evidence",
     )
-    if review.get("prominence_audit_sha256") != evidence.get("prominence_audit_sha256"):
-        raise ValueError("distribution review and freeze evidence reference different audits")
+    if distribution_evidence.get("prominence_audit_sha256") != evidence.get(
+        "prominence_audit_sha256"
+    ):
+        raise ValueError("distribution and threshold freeze evidence reference different audits")
 
     channels = _evidence_channel_map(evidence)
-    review_channels = _distribution_channel_map(review)
+    review_channels = _distribution_channel_map(distribution_evidence)
     if set(channels) != set(review_channels):
         raise ValueError("freeze-evidence and distribution-review channel sets differ")
     for key in channels:
@@ -243,7 +245,9 @@ def freeze_manifest_v2(
         raise ValueError("decisions reference a different prominence audit")
     if decisions.get("threshold_qc_sha256") != evidence.get("parent_threshold_qc_sha256"):
         raise ValueError("decisions reference a different threshold QC")
-    if decisions.get("distribution_review_sha256") != review.get("review_sha256"):
+    if decisions.get("distribution_review_sha256") != distribution_evidence.get(
+        "parent_distribution_review_sha256"
+    ):
         raise ValueError("decisions reference a different distribution review")
     if decisions.get("event_rate_used_for_selection") is not False:
         raise ValueError("event rate may not be used for threshold selection")
@@ -332,7 +336,10 @@ def freeze_manifest_v2(
         "prominence_audit_sha256": evidence["prominence_audit_sha256"],
         "threshold_qc_sha256": evidence["parent_threshold_qc_sha256"],
         "freeze_evidence_sha256": evidence["evidence_sha256"],
-        "distribution_review_sha256": review["review_sha256"],
+        "distribution_review_sha256": distribution_evidence[
+            "parent_distribution_review_sha256"
+        ],
+        "distribution_freeze_evidence_sha256": distribution_evidence["evidence_sha256"],
         "threshold_decisions_sha256": decisions["decisions_sha256"],
         "reviewer": reviewer,
         "adjudication_method": decisions["adjudication_method"],
@@ -375,14 +382,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     parser.add_argument("--freeze-evidence", required=True)
-    parser.add_argument("--distribution-review", required=True)
+    parser.add_argument("--distribution-evidence", required=True)
     parser.add_argument("--decisions", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--code-ref", required=True)
     args = parser.parse_args(argv)
     result = freeze_manifest_v2(
         freeze_evidence_path=args.freeze_evidence,
-        distribution_review_path=args.distribution_review,
+        distribution_evidence_path=args.distribution_evidence,
         decisions_path=args.decisions,
         output_path=args.out,
         code_ref=args.code_ref,
