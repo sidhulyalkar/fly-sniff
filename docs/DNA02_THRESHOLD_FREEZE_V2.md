@@ -58,7 +58,7 @@ The v2 freeze binds to all of the following:
 - prominence audit SHA-256: `4c421c803a696c5193b645412f674875c0746509043b835b11b8501d49fc2c9a`
 - threshold-QC SHA-256: `da7b8d837c5c8116847a9f58b281516500bf7f7bbb775d5a8f0aea783c864958`
 - distribution-review SHA-256: `a451d9166248a73ba7607b6c0cb78eab241a470ac0bfbdb83a21db5682a61686`
-- compact threshold-freeze evidence SHA-256: `5da87240cbd61e1cf7254af5e213561f2796aea0848d582ea5b27a79f52419cc`
+- compact threshold-freeze evidence SHA-256: `c0372a777e23298cb703091815bcea2a04de56d6b9ad43087b0e8d84023adc12`
 - compact distribution-freeze evidence SHA-256: `591974bcd0b726f072c54b58cba3720faeff4c6cdff53a7c96373a71b2514732`
 - threshold decisions SHA-256: `a8f89c2599a05a4be29776b32c7c5637b39b3d2d297767b8e119809f2ff3a612`
 
@@ -99,3 +99,8 @@ Threshold freezing does **not** by itself authorize an exact reproduction claim.
 - raw `yaw` units, sign, and calibration provenance.
 
 Only after those transformation contracts are fixed should the pipeline open `yaw` and compute the Figure 3C relationship.
+
+## Executable authority
+
+The v2 manifest generator is frozen to commit `696668d3f24d8d0caa2208c8ba22a3cb5348601e`. Later documentation, tests, or receipt commits do not change this executable authority reference.
+
