@@ -12,11 +12,15 @@ The sealed authority receipt is:
 
 Its canonical receipt SHA-256 is:
 
-`8a546e91b645962b4f8bf9b8c34dd635bdb6b9db94acd9c11a204c204d45c76a`
+`f21ea2f0f514b0da55a05a99c6fd62fd641c72cfc40883c8064281692ce52607`
 
 The complete deterministic manifest generated from the frozen evidence has SHA-256:
 
-`bd2f834a4387ddd323ef905e66c5e9f21a8e4390cc32e1d075bd77288fd675a5`
+`b26a5d9b156a907eb036afd95643080e90b7dbb9b89dd9b2cbf4b56dc14ff6dc`
+
+The executable freezer authority referenced by that receipt is commit:
+
+`cd859f49844076ec22e107bddb296fe965997aae`
 
 ## Primary thresholds
 
