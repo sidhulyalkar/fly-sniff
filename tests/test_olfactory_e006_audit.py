@@ -7,6 +7,7 @@ import pytest
 from fly_sniff.olfactory_door import sha256_file
 from fly_sniff.olfactory_e006_audit import (
     _canonical_sha,
+    _coverage_tables,
     _dataset_metadata,
     _development_subset_candidates,
     _mapping_summary,
@@ -54,6 +55,85 @@ def test_dataset_metadata_joins_on_dataset_id_not_citation(tmp_path: Path) -> No
     assert report["missing_metadata_for_response_studies"] == []
     assert joined.loc[0, "dataset"] == "Hallem.2006.EN"
     assert joined.loc[0, "study"] == "Hallem et.al. 2006"
+
+
+def test_coverage_counts_only_observed_odors_and_units() -> None:
+    df = pd.DataFrame(
+        [
+            {
+                "responding_unit": "Or1",
+                "odor_name": "odor-a",
+                "study_id": "Study.A",
+                "response_status": "observed",
+                "response_value": 1.0,
+            },
+            {
+                "responding_unit": "Or1",
+                "odor_name": "odor-b",
+                "study_id": "Study.A",
+                "response_status": "missing",
+                "response_value": None,
+            },
+            {
+                "responding_unit": "Or2",
+                "odor_name": "odor-a",
+                "study_id": "Study.A",
+                "response_status": "observed",
+                "response_value": 2.0,
+            },
+            {
+                "responding_unit": "Or2",
+                "odor_name": "odor-b",
+                "study_id": "Study.A",
+                "response_status": "missing",
+                "response_value": None,
+            },
+        ]
+    )
+    study, units, odors = _coverage_tables(df)
+    assert study.loc["Study.A", "odor_names"] == 1
+    assert study.loc["Study.A", "responding_units"] == 2
+    assert units.loc["Or1", "odor_names"] == 1
+    assert odors.loc["odor-b", "observed_cells"] == 0
+
+
+def test_dataset_metadata_resolves_only_frozen_muench_aliases(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "door_dataset_info.csv").write_text(
+        '"dataset";"study";"technique";"data.type";"concentration";"DOI"\n'
+        '"1";"Muench.2015.AntGC1";"Muench et al. 2016";"calcium imaging";'
+        '"mean deltaF/F";"10^-2 -  (vol/vol)";""\n'
+        '"2";"Muench.2015.AntGC3";"Muench et al. 2016";"calcium imaging";'
+        '"mean deltaF/F";"10^-2 -  (vol/vol)";""\n'
+    )
+    study = pd.DataFrame(
+        [
+            {
+                "study_id": "Muench.2016.AntGC1",
+                "observed_cells": 426,
+                "responding_units": 4,
+                "odor_names": 113,
+            },
+            {
+                "study_id": "Muench.2016.AntGC3",
+                "observed_cells": 108,
+                "responding_units": 1,
+                "odor_names": 108,
+            },
+        ]
+    ).set_index("study_id")
+    joined, report = _dataset_metadata(tmp_path, study)
+    assert report["complete_join"] is True
+    assert report["missing_metadata_for_response_studies"] == []
+    assert report["resolved_source_aliases"] == {
+        "Muench.2016.AntGC1": "Muench.2015.AntGC1",
+        "Muench.2016.AntGC3": "Muench.2015.AntGC3",
+    }
+    assert set(joined["response_study_id"]) == {
+        "Muench.2016.AntGC1",
+        "Muench.2016.AntGC3",
+    }
 
 
 def test_development_subset_selection_is_performance_blind() -> None:
