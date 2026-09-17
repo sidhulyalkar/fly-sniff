@@ -1,0 +1,133 @@
+{
+  "automatic_threshold_selection": false,
+  "behavior_fields_loaded": false,
+  "event_rate_used_for_selection": false,
+  "evidence_sha256": "c0372a777e23298cb703091815bcea2a04de56d6b9ad43087b0e8d84023adc12",
+  "figure3c_statistic_computed": false,
+  "files": [
+    {
+      "channels": [
+        {
+          "candidates": {
+            "0.99": {"threshold": 1.4040669693332608},
+            "0.995": {"threshold": 2.51830172535697},
+            "0.999": {"threshold": 6.637119885669186},
+            "0.9995": {"threshold": 7.686944301650364},
+            "0.9999": {"threshold": 10.39979516029358}
+          },
+          "soma_side": "L",
+          "source_field": "ephys_A"
+        },
+        {
+          "candidates": {
+            "0.99": {"threshold": 1.2752551940641395},
+            "0.995": {"threshold": 1.9547463353639352},
+            "0.999": {"threshold": 6.765934524457742},
+            "0.9995": {"threshold": 8.331259447807032},
+            "0.9999": {"threshold": 10.991691239286263}
+          },
+          "soma_side": "R",
+          "source_field": "ephys_B"
+        }
+      ],
+      "filename": "180410_gfp_3G_ss730_dual_08_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_08",
+      "source_sha256": "f02a345effb2fe722800dd1f43dce2c876878424307cb1fa486b5974f3d5922b"
+    },
+    {
+      "channels": [
+        {
+          "candidates": {
+            "0.99": {"threshold": 1.935426310882649},
+            "0.995": {"threshold": 5.413398798564633},
+            "0.999": {"threshold": 7.767453854120348},
+            "0.9995": {"threshold": 8.624074090719223},
+            "0.9999": {"threshold": 11.084403209217644}
+          },
+          "soma_side": "L",
+          "source_field": "ephys_A"
+        },
+        {
+          "candidates": {
+            "0.99": {"threshold": 1.7905048584050194},
+            "0.995": {"threshold": 5.661359850533993},
+            "0.999": {"threshold": 9.72219412124468},
+            "0.9995": {"threshold": 10.765183410894577},
+            "0.9999": {"threshold": 13.533707991019304}
+          },
+          "soma_side": "R",
+          "source_field": "ephys_B"
+        }
+      ],
+      "filename": "180430_gfp_3G_ss730_dual_12_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_12",
+      "source_sha256": "0f9a9251262f528f0b415d67cdb169bc1236a5157029ffeebace6d86136f60f7"
+    },
+    {
+      "channels": [
+        {
+          "candidates": {
+            "0.99": {"threshold": 0.7535566554582485},
+            "0.995": {"threshold": 1.136776551604271},
+            "0.999": {"threshold": 2.5424593984338437},
+            "0.9995": {"threshold": 5.32161236591439},
+            "0.9999": {"threshold": 8.676237110346777}
+          },
+          "soma_side": "L",
+          "source_field": "ephys_A"
+        },
+        {
+          "candidates": {
+            "0.99": {"threshold": 1.0627079829573631},
+            "0.995": {"threshold": 1.7067745507669116},
+            "0.999": {"threshold": 8.736763473032937},
+            "0.9995": {"threshold": 9.934726384490558},
+            "0.9999": {"threshold": 12.478803239762783}
+          },
+          "soma_side": "R",
+          "source_field": "ephys_B"
+        }
+      ],
+      "filename": "180501_gfp_3G_ss730_dual_13_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_13",
+      "source_sha256": "a460eb313b503b039b3eeec554efd902b54119aadfd783c72210efaee2daee24"
+    },
+    {
+      "channels": [
+        {
+          "candidates": {
+            "0.99": {"threshold": 0.8727102503180504},
+            "0.995": {"threshold": 1.4620315420887966},
+            "0.999": {"threshold": 5.497124009234522},
+            "0.9995": {"threshold": 6.575938778224595},
+            "0.9999": {"threshold": 8.993077974766493}
+          },
+          "soma_side": "L",
+          "source_field": "ephys_A"
+        },
+        {
+          "candidates": {
+            "0.99": {"threshold": 0.9596636891365051},
+            "0.995": {"threshold": 1.7454275419881853},
+            "0.999": {"threshold": 5.620147750325609},
+            "0.9995": {"threshold": 6.321522906256366},
+            "0.9999": {"threshold": 7.944568672776222}
+          },
+          "soma_side": "R",
+          "source_field": "ephys_B"
+        }
+      ],
+      "filename": "180517_gfp_3G_ss730_dual_14_data_for_SH_with_lat_vel.mat",
+      "fly_alias": "a2_d_14",
+      "source_sha256": "6e5aabc4bc45d76fd24baa81a9351cc6d29530c72e697038b78f07a0da36623f"
+    }
+  ],
+  "navigation_performance_used": false,
+  "parent_threshold_qc_sha256": "da7b8d837c5c8116847a9f58b281516500bf7f7bbb775d5a8f0aea783c864958",
+  "prominence_audit_sha256": "4c421c803a696c5193b645412f674875c0746509043b835b11b8501d49fc2c9a",
+  "schema": "fly-sniff-dna02-threshold-freeze-evidence-v2",
+  "source_byte_evidence_sha256": "d2e8f2c2bd41ff18b9be6a00c088f6b5c5f61b64bc6bfe42de70975a5dd93d67",
+  "source_contract_sha256": "5e513c180e97f6b7ccb5cc37f9b5977da651ecfd43cb66e578f04f083315b1bf",
+  "thresholds_frozen": false,
+  "yaw_loaded": false
+}
