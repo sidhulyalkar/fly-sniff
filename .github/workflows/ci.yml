@@ -29,5 +29,7 @@ jobs:
       - run: fly-sniff-dna02-threshold-waveform-review --help
       - run: fly-sniff-dna02-threshold-distribution-review --help
       - run: fly-sniff-dna02-threshold-freeze --help
+      - run: fly-sniff-dna02-figure3c-method --help
+      - run: fly-sniff-dna02-figure3c-method > /tmp/dna02-figure3c-method.json
       - run: ruff check src tests
       - run: pytest -q
