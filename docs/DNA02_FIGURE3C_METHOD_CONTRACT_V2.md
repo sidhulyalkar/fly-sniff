@@ -16,7 +16,7 @@ The canonical contract is:
 
 with canonical SHA-256:
 
-`b1760e495e9be7029222320223b5e25d67e2b559ee7eeb6e004418e2b70ddfff`
+`56f0cdc2db9fa89a8633e3bb87b1a3eb58ea3001b4beee0a167a3e881ea043f7`
 
 ## Threshold one-way door
 
@@ -87,7 +87,7 @@ provides the concrete released-MAT processing path:
 
 The original environment is Python 3.7.3 with NumPy 1.16.3, SciPy 1.2.1, PyMC3 3.6, and Theano 1.0.4.
 
-The PyMC3/Theano random-walk stage remains the only transformation that is not yet authorized for a modern reimplementation. Before numeric yaw is opened, we must either execute the pinned environment or qualify a replacement numerically against that implementation.
+The PyMC3/Theano random-walk stage remains the only kinematic transformation that is not yet authorized for a modern reimplementation. Before numeric yaw is opened, we must either execute the pinned environment or qualify a replacement numerically against that implementation.
 
 ## Transform-only qualification
 
