@@ -1,0 +1,66 @@
+{
+  "schema": "fly-sniff-dna02-threshold-adjudication-protocol-v1",
+  "protocol_id": "program-a-dna02-threshold-adjudication-v1",
+  "purpose": "Freeze the electrophysiology-only decision process used to select one prominence threshold per Figure 3C DNa02 channel before behavior is opened.",
+  "input_fields_allowlist": [
+    "ephys_SR",
+    "ephys_A",
+    "ephys_B"
+  ],
+  "forbidden_inputs": [
+    "yaw",
+    "fwd",
+    "lat",
+    "behavioral timebases",
+    "Figure 3C fit statistics",
+    "navigation performance",
+    "model outputs"
+  ],
+  "candidate_prominence_quantiles": [
+    0.95,
+    0.975,
+    0.99,
+    0.995,
+    0.999,
+    0.9995,
+    0.9999
+  ],
+  "candidate_generation": "Use thresholds already present in the authenticated prominence-audit receipt. Run peak detection once at the lowest candidate threshold, then obtain stricter candidate sets by filtering the same peak/prominence set.",
+  "deterministic_trace_windows_fraction": [
+    0.1,
+    0.3,
+    0.5,
+    0.7,
+    0.9
+  ],
+  "trace_window_seconds": 0.25,
+  "waveform_subsample_cap": 2000,
+  "waveform_pre_ms": 1.0,
+  "waveform_post_ms": 2.0,
+  "block_count": 20,
+  "bilateral_coincidence_tolerance_ms": [
+    0.2,
+    0.5
+  ],
+  "selection_basis_allowlist": [
+    "raw_trace_review",
+    "waveform_stereotypy",
+    "refractory_violations",
+    "blockwise_stability",
+    "bilateral_artifact_coincidence"
+  ],
+  "event_rate_policy": "Event rate is descriptive only and may not be the stated threshold-selection basis.",
+  "automatic_threshold_selection": false,
+  "required_decisions": 8,
+  "threshold_must_match_audited_candidate": true,
+  "navigation_performance_used": false,
+  "behavior_review_allowed_before_freeze": false,
+  "figure3c_statistic_review_allowed_before_freeze": false,
+  "allowed_next_status": "THRESHOLDS_FROZEN_BEFORE_BEHAVIOR",
+  "forbidden_actions": [
+    "select a threshold because it improves Figure 3C fit",
+    "select a threshold because it improves odor-navigation performance",
+    "invent a threshold outside the frozen candidate set in v1",
+    "drop a Figure 3C fly based on downstream behavior"
+  ]
+}
