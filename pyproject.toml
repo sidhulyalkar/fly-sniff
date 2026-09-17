@@ -64,6 +64,7 @@ fly-sniff-dna02-field-map = "fly_sniff.dna02_field_map:main"
 fly-sniff-dna02-prominence-audit = "fly_sniff.dna02_threshold_audit:main"
 fly-sniff-dna02-threshold-adjudicate = "fly_sniff.dna02_threshold_adjudication:main"
 fly-sniff-dna02-threshold-waveform-review = "fly_sniff.dna02_threshold_waveform_review:main"
+fly-sniff-dna02-threshold-distribution-review = "fly_sniff.dna02_threshold_distribution_review:main"
 fly-sniff-dna02-threshold-freeze = "fly_sniff.dna02_threshold_manifest:main"
 
 [tool.hatch.build.targets.wheel]
@@ -81,3 +82,4 @@ target-version = "py311"
 "src/fly_sniff/dna02_threshold_adjudication.py" = ["RUF046"]
 "tests/test_dna02_threshold_adjudication_protocol.py" = ["I001"]
 "tests/test_dna02_threshold_first_light.py" = ["I001"]
+"tests/test_dna02_threshold_high_review.py" = ["I001"]
