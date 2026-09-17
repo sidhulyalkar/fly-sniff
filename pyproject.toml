@@ -85,3 +85,4 @@ target-version = "py311"
 "tests/test_dna02_threshold_adjudication_protocol.py" = ["I001"]
 "tests/test_dna02_threshold_first_light.py" = ["I001"]
 "tests/test_dna02_threshold_high_review.py" = ["I001"]
+"tests/test_dna02_figure3c_method.py" = ["I001"]
