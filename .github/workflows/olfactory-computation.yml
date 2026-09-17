@@ -9,12 +9,17 @@ on:
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
       - "docs/OLFACTORY_*.md"
+      - "scripts/run_olfactory_first_light_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_e006_audit.py"
+      - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_e006_audit.py"
+      - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
       - ".github/workflows/olfactory-computation.yml"
@@ -26,12 +31,17 @@ on:
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
       - "docs/OLFACTORY_*.md"
+      - "scripts/run_olfactory_first_light_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_e006_audit.py"
+      - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_e006_audit.py"
+      - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
       - ".github/workflows/olfactory-computation.yml"
@@ -57,17 +67,24 @@ jobs:
         run: python -m fly_sniff.olfactory_geosmin authority/geosmin-e001-evidence-v0.json
       - name: Validate E002 identity authority
         run: python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
-      - name: Smoke DoOR E006 ingester
-        run: python -m fly_sniff.olfactory_door --help
+      - name: Smoke olfactory CLI and E006 ingester
+        run: |
+          fly-sniff-olfactory --help
+          fly-sniff-olfactory audit-e006 --help
+          python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
           ruff check
           src/fly_sniff/olfactory_program.py
           src/fly_sniff/olfactory_door.py
+          src/fly_sniff/olfactory_e006_audit.py
+          src/fly_sniff/olfactory_cli.py
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
+          tests/test_olfactory_e006_audit.py
+          tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
       - name: Focused tests
@@ -75,5 +92,7 @@ jobs:
           pytest -q
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
+          tests/test_olfactory_e006_audit.py
+          tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
