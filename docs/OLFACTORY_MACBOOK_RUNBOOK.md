@@ -2,222 +2,183 @@
 
 This runbook is for local development and evidence acquisition on macOS. It does not authorize confirmatory O003/O004 execution.
 
-## 1. Clone and enter the study branch
+## Fast path: one command
+
+The normal local workflow is now one command:
 
 ```bash
-git clone https://github.com/sidhulyalkar/fly-sniff.git
-cd fly-sniff
-git fetch origin research/olfactory-computation-v0
-git switch research/olfactory-computation-v0
-```
-
-If you already have the repository:
-
-```bash
-cd /path/to/fly-sniff
-git fetch origin
-git switch research/olfactory-computation-v0
-git pull --ff-only origin research/olfactory-computation-v0
-```
-
-## 2. Python environment
-
-Python 3.11+ is required. On Apple Silicon, Homebrew Python is a simple option:
-
-```bash
-brew install python@3.12
-python3.12 -m venv .venv-olfactory
-source .venv-olfactory/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
-```
-
-Verify:
-
-```bash
-python --version
-python -m pytest -q tests/test_olfactory_program.py tests/test_olfactory_geosmin.py tests/test_olfactory_structure.py tests/test_olfactory_door.py tests/test_olfactory_cli.py
-python -m ruff check src/fly_sniff/olfactory_*.py tests/test_olfactory_*.py
-```
-
-## 3. Inspect current scientific readiness
-
-```bash
-fly-sniff-olfactory status
-```
-
-Expected at the current v0 stage: the command succeeds but reports the study as `blocked`, because unresolved evidence is an expected scientific state rather than a software failure.
-
-Inspect E001 and E002 explicitly:
-
-```bash
-fly-sniff-olfactory validate-e001
-fly-sniff-olfactory validate-e002
-```
-
-The expected v0 states are:
-
-- E001: `development_evidence_not_qualified`
-- E002: `blocked_incomplete_body_id_adjudication`
-
-Do not manually edit these statuses merely to make the study appear ready.
-
-## 4. One-command first light
-
-The canonical Mac runner installs the editable package, runs focused tests, validates the study, clones the exact pinned DoOR source, and creates an E006 ingestion receipt.
-
-```bash
-chmod +x scripts/run_olfactory_first_light_mac.sh
 ./scripts/run_olfactory_first_light_mac.sh
 ```
 
-By default it stores external data outside the repository:
+That command:
+
+1. verifies Python >=3.11 and reuses the existing editable virtual environment when possible;
+2. runs the focused scientific regression suite;
+3. validates the study, E001, and E002 without promoting blocked evidence;
+4. verifies or clones the exact pinned DoOR source;
+5. reuses an existing immutable E006 ingestion only after its receipt/artifact hashes are checked;
+6. runs the complete E006 provenance, missingness, scale, metadata, geosmin, and mapping audit;
+7. identifies performance-blind within-study development subsets;
+8. emits one compact ZIP for review.
+
+A shell exit of zero means the integrity checks executed successfully. The scientific audit can still return
+`BLOCKED_METADATA_ADJUDICATION`; that is a valid scientific state.
+
+## 1. Checkout
+
+For ordinary work after this lane lands:
+
+```bash
+git fetch origin
+git switch research/olfactory-computation-v0
+git pull --ff-only
+```
+
+During review of the one-command audit branch:
+
+```bash
+git fetch origin
+git switch feat/e006-one-command-audit-v1
+git pull --ff-only origin feat/e006-one-command-audit-v1
+```
+
+For claim-bearing work, prefer an isolated clean worktree. The E006 audit records tracked modifications and
+fails the scientific cleanliness gate when untracked files exist under `authority/`, `src/`, `tests/`,
+`scripts/`, `.github/`, or `pyproject.toml`.
+
+## 2. Python
+
+Python 3.11+ is required. Apple Silicon example:
+
+```bash
+brew install python@3.12
+PYTHON_BIN="$(brew --prefix python@3.12)/bin/python3.12" \
+  ./scripts/run_olfactory_first_light_mac.sh
+```
+
+The first run creates `.venv-olfactory` and installs development dependencies. Later runs reuse the editable
+environment for speed. Force an environment refresh only when dependencies change:
+
+```bash
+FLY_SNIFF_REFRESH_ENV=1 ./scripts/run_olfactory_first_light_mac.sh
+```
+
+## 3. Data locations
+
+By default:
 
 ```text
 ~/fly-sniff-data/DoOR.data
 ~/fly-sniff-data/artifacts/e006-door-db323a496577/
+~/fly-sniff-data/artifacts/e006-audit-db323a496577-<code-ref>/
+~/fly-sniff-data/artifacts/e006-audit-db323a496577-<code-ref>-share.zip
 ```
 
-To keep data on another disk:
+Use another disk with:
 
 ```bash
-export FLY_SNIFF_DATA_DIR=/Volumes/YourDrive/fly-sniff-data
-./scripts/run_olfactory_first_light_mac.sh
+FLY_SNIFF_DATA_DIR=/Volumes/YourDrive/fly-sniff-data \
+  ./scripts/run_olfactory_first_light_mac.sh
 ```
 
-To choose a Python interpreter:
+## 4. What the E006 audit checks
 
-```bash
-PYTHON_BIN=python3.12 ./scripts/run_olfactory_first_light_mac.sh
-```
+The audit validates the canonical E006 receipt hash separately from the SHA-256 of the finished JSON file,
+then verifies the content hashes of the long-form response table and mapping table.
 
-## 5. Manual E006 DoOR ingestion
-
-If you want to run the steps yourself:
-
-```bash
-mkdir -p ~/fly-sniff-data
-cd ~/fly-sniff-data
-git clone https://github.com/ropensci/DoOR.data.git
-cd DoOR.data
-git checkout --detach db323a496577c4b4a72b5c2fcd1859e07521ffb5
-git status --short
-```
-
-`git status --short` must be empty. Then return to fly-sniff and ingest:
-
-```bash
-cd /path/to/fly-sniff
-source .venv-olfactory/bin/activate
-
-fly-sniff-olfactory ingest-door \
-  ~/fly-sniff-data/DoOR.data \
-  --output ~/fly-sniff-data/artifacts/e006-door-first-light
-```
-
-The output directory contains:
+It produces:
 
 ```text
-door-responses-long.csv
-door-unit-mappings.json
-door-e006-receipt.json
+e006-audit.json
+SUMMARY.txt
+study-coverage.csv
+responding-unit-coverage.csv
+odor-coverage.csv
+study-response-scales.csv
+study-metadata-joined.csv
+geosmin-observations.csv
+ambiguous-unit-mappings.json
+candidate-development-subsets.json
 ```
 
-The receipt should report 78 responding units and preserves every study-specific observed/missing response without normalization or aggregation.
+The source metadata are read directly from the exact pinned DoOR tree at
+`data/door_dataset_info.csv`. The audit does not infer that two studies are commensurable merely because
+their metadata look similar.
 
-## 6. Inspect the geosmin evidence in the real E006 artifact
+## 5. Development subset policy
 
-After ingestion:
+To accelerate development without cross-study normalization, v1 identifies within-study candidates using a
+frozen performance-blind rule:
 
-```bash
-python - <<'PY'
-import pandas as pd
-from pathlib import Path
+- electrophysiology;
+- spike response data;
+- at least 500 observed cells;
+- at least 20 responding units;
+- at least 25 odor names;
+- non-empty concentration metadata.
 
-p = Path.home() / "fly-sniff-data/artifacts/e006-door-first-light/door-responses-long.csv"
-df = pd.read_csv(p)
-geosmin = df[(df.odor_name == "geosmin") & (df.response_status == "observed")]
-print(geosmin[["responding_unit", "study_id", "raw_response"]].to_string(index=False))
-PY
-```
+Candidates are selected using source coverage and metadata only. No decoding score, model output, navigation
+metric, or behavioral outcome is inspected.
 
-This is descriptive source inspection only. Do not average study columns or interpret their raw scales as directly comparable unless the later E006 adjudication explicitly allows it.
+A selected development subset is not an E006 global qualification and cannot be promoted into confirmatory
+O003 evidence.
 
-## 7. Evaluate source missingness and study coverage
+## 6. Scientific guardrails
 
-```bash
-python - <<'PY'
-import pandas as pd
-from pathlib import Path
+The audit never authorizes:
 
-p = Path.home() / "fly-sniff-data/artifacts/e006-door-first-light/door-responses-long.csv"
-df = pd.read_csv(p)
+- averaging raw responses across studies without an assay-comparability authority;
+- treating source missingness as measured zero response;
+- selecting among one-to-many receptor mappings using model performance;
+- converting DoOR source metadata into undocumented dose-response curves;
+- O003/O004 confirmatory execution.
 
-print("responding units:", df.responding_unit.nunique())
-print("study columns:", df.study_id.nunique())
-print("odor names:", df.odor_name.nunique(dropna=True))
-print("observed cells:", (df.response_status == "observed").sum())
-print("missing cells:", (df.response_status == "missing").sum())
-print("missing fraction:", (df.response_status == "missing").mean())
+E001, E002, and E006 may remain blocked while development diagnostics proceed.
 
-coverage = (
-    df.assign(observed=df.response_status.eq("observed"))
-      .groupby("study_id")["observed"]
-      .agg(["sum", "count", "mean"])
-      .sort_values("sum", ascending=False)
-)
-print(coverage.head(30).to_string())
-PY
-```
+## 7. Full qualification check
 
-This is a useful E006 adjudication diagnostic because sparse assay coverage can otherwise create misleading cross-odor comparisons.
-
-## 8. Run the entire repository test suite
-
-Before trusting any scientific artifact produced from a new branch head:
+Before a claim-bearing artifact or merge:
 
 ```bash
+source .venv-olfactory/bin/activate
 python -m ruff check .
 python -m pytest -q
-```
-
-Also record the exact source commit:
-
-```bash
 git rev-parse HEAD
 git status --short
 ```
 
-A claim-bearing artifact should be produced from a clean checkout.
+A negative or blocked scientific result must not be turned green by loosening an evidence threshold.
 
-## 9. What you should not run yet
+## 8. Manual CLI use
 
-Do not treat these as authorized flagship experiments yet:
-
-- O003 confirmatory odor-conflict evaluation;
-- O004 confirmatory plume/navigation evaluation;
-- a final intact-vs-rewire p-value;
-- an engineered-sensor result presented as validation of the fly mechanism.
-
-They remain blocked until the evidence registry and a later frozen ExperimentSpec/Lock allow them.
-
-## 10. What to send back after first light
-
-The most useful artifacts/logs to share are:
+The integrated command can also be run directly against an existing immutable ingestion:
 
 ```bash
-fly-sniff-olfactory status
-cat ~/fly-sniff-data/artifacts/e006-door-db323a496577/door-e006-receipt.json
-git rev-parse HEAD
+source .venv-olfactory/bin/activate
+
+fly-sniff-olfactory audit-e006 \
+  "$HOME/fly-sniff-data/artifacts/e006-door-db323a496577" \
+  --door-checkout "$HOME/fly-sniff-data/DoOR.data" \
+  --output "$HOME/fly-sniff-data/artifacts/e006-audit-manual"
 ```
 
-and, if anything fails, the complete traceback plus:
+Use this only when debugging the audit. The Mac runner is the preferred routine workflow.
 
-```bash
-python --version
-uname -m
-git status --short
-git -C ~/fly-sniff-data/DoOR.data rev-parse HEAD
+## 9. What to send back
+
+Normally send only the generated:
+
+```text
+e006-audit-...-share.zip
 ```
 
-Those outputs are enough to distinguish environment problems, provenance failures, parser failures, and real evidence-quality blockers.
+If the command fails before creating the bundle, send the complete terminal traceback.
+
+The ZIP contains enough information to distinguish source/provenance failures, metadata limitations, mapping
+ambiguity, sparse coverage, and a legitimate scientific block without uploading the full DoOR tables.
+
+## 10. Current claim boundary
+
+Passing the command means the preregistration and source/audit machinery worked at that exact code/source
+state. It does not mean E001/E002/E006 are qualified, O001 calibration passed, biological topology has an
+advantage, or O003 may be run confirmatorily.
