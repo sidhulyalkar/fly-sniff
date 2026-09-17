@@ -11,6 +11,7 @@ from fly_sniff.dna02_figure3c_method_v2 import (
     bilateral_right_minus_left,
     bin_spike_indices_10ms,
     firing_rate_hz_from_counts,
+    gp_random_walk_map_v2,
     load_method_contract,
     method_status,
     nonoverlap_mean_50ms,
@@ -106,6 +107,52 @@ def test_fifty_ms_windows_drop_only_incomplete_trailing_window() -> None:
     )
 
 
+
+def test_source_equivalent_gp_map_matches_frozen_synthetic_fixtures() -> None:
+    payload = load_method_contract(CONTRACT, HASH)
+    fixtures = payload["gp_map_conformance"]["synthetic_fixtures"]
+    for fixture in fixtures:
+        observed = gp_random_walk_map_v2(np.asarray(fixture["input"], dtype=float))
+        np.testing.assert_allclose(
+            observed,
+            np.asarray(fixture["expected"], dtype=float),
+            rtol=0,
+            atol=5e-15,
+        )
+
+
+def test_gp_map_solves_frozen_tridiagonal_first_order_condition() -> None:
+    y = np.array([2.0, -1.0, 4.0, 0.5, 3.0, -2.0], dtype=float)
+    z = gp_random_walk_map_v2(y)
+    lam = 0.25
+    residual = z - y
+    residual[0] += lam * (z[0] - z[1])
+    residual[-1] += lam * (z[-1] - z[-2])
+    residual[1:-1] += lam * (2 * z[1:-1] - z[:-2] - z[2:])
+    np.testing.assert_allclose(residual, np.zeros_like(y), rtol=0, atol=1e-12)
+
+
+def test_gp_map_handles_empty_singleton_and_rejects_matrix_input() -> None:
+    np.testing.assert_array_equal(gp_random_walk_map_v2(np.array([])), np.array([]))
+    np.testing.assert_array_equal(gp_random_walk_map_v2(np.array([4.2])), np.array([4.2]))
+    with pytest.raises(ValueError, match="one-dimensional"):
+        gp_random_walk_map_v2(np.zeros((2, 2)))
+
+
+def test_gp_source_authority_is_pinned_to_pymc3_v36() -> None:
+    payload = load_method_contract(CONTRACT, HASH)
+    gp = payload["gp_map_conformance"]
+    source = gp["pymc3_source"]
+    assert source["commit"] == "081e7f4a55ce45ef50a03f8062611051d9c00ce8"
+    assert source["gaussian_random_walk_blob"] == "9c5847271ae70ca26f2fef544d806bb58bf968ed"
+    assert source["find_map_blob"] == "491c38b8502e486d287566e29cbd71c9fe7177b0"
+    assert gp["matrix_structure"] == {
+        "endpoint_diagonal": 1.25,
+        "interior_diagonal": 1.5,
+        "off_diagonal": -0.25,
+    }
+
+
 def test_historical_integral_correction_is_sensitivity_not_primary() -> None:
     payload = load_method_contract(CONTRACT, HASH)
     historical = payload["smoothts_conformance"]["historical_integral_correction"]
@@ -138,4 +185,4 @@ def test_status_exposes_remaining_gate_without_opening_behavior() -> None:
     status = method_status(CONTRACT, HASH)
     assert status["status"] == "METHOD_CONTRACT_FROZEN_BEHAVIOR_STILL_SEALED"
     assert status["gates"]["behavior_opening_allowed"] is False
-    assert len(status["remaining_before_behavior_opening"]) == 2
+    assert len(status["remaining_before_behavior_opening"]) == 1
