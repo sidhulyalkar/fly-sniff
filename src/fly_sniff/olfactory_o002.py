@@ -166,7 +166,7 @@ def _pca_metrics(matrix: pd.DataFrame) -> tuple[dict[str, Any], pd.DataFrame]:
     return (
         {
             "centered_not_zscored": True,
-            "components": int(len(explained)),
+            "components": len(explained),
             "explained_variance_ratio_top10": [
                 float(value) for value in explained[:10]
             ],
@@ -252,7 +252,7 @@ def _chemical_class_probe(
         return {
             "status": "blocked_insufficient_source_labels",
             "eligible_classes": eligible_classes,
-            "eligible_odors": int(len(y)),
+            "eligible_odors": len(y),
         }
 
     prediction = _loo_nearest_centroid(x, y)
