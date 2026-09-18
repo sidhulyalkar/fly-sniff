@@ -14,6 +14,7 @@ RENDER_REF="$(git rev-parse --short=12 HEAD)"
 OUT="${FLY_SNIFF_LIVE_SHOWCASE_DIR:-${DATA_ROOT}/artifacts/live-showcase-${RENDER_REF}}"
 SITE="${OUT}/site"
 GRAPH="${FLY_SNIFF_SHOWCASE_GRAPH:-}"
+O2_DIR="${FLY_SNIFF_O002_DIR:-${DATA_ROOT}/artifacts/o002-dev-db323a496577-${SOURCE_REF}}"
 ANNOTATIONS="${FLY_SNIFF_MALECNS_ANNOTATIONS:-}"
 FETCH_SKELETONS="${FLY_SNIFF_FETCH_SKELETONS:-0}"
 
@@ -65,6 +66,15 @@ if [[ -n "${GRAPH}" && "${FETCH_SKELETONS}" == "1" ]]; then
     --cache-dir "${DATA_ROOT}/cache/malecns-v1.0-swc" \
     --max-neurons "${FLY_SNIFF_SHOWCASE_MAX_SKELETONS:-128}" \
     --max-segments-per-neuron "${FLY_SNIFF_SHOWCASE_MAX_SEGMENTS:-6000}"
+fi
+
+if [[ -f "${O2_DIR}/o002-development-receipt.json" ]]; then
+  printf '\n== Add measured named-odor response explorer ==\n'
+  fly-sniff-odor-explorer \
+    "${O2_DIR}" \
+    --output "${SITE}/data/o002-odor-explorer.json"
+else
+  echo "O002 v1 directory not found at ${O2_DIR}; named-odor explorer will be omitted"
 fi
 
 # Pull the latest O002 truth-card into the site when available.
