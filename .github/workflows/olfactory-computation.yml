@@ -15,6 +15,7 @@ on:
       - "src/fly_sniff/olfactory_door.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
       - "src/fly_sniff/olfactory_o002.py"
+      - "src/fly_sniff/olfactory_o002_robustness.py"
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
@@ -22,6 +23,7 @@ on:
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
       - "tests/test_olfactory_o002.py"
+      - "tests/test_olfactory_o002_robustness.py"
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
@@ -80,6 +82,7 @@ jobs:
           fly-sniff-olfactory --help
           fly-sniff-olfactory audit-e006 --help
           fly-sniff-olfactory run-o002-dev --help
+          fly-sniff-olfactory run-o002-robustness --help
           python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
@@ -88,6 +91,7 @@ jobs:
           src/fly_sniff/olfactory_door.py
           src/fly_sniff/olfactory_e006_audit.py
           src/fly_sniff/olfactory_o002.py
+          src/fly_sniff/olfactory_o002_robustness.py
           src/fly_sniff/olfactory_cli.py
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
@@ -95,6 +99,7 @@ jobs:
           tests/test_olfactory_door.py
           tests/test_olfactory_e006_audit.py
           tests/test_olfactory_o002.py
+          tests/test_olfactory_o002_robustness.py
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
