@@ -178,11 +178,40 @@ def _sample_plume(env: FlySniffEnv, max_points: int = 90) -> list[list[float]]:
     return [[round(float(x), 4), round(float(y), 4), round(float(s), 4)] for x, y, s in snap]
 
 
+def _modeled_node_activity(
+    controller: Controller,
+    *,
+    max_nodes: int = 256,
+) -> dict[str, float]:
+    inner: Controller = controller
+    while isinstance(inner, SensoryMaskController):
+        inner = inner.inner
+    if not isinstance(inner, MaleCNSRateController):
+        return {}
+
+    values = np.asarray(inner.activity, dtype=float)
+    if len(values) != len(inner.ids):
+        return {}
+    magnitude = np.abs(values)
+    if len(values) > max_nodes:
+        selected = np.argpartition(magnitude, -max_nodes)[-max_nodes:]
+    else:
+        selected = np.arange(len(values))
+    selected = selected[np.argsort(-magnitude[selected])]
+
+    return {
+        str(int(inner.ids[int(index)])): round(float(values[int(index)]), 6)
+        for index in selected
+        if magnitude[int(index)] > 1e-6
+    }
+
+
 def _record_frame(
     env: FlySniffEnv,
     obs: Observation,
     action: Action,
     diag: dict[str, float],
+    node_activity: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     effective_left = float(diag.get("input_left_odor", obs.left_odor))
     effective_right = float(diag.get("input_right_odor", obs.right_odor))
@@ -204,6 +233,7 @@ def _record_frame(
         "dn_left": round(float(diag.get("dn_left", 0.0)), 5),
         "dn_right": round(float(diag.get("dn_right", 0.0)), 5),
         "activity_mean": round(float(diag.get("activity_mean", 0.0)), 6),
+        "node_activity": node_activity or {},
     }
 
 
@@ -325,6 +355,9 @@ def export_live_showcase(
                             observations[str(condition["key"])],
                             actions[str(condition["key"])],
                             diagnostics[str(condition["key"])],
+                            _modeled_node_activity(
+                                controllers[str(condition["key"])]
+                            ),
                         )
                         for condition in conditions
                     },
