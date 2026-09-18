@@ -24,8 +24,9 @@ def _load(path: str | Path) -> dict[str, Any]:
 
 
 def validate_geosmin_evidence(payload: dict[str, Any]) -> dict[str, Any]:
-    if payload.get("schema_version") != 1:
-        raise ValueError("E001 evidence requires schema_version=1")
+    schema_version = payload.get("schema_version")
+    if schema_version not in {1, 2}:
+        raise ValueError("E001 evidence requires schema_version in {1, 2}")
     if payload.get("authority_id") != "E001_geosmin_receptor_physiology":
         raise ValueError("E001 authority id changed")
     if payload.get("program_id") != "olfactory-computation-v0":
@@ -72,10 +73,50 @@ def validate_geosmin_evidence(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(policy, dict) or any(value is not True for value in policy.values()):
         raise ValueError("E001 calibration anti-leakage policy may not be weakened")
     blockers = payload.get("qualification_blockers")
-    if not isinstance(blockers, list) or len(blockers) < 4:
-        raise ValueError("E001 qualification blockers are incomplete")
-    if payload.get("status") != "development_evidence_not_qualified":
-        raise ValueError("E001 v0 must remain unqualified until blockers are resolved in a new artifact")
+    if not isinstance(blockers, list):
+        raise TypeError("E001 qualification_blockers must be a list")
+
+    if schema_version == 1:
+        if len(blockers) < 4:
+            raise ValueError("E001 v0 qualification blockers are incomplete")
+        if payload.get("status") != "development_evidence_not_qualified":
+            raise ValueError("E001 v0 must remain unqualified until blockers are resolved in a new artifact")
+        qualitative_usable = False
+    else:
+        if blockers:
+            raise ValueError("qualified E001 v1 must have no unresolved qualification blockers")
+        if payload.get("status") != "qualified_qualitative_evidence_only":
+            raise ValueError("E001 v1 must remain qualified_qualitative_evidence_only")
+        source = payload.get("source", {})
+        archives = source.get("citable_archives")
+        if not isinstance(archives, list) or len(archives) < 2:
+            raise ValueError("E001 v1 requires multiple citable archive records")
+        door = payload.get("door_crosscheck")
+        if not isinstance(door, dict):
+            raise ValueError("E001 v1 requires the frozen DoOR cross-check")
+        if door.get("commit") != "db323a496577c4b4a72b5c2fcd1859e07521ffb5":
+            raise ValueError("E001 v1 DoOR source commit changed")
+        if door.get("response_file_blob") != "ede0085074d95a007bfbe98bd3f95da227313fc2":
+            raise ValueError("E001 v1 ab4B source blob changed")
+        if door.get("dataset_id") != "Stensmyr.2012.WT":
+            raise ValueError("E001 v1 DoOR dataset id changed")
+        if door.get("responding_unit") != "ab4B":
+            raise ValueError("E001 v1 DoOR responding unit changed")
+        if door.get("odor", {}).get("name") != "geosmin":
+            raise ValueError("E001 v1 DoOR cross-check must remain geosmin")
+        if door.get("observed_raw_response") != 146.4:
+            raise ValueError("E001 v1 frozen geosmin response changed")
+        numeric = payload.get("numeric_adjudication")
+        if not isinstance(numeric, dict) or numeric.get("status") != "qualified_no_numeric_parameterization":
+            raise ValueError("E001 v1 numeric adjudication changed")
+        raw_summary = payload.get("raw_vs_summary_policy")
+        if not isinstance(raw_summary, dict) or raw_summary.get("status") != "qualified":
+            raise ValueError("E001 v1 raw-vs-summary policy changed")
+        if raw_summary.get("published_summary_statistics_are_raw_trials") is not False:
+            raise ValueError("E001 v1 cannot promote published summaries to raw trials")
+        if raw_summary.get("confirmatory_numeric_likelihood_use") is not False:
+            raise ValueError("E001 v1 cannot authorize confirmatory numeric likelihood use")
+        qualitative_usable = True
 
     return {
         "status": payload["status"],
@@ -83,6 +124,8 @@ def validate_geosmin_evidence(payload: dict[str, Any]) -> dict[str, Any]:
         "numeric_fit_claims": 0,
         "o003_conflict_reserved": True,
         "qualification_blockers": len(blockers),
+        "qualitative_usable": qualitative_usable,
+        "numeric_parameterization_usable": False,
     }
 
 
