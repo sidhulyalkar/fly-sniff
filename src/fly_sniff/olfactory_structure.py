@@ -17,7 +17,7 @@ EXPECTED_ANNOTATION = {
     "annotation_table_git_blob": "1a3168731618ee62a47392252d3af7664e739e9e",
 }
 KNOWN_DA2_LPN_ANCHOR = "720575940624106442"
-ALLOWED_SIDES = {"left", "right"}
+ALLOWED_SIDES = {"left", "right", "unresolved"}
 ALLOWED_IDENTITY_GRADES = {
     "direct_public_cross_reference",
     "publication_matched_annotation",
@@ -47,7 +47,7 @@ def _validate_body_records(records: Any, *, population_id: str) -> list[dict[str
             raise ValueError(f"{population_id}: duplicate root_id {root_id}")
         seen.add(root_id)
         if record.get("side") not in ALLOWED_SIDES:
-            raise ValueError(f"{population_id}: every body requires left/right side")
+            raise ValueError(f"{population_id}: every body requires left/right or explicit unresolved side")
         if record.get("identity_grade") not in ALLOWED_IDENTITY_GRADES:
             raise ValueError(f"{population_id}: unsupported identity grade")
         authority = record.get("identity_authority")
@@ -93,16 +93,64 @@ def validate_da2_authority(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Or56a OSN side-count constraint changed")
     if osn["expected_ipsilateral"] + osn["expected_contralateral"] != osn["expected_total"]:
         raise ValueError("Or56a OSN side counts do not sum to total")
-    osn_records = _validate_body_records(osn.get("body_records", []), population_id=osn["population_id"])
+    if osn.get("publication_reported_annotated_count") != 40:
+        raise ValueError("Or56a publication-reported annotated count changed")
+    if osn.get("publication_reported_manual_additional_count") != 1:
+        raise ValueError("Or56a publication-reported manual-additional count changed")
+    if osn.get("frozen_annotation_count") != 39:
+        raise ValueError("Or56a exact v2.1.0 frozen annotation count changed")
+    if osn.get("candidate_discovery_rule") != (
+        "exact frozen v2.1.0 FlyWire hemibrain_type/cell_type ORN_DA2 only; "
+        "no connectivity- or outcome-based expansion"
+    ):
+        raise ValueError("Or56a OSN candidate discovery rule changed")
+    osn_records = _validate_body_records(
+        osn.get("body_records", []), population_id=osn["population_id"]
+    )
+    frozen_osn_records = [
+        row
+        for row in osn_records
+        if "exact blob 1a3168731618ee62a47392252d3af7664e739e9e"
+        in row.get("identity_authority", "")
+    ]
+    if len(frozen_osn_records) != 39:
+        raise ValueError("E002 must retain all 39 exact v2.1.0 ORN_DA2 annotation records")
+    unresolved_osn = [row for row in osn_records if row["side"] == "unresolved"]
 
     pn = by_id["DA2_lPN_publication_matched"]
     if pn.get("candidate_discovery_rule") != (
         "exact publication-matched annotation hemibrain_type/cell_type DA2_lPN only"
     ):
         raise ValueError("DA2_lPN candidate discovery rule changed")
-    pn_records = _validate_body_records(pn.get("body_records", []), population_id=pn["population_id"])
+    if pn.get("frozen_annotation_count") != 11:
+        raise ValueError("DA2_lPN exact v2.1.0 frozen annotation count changed")
+    pn_records = _validate_body_records(
+        pn.get("body_records", []), population_id=pn["population_id"]
+    )
+    if len(pn_records) != 11:
+        raise ValueError("E002 must retain all 11 exact v2.1.0 DA2_lPN records")
+    if pn.get("enumeration_complete") is not True:
+        raise ValueError("DA2_lPN exact annotation cohort must remain complete")
+    if any(row["side"] == "unresolved" for row in pn_records):
+        raise ValueError("DA2_lPN cohort may not contain unresolved sides")
     if KNOWN_DA2_LPN_ANCHOR not in {row["root_id"] for row in pn_records}:
         raise ValueError("frozen DA2_lPN candidate records must retain the known anchor")
+
+    discrepancies = payload.get("unresolved_discrepancies")
+    if not isinstance(discrepancies, list):
+        raise TypeError("E002 unresolved_discrepancies must be a list")
+    discrepancy_ids = {
+        row.get("id") for row in discrepancies if isinstance(row, dict)
+    }
+    required_discrepancies = {
+        "orn_da2_annotation_count_gap",
+        "orn_da2_manual_additional_root_id_missing",
+        "orn_da2_side_unresolved_fw044213",
+    }
+    if payload.get("status") != "qualified_identity_cohort" and not required_discrepancies.issubset(
+        discrepancy_ids
+    ):
+        raise ValueError("blocked E002 authority must retain all unresolved cohort discrepancies")
 
     rules = payload.get("qualification_rules")
     if not isinstance(rules, dict) or any(value is not True for value in rules.values()):
@@ -111,10 +159,11 @@ def validate_da2_authority(payload: dict[str, Any]) -> dict[str, Any]:
     osn_complete = (
         osn.get("enumeration_complete") is True
         and len(osn_records) == 41
-        and sum(row["side"] == "right" for row in osn_records) in {22, 19}
-        and sum(row["side"] == "left" for row in osn_records) in {22, 19}
+        and not unresolved_osn
+        and sum(row["side"] == "right" for row in osn_records) == 22
+        and sum(row["side"] == "left" for row in osn_records) == 19
     )
-    pn_complete = pn.get("enumeration_complete") is True and len(pn_records) >= 1
+    pn_complete = pn.get("enumeration_complete") is True and len(pn_records) == 11
     expected_status = "qualified_identity_cohort" if osn_complete and pn_complete else "blocked_incomplete_body_id_adjudication"
     if payload.get("status") != expected_status:
         raise ValueError("E002 status does not match body-ID adjudication completeness")
@@ -124,6 +173,8 @@ def validate_da2_authority(payload: dict[str, Any]) -> dict[str, Any]:
         "osn_body_records": len(osn_records),
         "da2_lpn_body_records": len(pn_records),
         "known_anchor_present": True,
+        "unresolved_osn_side_records": len(unresolved_osn),
+        "unresolved_discrepancies": len(discrepancies),
         "confirmatory_usable": expected_status == "qualified_identity_cohort",
     }
 
