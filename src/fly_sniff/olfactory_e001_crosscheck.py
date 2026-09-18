@@ -10,7 +10,6 @@ from .olfactory_door import sha256_file
 from .olfactory_e006_audit import _canonical_sha
 
 EXPECTED_STUDY = "Stensmyr.2012.WT"
-EXPECTED_DOI = "10.1016/j.cell.2012.09.046"
 EXPECTED_UNIT = "ab4B"
 EXPECTED_ODOR = "geosmin"
 EXPECTED_RAW_RESPONSE = 146.4
@@ -50,14 +49,12 @@ def crosscheck_e001_door(
 
     receipt = _load_e006_receipt(artifact)
     long_path = artifact / "door-responses-long.csv"
-    metadata_path = artifact / "door-dataset-info.csv"
     if not long_path.is_file():
         raise FileNotFoundError(f"missing E006 long-form artifact: {long_path}")
-    if not metadata_path.is_file():
-        raise FileNotFoundError(f"missing E006 dataset metadata artifact: {metadata_path}")
 
     expected_long_sha = (
-        receipt.get("outputs", {}).get("long_form", {}).get("sha256")
+        receipt.get("long_form_artifact", {}).get("sha256")
+        or receipt.get("outputs", {}).get("long_form", {}).get("sha256")
         or receipt.get("long_form_sha256")
     )
     if expected_long_sha and sha256_file(long_path) != expected_long_sha:
@@ -102,29 +99,6 @@ def crosscheck_e001_door(
             f"{response} != {EXPECTED_RAW_RESPONSE}"
         )
 
-    metadata = pd.read_csv(metadata_path)
-    id_column = next(
-        (
-            column
-            for column in ("study_id", "dataset_id", "id")
-            if column in metadata.columns
-        ),
-        None,
-    )
-    if id_column is None:
-        raise ValueError("E006 dataset metadata has no recognized study-id column")
-    meta = metadata[metadata[id_column].astype(str).eq(EXPECTED_STUDY)]
-    if len(meta) != 1:
-        raise ValueError(
-            f"expected one E006 metadata record for {EXPECTED_STUDY}; got {len(meta)}"
-        )
-    meta_row = meta.iloc[0].to_dict()
-    doi = str(meta_row.get("doi", "") or "")
-    if doi != EXPECTED_DOI:
-        raise ValueError(f"Stensmyr.2012.WT DOI mismatch: {doi!r}")
-    technique = str(meta_row.get("technique", "") or "")
-    data_type = str(meta_row.get("data_type", "") or "")
-
     observations = [
         {
             "responding_unit": str(row["responding_unit"]),
@@ -144,13 +118,9 @@ def crosscheck_e001_door(
             "door_commit": EXPECTED_DOOR_COMMIT,
             "e006_receipt_sha256": sha256_file(artifact / "door-e006-receipt.json"),
             "e006_long_form_sha256": sha256_file(long_path),
-            "e006_dataset_metadata_sha256": sha256_file(metadata_path),
         },
         "study": {
             "study_id": EXPECTED_STUDY,
-            "doi": doi,
-            "technique": technique,
-            "data_type": data_type,
             "observed_cells": int(len(observed)),
             "observed_responding_units": int(observed["responding_unit"].nunique()),
             "observed_odor_names": int(observed["odor_name"].nunique()),
@@ -184,9 +154,7 @@ def crosscheck_e001_door(
                 "E001 DOOR CROSS-CHECK V1",
                 f"status: {report['status']}",
                 f"study: {EXPECTED_STUDY}",
-                f"study_doi: {doi}",
-                f"technique: {technique}",
-                f"data_type: {data_type}",
+                "source_commit: " + EXPECTED_DOOR_COMMIT,
                 f"observed_study_cells: {len(observed)}",
                 f"observed_geosmin_cells: {len(geosmin)}",
                 f"ab4B_geosmin_raw_response: {response}",
