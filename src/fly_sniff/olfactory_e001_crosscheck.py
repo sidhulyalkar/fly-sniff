@@ -122,12 +122,12 @@ def crosscheck_e001_door(
         },
         "study": {
             "study_id": EXPECTED_STUDY,
-            "observed_cells": int(len(observed)),
+            "observed_cells": len(observed),
             "observed_responding_units": int(observed["responding_unit"].nunique()),
             "observed_odor_names": int(observed["odor_name"].nunique()),
         },
         "geosmin": {
-            "observed_cells": int(len(geosmin)),
+            "observed_cells": len(geosmin),
             "observations": observations,
             "ab4B_raw_response": response,
             "ab4B_exact_source_transcription_match": True,
