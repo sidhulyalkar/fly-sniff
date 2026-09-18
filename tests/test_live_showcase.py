@@ -6,8 +6,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from fly_sniff.controllers import BilateralProxyController
+from fly_sniff.env import Observation
 from fly_sniff.graph import GraphBundle
-from fly_sniff.live_showcase import SCHEMA, export_live_showcase
+from fly_sniff.live_showcase import SCHEMA, SensoryMaskController, export_live_showcase
 
 
 def _write_graph(root: Path, *, qualified: bool) -> Path:
@@ -81,15 +83,27 @@ def test_development_conditions_share_one_exogenous_plume_clock(tmp_path: Path) 
     assert len(starts) == 1
 
 
-def test_lesion_telemetry_distinguishes_world_from_controller_input(tmp_path: Path) -> None:
-    payload = export_live_showcase(tmp_path / "showcase.json", seconds=1.0, sample_hz=10)
-    frame = next(
-        frame for frame in payload["frames"]
-        if frame["agents"]["left-antenna-off"]["world_left_odor"] > 0
+def test_sensory_mask_reports_effective_controller_input() -> None:
+    controller = SensoryMaskController(
+        BilateralProxyController(),
+        left_scale=0.0,
+        right_scale=1.0,
     )
-    lesioned = frame["agents"]["left-antenna-off"]
-    assert lesioned["world_left_odor"] > 0
-    assert lesioned["left_odor"] == 0.0
+    controller.reset(7)
+    observation = Observation(
+        left_odor=0.8,
+        right_odor=0.2,
+        mean_odor=0.5,
+        odor_delta=-0.6,
+        wind_x_body=0.1,
+        wind_y_body=-0.2,
+        heading=0.3,
+    )
+    controller.act(observation)
+    diagnostics = controller.diagnostics()
+
+    assert diagnostics["input_left_odor"] == 0.0
+    assert diagnostics["input_right_odor"] == 0.2
 
 
 def test_candidate_graph_refuses_claim_bearing_export(tmp_path: Path) -> None:
