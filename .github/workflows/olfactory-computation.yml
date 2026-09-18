@@ -23,6 +23,7 @@ on:
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "src/fly_sniff/olfactory_e001_source.py"
+      - "src/fly_sniff/olfactory_e001_crosscheck.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
@@ -33,6 +34,7 @@ on:
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
       - "tests/test_olfactory_e001_source.py"
+      - "tests/test_olfactory_e001_crosscheck.py"
       - ".github/workflows/olfactory-computation.yml"
   push:
     paths:
@@ -52,6 +54,7 @@ on:
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "src/fly_sniff/olfactory_e001_source.py"
+      - "src/fly_sniff/olfactory_e001_crosscheck.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
@@ -59,6 +62,7 @@ on:
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
       - "tests/test_olfactory_e001_source.py"
+      - "tests/test_olfactory_e001_crosscheck.py"
       - ".github/workflows/olfactory-computation.yml"
 
 jobs:
@@ -96,6 +100,7 @@ jobs:
           fly-sniff-olfactory run-o002-robustness --help
           fly-sniff-olfactory run-o002-stability --help
           python -m fly_sniff.olfactory_e001_source --help
+          python -m fly_sniff.olfactory_e001_crosscheck --help
           python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
@@ -110,6 +115,7 @@ jobs:
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
           src/fly_sniff/olfactory_e001_source.py
+          src/fly_sniff/olfactory_e001_crosscheck.py
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
           tests/test_olfactory_e006_audit.py
@@ -120,6 +126,7 @@ jobs:
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
           tests/test_olfactory_e001_source.py
+          tests/test_olfactory_e001_crosscheck.py
       - name: Focused tests
         run: >-
           pytest -q
@@ -130,3 +137,4 @@ jobs:
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
           tests/test_olfactory_e001_source.py
+          tests/test_olfactory_e001_crosscheck.py
