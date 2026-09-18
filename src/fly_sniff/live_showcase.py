@@ -372,7 +372,6 @@ def export_live_showcase(
             last_diagnostics[key] = diagnostics[key]
 
         if step % stride == 0:
-            first_key = str(conditions[0]["key"])
             frames.append(
                 {
                     "t": round(step * arena.dt, 4),
