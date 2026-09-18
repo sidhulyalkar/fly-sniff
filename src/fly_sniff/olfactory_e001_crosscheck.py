@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -168,3 +169,18 @@ def crosscheck_e001_door(
         + "\n"
     )
     return report
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Cross-check frozen E001 Stensmyr.2012.WT source cells against E006"
+    )
+    parser.add_argument("artifact_dir")
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+    report = crosscheck_e001_door(args.artifact_dir, output_dir=args.output)
+    print(json.dumps(report, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
