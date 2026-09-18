@@ -441,20 +441,36 @@
     );
     setBadge(
       qs("claimBadge"),
-      qualified ? "claim-bearing inputs loaded" : "no MaleCNS navigation claim",
+      qualified ? "odor-navigation qualification loaded" : "no MaleCNS navigation claim",
       qualified ? "badge-qualified" : "badge-warn"
     );
 
     const connectome = state.data.connectome || {};
-    qs("connectomeTitle").textContent = connectome.label || "Connectome status";
-    setBadge(
-      qs("geometryBadge"),
-      connectome.geometry_kind === "morphology_xyz" ? "MEASURED XYZ" :
-        connectome.geometry_kind === "topology_only" ? "TOPOLOGY • NOT MORPHOLOGY" :
-        "NO CONNECTOME ASSET",
-      connectome.geometry_kind === "morphology_xyz" ? "badge-qualified" : "badge-warn"
-    );
-    qs("connectomeBoundary").textContent = connectome.claim_boundary || "";
+    if (state.somaContext || state.skeletons) {
+      qs("connectomeTitle").textContent = state.skeletons
+        ? "Measured MaleCNS context + selected circuit morphology"
+        : "Measured MaleCNS soma context";
+      setBadge(
+        qs("geometryBadge"),
+        state.skeletons ? "MEASURED SOMA + SWC" : "MEASURED SOMA XYZ",
+        "badge-qualified"
+      );
+      const pieces = [];
+      if (state.somaContext?.point_meaning) pieces.push(state.somaContext.point_meaning);
+      if (state.skeletons?.claim_boundary) pieces.push(state.skeletons.claim_boundary);
+      qs("connectomeBoundary").textContent = pieces.join(" ");
+    } else {
+      qs("connectomeTitle").textContent = connectome.label || "Connectome status";
+      setBadge(
+        qs("geometryBadge"),
+        connectome.geometry_kind === "topology_only"
+          ? "TOPOLOGY • NOT MORPHOLOGY"
+          : "NO CONNECTOME ASSET",
+        "badge-warn"
+      );
+      qs("connectomeBoundary").textContent = connectome.claim_boundary || "";
+    }
+
     qs("globalBoundary").textContent = state.data.claim_boundary || "";
     qs("schemaLabel").textContent = state.data.schema || "unknown schema";
   }
@@ -497,7 +513,38 @@
 
     qs("showPlume").addEventListener("change", drawArena);
     qs("showSource").addEventListener("change", drawArena);
+
+    connectomeCanvas.addEventListener("pointerdown", (event) => {
+      state.dragging = true;
+      state.dragX = event.clientX;
+      state.dragY = event.clientY;
+      connectomeCanvas.setPointerCapture?.(event.pointerId);
+    });
+    connectomeCanvas.addEventListener("pointermove", (event) => {
+      if (!state.dragging || (!state.somaContext && !state.skeletons)) return;
+      const dx = event.clientX - state.dragX;
+      const dy = event.clientY - state.dragY;
+      state.dragX = event.clientX;
+      state.dragY = event.clientY;
+      state.viewYaw += dx * 0.008;
+      state.viewPitch = Math.max(-1.15, Math.min(1.15, state.viewPitch + dy * 0.008));
+      drawConnectome();
+    });
+    const endDrag = () => { state.dragging = false; };
+    connectomeCanvas.addEventListener("pointerup", endDrag);
+    connectomeCanvas.addEventListener("pointercancel", endDrag);
+
     window.addEventListener("resize", renderAll);
+  }
+
+  async function loadOptionalJSON(url) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (_) {
+      return null;
+    }
   }
 
   async function init() {
@@ -505,6 +552,13 @@
       const response = await fetch("./data/showcase.json", { cache: "no-store" });
       if (!response.ok) throw new Error(`showcase.json returned ${response.status}`);
       state.data = await response.json();
+      const [somaContext, skeletons] = await Promise.all([
+        loadOptionalJSON("./data/connectome-soma.json"),
+        loadOptionalJSON("./data/selected-skeletons.json"),
+      ]);
+      state.somaContext = somaContext;
+      state.skeletons = skeletons;
+
       if (!Array.isArray(state.data.frames) || state.data.frames.length === 0) {
         throw new Error("showcase.json has no replay frames");
       }
