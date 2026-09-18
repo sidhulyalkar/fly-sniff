@@ -360,15 +360,31 @@ def _draw_coding(ax: plt.Axes, data: O002VisualData) -> None:
         )
 
 
+def _boxplot_compat(
+    ax: plt.Axes,
+    values: list[np.ndarray],
+    labels: list[str],
+    **kwargs: Any,
+) -> None:
+    """Support both Matplotlib 3.8's labels= and newer tick_labels= APIs."""
+    try:
+        ax.boxplot(values, tick_labels=labels, **kwargs)
+    except TypeError as exc:
+        if "tick_labels" not in str(exc):
+            raise
+        ax.boxplot(values, labels=labels, **kwargs)
+
+
 def _draw_holdout(ax: plt.Axes, data: O002VisualData) -> None:
     holdout = data.holdout
-    ax.boxplot(
+    _boxplot_compat(
+        ax,
         [
             holdout["full_pattern_accuracy"].to_numpy(),
             holdout["direction_only_accuracy"].to_numpy(),
             holdout["identity_erased_sorted_accuracy"].to_numpy(),
         ],
-        tick_labels=["Full", "Direction", "Identity erased"],
+        ["Full", "Direction", "Identity erased"],
         showfliers=False,
         patch_artist=True,
         boxprops={"facecolor": "#e6f6fd", "edgecolor": INK},
