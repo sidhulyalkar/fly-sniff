@@ -1,0 +1,171 @@
+{
+  "schema_version": 2,
+  "authority_id": "E001_geosmin_receptor_physiology",
+  "program_id": "olfactory-computation-v0",
+  "source": {
+    "citation": "Stensmyr et al., Cell 151:1345-1357 (2012)",
+    "doi": "10.1016/j.cell.2012.09.046",
+    "source_role": "primary_published_experiment",
+    "raw_trial_data_status": "not_frozen_not_required_for_qualitative_constraints",
+    "door_crosscheck_status": "qualified_exact_frozen_source_crosscheck",
+    "citable_archive_status": "qualified_equivalent_citable_archives",
+    "citable_archives": [
+      {
+        "authority": "ScienceDirect open archive",
+        "pii": "S0092867412013578",
+        "doi": "10.1016/j.cell.2012.09.046"
+      },
+      {
+        "authority": "PubMed",
+        "pmid": "23217715",
+        "doi": "10.1016/j.cell.2012.09.046"
+      },
+      {
+        "authority": "Swedish University of Agricultural Sciences publication database",
+        "permanent_id": "https://res.slu.se/id/publ/42859",
+        "doi": "10.1016/j.cell.2012.09.046"
+      }
+    ]
+  },
+  "claims": [
+    {
+      "claim_id": "G001_ab4B_geosmin_specificity",
+      "evidence_class": "measured_physiology",
+      "assay": "single_sensillum_recording",
+      "population": "ab4B_Or56a_OSN",
+      "stimulus": "approximately_1000_structurally_diverse_odors",
+      "stimulus_dilution": 0.01,
+      "observation": "geosmin was the only screened odor reported to increase ab4B spike firing",
+      "o001_use": "qualitative_selectivity_constraint",
+      "numeric_model_parameter_allowed": false
+    },
+    {
+      "claim_id": "G002_ab4B_geosmin_sensitivity",
+      "evidence_class": "measured_physiology",
+      "assay": "single_sensillum_recording",
+      "population": "ab4B_Or56a_OSN",
+      "stimulus": "geosmin",
+      "reported_detectable_dilution": 1e-8,
+      "reported_stimulus_pipette_mass_pg": 100,
+      "observation": "ab4B response was reported at 10^-8 dilution corresponding to about 100 pg in the stimulus pipette",
+      "o001_use": "sensitivity_sanity_check",
+      "numeric_model_parameter_allowed": false,
+      "caveat": "pipette loading/dilution is not equivalent to receptor-site concentration"
+    },
+    {
+      "claim_id": "G003_DA2_glomerulus_selectivity",
+      "evidence_class": "measured_physiology",
+      "assay": "antennal_lobe_calcium_imaging",
+      "population": "olfactory_sensory_input_to_antennal_lobe",
+      "stimulus": "geosmin",
+      "reported_dilutions": [
+        0.001,
+        0.00001
+      ],
+      "observation": "at 10^-5 geosmin elicited repeatable signal from DA2 as the reported selective antennal-lobe locus",
+      "o001_use": "qualitative_pathway_localization_constraint",
+      "numeric_model_parameter_allowed": false
+    },
+    {
+      "claim_id": "G004_DA2_PN_tuning",
+      "evidence_class": "measured_physiology",
+      "assay": "projection_neuron_electrophysiology_and_imaging",
+      "population": "DA2_projection_neuron",
+      "odor_panel_size": 17,
+      "control_odor_dilution": 0.01,
+      "geosmin_dilution": 0.001,
+      "observation": "DA2 projection neurons were reported as selectively responsive to geosmin within the tested panel",
+      "o001_use": "qualitative_projection_neuron_selectivity_constraint",
+      "numeric_model_parameter_allowed": false
+    },
+    {
+      "claim_id": "G005_Or56a_input_necessary_for_aversion",
+      "evidence_class": "behavioral_output",
+      "assay": "T_maze_with_temperature_sensitive_synaptic_silencing",
+      "intervention": "Shibire_ts_from_Or56a_promoter",
+      "geosmin_dilution": 0.00001,
+      "observation": "silencing the Or56a/ab4B input abolished or strongly reduced the reported geosmin aversion relative to controls",
+      "o001_use": "required_perturbation_direction_check",
+      "numeric_model_parameter_allowed": false
+    },
+    {
+      "claim_id": "G006_DA2_activation_overrides_attraction",
+      "evidence_class": "behavioral_output",
+      "assay": "Or22a_misexpression_plus_T_maze",
+      "intervention": "express_Or22a_in_ab4B_using_Or56a_driver",
+      "stimulus": "ethyl_butyrate",
+      "stimulus_dilution": 0.00001,
+      "observation": "parental and wild-type flies were attracted to ethyl butyrate whereas flies with ectopic Or22a activation of the ab4B/DA2 pathway showed no attraction",
+      "o001_use": "required_chemical_identity_independent_pathway_check",
+      "numeric_model_parameter_allowed": false
+    },
+    {
+      "claim_id": "G007_geosmin_suppresses_vinegar_attraction",
+      "evidence_class": "behavioral_output",
+      "assay": "FlyWalk_trap_and_T_maze",
+      "stimulus": "balsamic_vinegar_plus_geosmin",
+      "geosmin_dilution": 0.001,
+      "observation": "adding geosmin reduced attraction to balsamic vinegar across reported behavioral assays",
+      "o001_use": "context_only_reserved_for_O003_behavioral_conflict_design",
+      "numeric_model_parameter_allowed": false
+    }
+  ],
+  "calibration_policy": {
+    "no_cross_assay_numeric_scaling": true,
+    "no_behavioral_score_fitting": true,
+    "no_pipette_dilution_to_receptor_concentration_conversion_without_physical_model": true,
+    "published_summary_statistics_not_treated_as_raw_trials": true,
+    "O003_conflict_behavior_reserved_from_O001_parameter_fitting": true
+  },
+  "status": "qualified_qualitative_evidence_only",
+  "qualification_blockers": [],
+  "claim_boundary": "E001 is qualified only for citable qualitative Or56a/DA2/geosmin constraints, assay-condition provenance, and perturbation-direction checks. It does not authorize numeric physiological parameter fitting, raw-trial inference, cross-assay scaling, or O003 behavioral calibration.",
+  "door_crosscheck": {
+    "repository": "ropensci/DoOR.data",
+    "commit": "db323a496577c4b4a72b5c2fcd1859e07521ffb5",
+    "tree": "2b673e851cd0760715c1b74d6b3a6035c1af72cd",
+    "response_file": "data/ab4B.csv",
+    "response_file_blob": "ede0085074d95a007bfbe98bd3f95da227313fc2",
+    "metadata_file": "data/door_dataset_info.csv",
+    "metadata_file_blob": "43d165dc70b7b587df7842b1c1675419c4a7dd3f",
+    "dataset_id": "Stensmyr.2012.WT",
+    "responding_unit": "ab4B",
+    "mapped_glomerulus": "DA2",
+    "mapped_receptor_context": "Or33a+56a; DoOR mapping marks Or56a as see ab4B for data",
+    "odor": {
+      "name": "geosmin",
+      "inchikey": "JLPUXFOGCDVKGO-GRYCIOLGSA-N",
+      "cid": "15559490",
+      "cas": "16423-19-1"
+    },
+    "observed_raw_response": 146.4,
+    "numeric_use": "source cross-check only; not a common-scale model parameter",
+    "comparability_warning": "No normalization or cross-study scale equivalence is inferred."
+  },
+  "numeric_adjudication": {
+    "status": "qualified_no_numeric_parameterization",
+    "allowed": [
+      "preserve reported stimulus definitions and dilution conditions",
+      "use signs/directions and qualitative selectivity/pathway constraints",
+      "use reported magnitudes only as source-level sanity checks with assay labels"
+    ],
+    "forbidden": [
+      "fit model gain from published summary values",
+      "convert pipette dilution to receptor-site concentration without a physical model",
+      "combine electrophysiology, calcium imaging, and behavior on a shared numeric scale",
+      "use G007 conflict behavior to tune O001"
+    ]
+  },
+  "raw_vs_summary_policy": {
+    "status": "qualified",
+    "raw_trials_available": false,
+    "published_summary_statistics_are_raw_trials": false,
+    "perturbation_claims_use": "directional qualitative checks only",
+    "confirmatory_numeric_likelihood_use": false
+  },
+  "remaining_limitations": [
+    "raw trial-level Stensmyr 2012 data are not frozen",
+    "E001 cannot supply fitted numeric gains or shared assay scales",
+    "O003 conflict behavior remains reserved and requires separate E005 qualification"
+  ]
+}
