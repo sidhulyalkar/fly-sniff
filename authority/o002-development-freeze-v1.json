@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "freeze_id": "O002-development-freeze-v1",
+  "program_id": "olfactory-computation-v0",
+  "aim": "O002_multi_odor_representation",
+  "status": "frozen_development_finding_not_confirmatory",
+  "source": {
+    "door_commit": "db323a496577c4b4a72b5c2fcd1859e07521ffb5",
+    "study_id": "Hallem.2006.EN",
+    "nominal_concentration": "10^-2",
+    "assay": "electrophysiology",
+    "data_type": "spikes",
+    "feature_identity": "source_responding_unit"
+  },
+  "lineage": {
+    "v1": {
+      "code_head": "8726aaef51900d003f4b41d400f05ff6508c18e7",
+      "protocol": "o002-within-study-development-v1",
+      "receipt_sha256": "fd7fd52338f6f5bab9b132208d56bbeb34c93e7b2bf6aee0ad494c33a06e43e1"
+    },
+    "v2": {
+      "code_head": "0fad162ca1c3e1b9ac8a432dc53bb8675e6d9f79",
+      "protocol": "o002-coding-robustness-development-v2",
+      "receipt_sha256": "89f738e5a6b2426f303b5d45bd3015e0d7ac6870d1b6907e5336013410f4c2c4"
+    },
+    "v3": {
+      "code_head": "7fe9f622d90967bd1dd9be8c37dc09d48469816c",
+      "protocol": "o002-subspace-stability-development-v3",
+      "receipt_sha256": "437d9880f3a8a9b17a56e31ab3a3ee8d5f9f43a57f509805fddb2dda2afa2dd7"
+    }
+  },
+  "frozen_findings": {
+    "matrix": {
+      "complete_odors_excluding_sfr": 110,
+      "responding_units": 24,
+      "imputation_used": false
+    },
+    "geometry": {
+      "pca_top2_variance": 0.5529728249870696,
+      "effective_rank_participation_ratio": 4.832379383797349,
+      "leave_one_unit_geometry_mean_spearman": 0.9928458834090849
+    },
+    "class_probe": {
+      "full_pattern_balanced_accuracy": 0.5215286256952923,
+      "label_permutation_null_q95": 0.1878217846967847,
+      "label_permutation_empirical_tail_fraction": 0.001949317738791423
+    },
+    "coding_decomposition": {
+      "mean_amplitude_only_balanced_accuracy": 0.292667209333876,
+      "l2_amplitude_only_balanced_accuracy": 0.28867690951024283,
+      "peak_to_peak_only_balanced_accuracy": 0.2350308641975309,
+      "direction_only_balanced_accuracy": 0.610917785917786,
+      "identity_erased_sorted_profile_balanced_accuracy": 0.3519129019129019,
+      "channel_identity_shuffle_null_mean": 0.22332186524894856,
+      "channel_identity_shuffle_null_q95": 0.28924374236874234,
+      "leave_one_unit_mean_balanced_accuracy": 0.5189774538732871
+    },
+    "stability": {
+      "balanced_holdout_full_mean": 0.5316840277777778,
+      "balanced_holdout_direction_mean": 0.6032986111111112,
+      "balanced_holdout_direction_minus_full_mean": 0.07161458333333334,
+      "fraction_direction_greater_than_full": 0.529296875,
+      "fraction_full_greater_than_identity_erased_sorted": 0.76171875,
+      "full_pattern_min_class_recall": 0,
+      "direction_only_min_class_recall": 0.16666666666666666,
+      "direction_subspace_5d_balanced_accuracy": 0.571515059015059,
+      "direction_subspace_8d_balanced_accuracy": 0.6035917785917787,
+      "direction_subspace_24d_balanced_accuracy": 0.610917785917786
+    }
+  },
+  "bounded_interpretation": [
+    "within Hallem.2006.EN, source chemical-class labels are associated with distributed population response structure",
+    "overall response magnitude alone carries substantially less class information than the full or direction-normalized population pattern under the frozen nearest-centroid diagnostic",
+    "stable responding-unit identity contributes information beyond an identity-erased response-value multiset",
+    "single-unit removal has limited average effect and the odor geometry is highly stable to leave-one-unit deletion",
+    "a low-dimensional direction-normalized subspace retains much of the frozen development score, but the full 24-dimensional direction representation remains the best fixed tested point",
+    "class-level performance is heterogeneous and some classes remain poorly recalled"
+  ],
+  "forbidden_promotions": [
+    "odor identity decoding",
+    "behavioral valence decoding",
+    "receptor-specific causal mechanism",
+    "cross-study generalization",
+    "connectome topology effect",
+    "confirmatory p-value interpretation of repeated holdouts",
+    "O003 or O004 authorization"
+  ],
+  "continuation_policy": {
+    "further_model_or_threshold_search_on_same_O002_table_allowed": false,
+    "new_O002_work_requires": [
+      "new independently motivated external data authority",
+      "or a new preregistered scientific question versioned before inspecting its outcome"
+    ],
+    "negative_or_heterogeneous_class_results_retained": true
+  },
+  "claim_boundary": "This freeze records the completed O002 development finding and prevents post-hoc extension of the same analysis. It does not convert development diagnostics into confirmatory evidence and does not unlock O003/O004."
+}
