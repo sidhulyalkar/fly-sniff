@@ -11,12 +11,14 @@ on:
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
       - "scripts/run_olfactory_development_mac.sh"
+      - "scripts/run_olfactory_authority_unlock_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
       - "src/fly_sniff/olfactory_o002.py"
       - "src/fly_sniff/olfactory_o002_robustness.py"
       - "src/fly_sniff/olfactory_o002_stability.py"
+      - "src/fly_sniff/olfactory_authority_unlock.py"
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
@@ -26,6 +28,7 @@ on:
       - "tests/test_olfactory_o002.py"
       - "tests/test_olfactory_o002_robustness.py"
       - "tests/test_olfactory_o002_stability.py"
+      - "tests/test_olfactory_authority_unlock.py"
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
@@ -76,9 +79,10 @@ jobs:
         run: python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
       - name: Validate Mac runner shell contract
         run: |
-          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh
+          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh scripts/run_olfactory_authority_unlock_mac.sh
           test -x scripts/run_olfactory_first_light_mac.sh
           test -x scripts/run_olfactory_development_mac.sh
+          test -x scripts/run_olfactory_authority_unlock_mac.sh
       - name: Smoke olfactory CLI and E006 ingester
         run: |
           fly-sniff-olfactory --help
@@ -87,6 +91,7 @@ jobs:
           fly-sniff-olfactory run-o002-robustness --help
           fly-sniff-olfactory run-o002-stability --help
           python -m fly_sniff.olfactory_door --help
+          python -m fly_sniff.olfactory_authority_unlock --help
       - name: Ruff
         run: >-
           ruff check
@@ -96,6 +101,7 @@ jobs:
           src/fly_sniff/olfactory_o002.py
           src/fly_sniff/olfactory_o002_robustness.py
           src/fly_sniff/olfactory_o002_stability.py
+          src/fly_sniff/olfactory_authority_unlock.py
           src/fly_sniff/olfactory_cli.py
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
@@ -105,9 +111,11 @@ jobs:
           tests/test_olfactory_o002.py
           tests/test_olfactory_o002_robustness.py
           tests/test_olfactory_o002_stability.py
+          tests/test_olfactory_authority_unlock.py
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
+          tests/test_olfactory_authority_unlock.py
       - name: Focused tests
         run: >-
           pytest -q
