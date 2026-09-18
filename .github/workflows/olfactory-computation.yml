@@ -6,15 +6,21 @@ on:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
       - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/geosmin-e001-qualified-v1.json"
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
+      - "authority/flywire-da2-e002-adjudication-v1.json"
+      - "authority/o002-development-freeze-v1.json"
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
       - "scripts/run_olfactory_development_mac.sh"
+      - "scripts/run_olfactory_unlock_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_e002_adjudication.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
       - "src/fly_sniff/olfactory_o002.py"
+      - "src/fly_sniff/olfactory_o002_freeze.py"
       - "src/fly_sniff/olfactory_o002_robustness.py"
       - "src/fly_sniff/olfactory_o002_stability.py"
       - "src/fly_sniff/olfactory_cli.py"
@@ -22,8 +28,11 @@ on:
       - "src/fly_sniff/olfactory_geosmin.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_e001_qualified.py"
+      - "tests/test_olfactory_e002_adjudication.py"
       - "tests/test_olfactory_e006_audit.py"
       - "tests/test_olfactory_o002.py"
+      - "tests/test_olfactory_o002_freeze.py"
       - "tests/test_olfactory_o002_robustness.py"
       - "tests/test_olfactory_o002_stability.py"
       - "tests/test_olfactory_cli.py"
@@ -35,18 +44,25 @@ on:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
       - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/geosmin-e001-qualified-v1.json"
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
+      - "authority/flywire-da2-e002-adjudication-v1.json"
+      - "authority/o002-development-freeze-v1.json"
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
+      - "scripts/run_olfactory_unlock_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
+      - "src/fly_sniff/olfactory_e002_adjudication.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
+      - "tests/test_olfactory_e001_qualified.py"
+      - "tests/test_olfactory_e002_adjudication.py"
       - "tests/test_olfactory_e006_audit.py"
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
@@ -71,14 +87,20 @@ jobs:
           --source-registry authority/olfactory-source-registry-v0.json
           --o001 authority/geosmin-o001-development-v0.json
       - name: Validate E001 published evidence
-        run: python -m fly_sniff.olfactory_geosmin authority/geosmin-e001-evidence-v0.json
+        run: |
+          python -m fly_sniff.olfactory_geosmin authority/geosmin-e001-evidence-v0.json
+          python -m fly_sniff.olfactory_geosmin authority/geosmin-e001-qualified-v1.json
       - name: Validate E002 identity authority
-        run: python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
+        run: |
+          python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
+          python -m fly_sniff.olfactory_e002_adjudication authority/flywire-da2-e002-adjudication-v1.json
+          python -m fly_sniff.olfactory_o002_freeze authority/o002-development-freeze-v1.json
       - name: Validate Mac runner shell contract
         run: |
-          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh
+          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh scripts/run_olfactory_unlock_mac.sh
           test -x scripts/run_olfactory_first_light_mac.sh
           test -x scripts/run_olfactory_development_mac.sh
+          test -x scripts/run_olfactory_unlock_mac.sh
       - name: Smoke olfactory CLI and E006 ingester
         run: |
           fly-sniff-olfactory --help
@@ -86,14 +108,18 @@ jobs:
           fly-sniff-olfactory run-o002-dev --help
           fly-sniff-olfactory run-o002-robustness --help
           fly-sniff-olfactory run-o002-stability --help
+          fly-sniff-olfactory validate-e002-adjudication --help
+          fly-sniff-olfactory validate-o002-freeze --help
           python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
           ruff check
           src/fly_sniff/olfactory_program.py
           src/fly_sniff/olfactory_door.py
+          src/fly_sniff/olfactory_e002_adjudication.py
           src/fly_sniff/olfactory_e006_audit.py
           src/fly_sniff/olfactory_o002.py
+          src/fly_sniff/olfactory_o002_freeze.py
           src/fly_sniff/olfactory_o002_robustness.py
           src/fly_sniff/olfactory_o002_stability.py
           src/fly_sniff/olfactory_cli.py
@@ -101,8 +127,11 @@ jobs:
           src/fly_sniff/olfactory_geosmin.py
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
+          tests/test_olfactory_e001_qualified.py
+          tests/test_olfactory_e002_adjudication.py
           tests/test_olfactory_e006_audit.py
           tests/test_olfactory_o002.py
+          tests/test_olfactory_o002_freeze.py
           tests/test_olfactory_o002_robustness.py
           tests/test_olfactory_o002_stability.py
           tests/test_olfactory_cli.py
@@ -113,7 +142,10 @@ jobs:
           pytest -q
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
+          tests/test_olfactory_e001_qualified.py
+          tests/test_olfactory_e002_adjudication.py
           tests/test_olfactory_e006_audit.py
+          tests/test_olfactory_o002_freeze.py
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
