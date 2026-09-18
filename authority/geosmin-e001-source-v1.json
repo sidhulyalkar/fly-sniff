@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "authority_id": "E001_geosmin_receptor_physiology_source_archive",
+  "program_id": "olfactory-computation-v0",
+  "source": {
+    "citation": "Stensmyr et al., Cell 151:1345-1357 (2012)",
+    "doi": "10.1016/j.cell.2012.09.046",
+    "institutional_repository": "Max Planck Society PURE",
+    "item_id": "item_1577953_11",
+    "component_id": "file_3157174",
+    "url": "https://pure.mpg.de/rest/items/item_1577953_11/component/file_3157174/content?download=true",
+    "expected_media_type": "application/pdf",
+    "observed_page_count": 19,
+    "supplemental_information_in_same_pdf": true,
+    "supplemental_figures_reported": 6
+  },
+  "acquisition_policy": {
+    "freeze_exact_bytes_once": true,
+    "require_pdf_magic": true,
+    "minimum_bytes": 100000,
+    "record_sha256": true,
+    "do_not_treat_published_pdf_as_raw_trial_data": true,
+    "do_not_fit_numeric_model_parameters_from_figure_pixels": true,
+    "o003_conflict_behavior_reserved": true
+  },
+  "status": "source_uri_frozen_hash_pending",
+  "claim_boundary": "This manifest freezes the institutional archive location for the Stensmyr 2012 Cell article and its included supplemental information. Downloading and hashing these bytes establishes source provenance only. It does not turn published figures or summary statistics into raw trial data and does not by itself qualify E001 for numeric parameter fitting."
+}
