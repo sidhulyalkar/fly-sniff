@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: I001
+
 import argparse
 import hashlib
 import json
@@ -69,8 +71,8 @@ def build_soma_context(
 
     rows: list[dict[str, Any]] = []
     for row in traced.itertuples(index=False):
-        body_id = int(getattr(row, "bodyId"))
-        position = _xyz(getattr(row, "somaLocation"))
+        body_id = int(row.bodyId)
+        position = _xyz(row.somaLocation)
         if position is None:
             continue
         rows.append(
