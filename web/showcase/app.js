@@ -241,15 +241,18 @@
     };
   }
 
-  function skeletonColor(roles, agent) {
-    const strength = roleStrength(roles, agent);
+  function skeletonColor(roles, agent, bodyId) {
+    const roleValue = roleStrength(roles, agent);
+    const rawActivity = Math.abs(Number(agent?.node_activity?.[String(bodyId)] || 0));
+    const activity = Math.max(0, Math.min(1, rawActivity));
+    const strength = Math.max(roleValue, activity);
     if ((roles || []).some((r) => r.startsWith("odor_"))) {
-      return `rgba(71,199,243,${0.24 + 0.70 * strength})`;
+      return `rgba(71,199,243,${0.20 + 0.76 * strength})`;
     }
     if ((roles || []).some((r) => r.startsWith("steer_"))) {
-      return `rgba(245,191,66,${0.24 + 0.70 * strength})`;
+      return `rgba(245,191,66,${0.20 + 0.76 * strength})`;
     }
-    return `rgba(158,140,255,${0.18 + 0.58 * strength})`;
+    return `rgba(158,140,255,${0.12 + 0.78 * strength})`;
   }
 
   function drawMeasuredAnatomy(dims, selectedAgent) {
@@ -270,7 +273,11 @@
     if (state.skeletons?.neurons?.length) {
       connectomeCtx.lineWidth = 1.0;
       for (const neuron of state.skeletons.neurons) {
-        connectomeCtx.strokeStyle = skeletonColor(neuron.roles || [], selectedAgent);
+        connectomeCtx.strokeStyle = skeletonColor(
+          neuron.roles || [],
+          selectedAgent,
+          neuron.body_id
+        );
         connectomeCtx.beginPath();
         for (const seg of neuron.segments || []) {
           const a = projectXYZ(seg[0], seg[1], seg[2], dims, bounds);
@@ -314,10 +321,15 @@
     for (const node of nodes) {
       const p = positions.get(String(node.body_id));
       if (!p) continue;
-      const strength = roleStrength(node.roles, selectedAgent);
+      const roleValue = roleStrength(node.roles, selectedAgent);
+      const activity = Math.min(
+        1,
+        Math.abs(Number(selectedAgent?.node_activity?.[String(node.body_id)] || 0))
+      );
+      const strength = Math.max(roleValue, activity);
       const isRole = (node.roles || []).length > 0;
-      connectomeCtx.fillStyle = isRole
-        ? `rgba(71,199,243,${0.25 + strength * 0.7})`
+      connectomeCtx.fillStyle = isRole || activity > 0
+        ? `rgba(71,199,243,${0.20 + strength * 0.75})`
         : "rgba(116,145,171,.28)";
       connectomeCtx.beginPath();
       connectomeCtx.arc(p.x, p.y, isRole ? 3 + strength * 3 : 1.5, 0, Math.PI * 2);
