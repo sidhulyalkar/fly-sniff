@@ -39,6 +39,7 @@ def _write_graph(root: Path, *, qualified: bool) -> Path:
             {
                 "qualification_status": "qualified" if qualified else "candidate",
                 "scientific_claim_allowed": qualified,
+                "qualified_experiments": ["odor-plume"] if qualified else [],
             }
         )
     )
@@ -73,6 +74,22 @@ def test_development_conditions_share_one_exogenous_plume_clock(tmp_path: Path) 
         "left-antenna-off",
         "odor-blind",
     }
+    starts = {
+        (row["x"], row["y"], row["heading"])
+        for row in frame["agents"].values()
+    }
+    assert len(starts) == 1
+
+
+def test_lesion_telemetry_distinguishes_world_from_controller_input(tmp_path: Path) -> None:
+    payload = export_live_showcase(tmp_path / "showcase.json", seconds=1.0, sample_hz=10)
+    frame = next(
+        frame for frame in payload["frames"]
+        if frame["agents"]["left-antenna-off"]["world_left_odor"] > 0
+    )
+    lesioned = frame["agents"]["left-antenna-off"]
+    assert lesioned["world_left_odor"] > 0
+    assert lesioned["left_odor"] == 0.0
 
 
 def test_candidate_graph_refuses_claim_bearing_export(tmp_path: Path) -> None:
@@ -100,6 +117,23 @@ def test_candidate_graph_can_render_only_when_explicitly_allowed(tmp_path: Path)
     assert payload["connectome"]["available"] is True
     assert payload["connectome"]["geometry_kind"] == "topology_only"
     assert "not anatomical XYZ morphology" in payload["connectome"]["claim_boundary"]
+
+
+
+def test_generic_qualification_does_not_unlock_odor_navigation(tmp_path: Path) -> None:
+    graph = _write_graph(tmp_path / "generic-qualified", qualified=True)
+    manifest_path = graph / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["qualified_experiments"] = ["loom-escape"]
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(ValueError, match="odor-plume-qualified"):
+        export_live_showcase(
+            tmp_path / "showcase.json",
+            seconds=0.2,
+            sample_hz=5,
+            graph_dir=graph,
+        )
 
 
 def test_qualified_graph_exports_paired_topology_controls(tmp_path: Path) -> None:
