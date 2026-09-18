@@ -17,6 +17,8 @@
     accumulator: 0,
     somaContext: null,
     skeletons: null,
+    odorExplorer: null,
+    selectedOdor: 0,
     viewYaw: -0.55,
     viewPitch: 0.24,
     dragging: false,
@@ -405,6 +407,103 @@
     );
   }
 
+  function drawOdorFingerprint() {
+    const explorer = state.odorExplorer;
+    const canvas = qs("odorFingerprintCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dims = fitCanvas(canvas, ctx);
+    ctx.clearRect(0, 0, dims.width, dims.height);
+    ctx.fillStyle = "#06111d";
+    ctx.fillRect(0, 0, dims.width, dims.height);
+
+    if (!explorer?.odors?.length) {
+      ctx.fillStyle = "rgba(190,210,228,.65)";
+      ctx.font = "12px system-ui";
+      ctx.fillText("Measured odor matrix not loaded in this build.", 14, 28);
+      return;
+    }
+
+    const odor = explorer.odors[Math.max(0, Math.min(explorer.odors.length - 1, state.selectedOdor))];
+    const values = odor.responses || [];
+    const maxAbs = Math.max(Number(explorer.global_abs_max || 1), 1e-9);
+    const pad = { left: 30, right: 10, top: 28, bottom: 24 };
+    const width = Math.max(1, dims.width - pad.left - pad.right);
+    const height = Math.max(1, dims.height - pad.top - pad.bottom);
+    const zero = pad.top + height / 2;
+
+    ctx.strokeStyle = "rgba(111,141,168,.32)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, zero);
+    ctx.lineTo(dims.width - pad.right, zero);
+    ctx.stroke();
+
+    const gap = 2;
+    const barWidth = Math.max(1, width / Math.max(1, values.length) - gap);
+    values.forEach((raw, index) => {
+      const value = Number(raw) || 0;
+      const normalized = Math.max(-1, Math.min(1, value / maxAbs));
+      const h = normalized * (height / 2);
+      const x = pad.left + index * (width / values.length) + gap / 2;
+      ctx.fillStyle = normalized >= 0 ? "#47c7f3" : "#ff6f91";
+      ctx.fillRect(x, h >= 0 ? zero - h : zero, barWidth, Math.abs(h));
+    });
+
+    ctx.fillStyle = "#d8e7f2";
+    ctx.font = "600 11px system-ui";
+    ctx.fillText(`${odor.odor_name} • ${odor.odor_class}`, pad.left, 16);
+    ctx.fillStyle = "rgba(143,162,183,.8)";
+    ctx.font = "10px ui-monospace, SFMono-Regular, monospace";
+    ctx.fillText(`${values.length} measured responding units`, pad.left, dims.height - 7);
+  }
+
+  function setupOdorExplorer() {
+    const select = qs("odorSelect");
+    if (!select) return;
+    select.innerHTML = "";
+    const explorer = state.odorExplorer;
+    if (!explorer?.odors?.length) {
+      const option = document.createElement("option");
+      option.textContent = "Measured odor matrix unavailable";
+      option.value = "0";
+      select.appendChild(option);
+      select.disabled = true;
+      qs("odorExplorerBoundary").textContent =
+        "Run the live site builder with the frozen O002 v1 artifacts to enable named-odor fingerprints.";
+      drawOdorFingerprint();
+      return;
+    }
+
+    const groups = new Map();
+    explorer.odors.forEach((odor, index) => {
+      const key = odor.odor_class || "unlabeled";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ odor, index });
+    });
+    for (const [label, rows] of groups.entries()) {
+      const group = document.createElement("optgroup");
+      group.label = label;
+      for (const row of rows) {
+        const option = document.createElement("option");
+        option.value = String(row.index);
+        option.textContent = row.odor.odor_name;
+        group.appendChild(option);
+      }
+      select.appendChild(group);
+    }
+
+    select.disabled = false;
+    state.selectedOdor = 0;
+    select.value = "0";
+    select.addEventListener("change", () => {
+      state.selectedOdor = Math.max(0, Math.min(explorer.odors.length - 1, Number(select.value) || 0));
+      drawOdorFingerprint();
+    });
+    qs("odorExplorerBoundary").textContent = explorer.claim_boundary || "";
+    drawOdorFingerprint();
+  }
+
   function renderAll() {
     drawArena();
     drawConnectome();
@@ -555,7 +654,10 @@
     connectomeCanvas.addEventListener("pointerup", endDrag);
     connectomeCanvas.addEventListener("pointercancel", endDrag);
 
-    window.addEventListener("resize", renderAll);
+    window.addEventListener("resize", () => {
+      renderAll();
+      drawOdorFingerprint();
+    });
   }
 
   async function loadOptionalJSON(url) {
@@ -573,12 +675,14 @@
       const response = await fetch("./data/showcase.json", { cache: "no-store" });
       if (!response.ok) throw new Error(`showcase.json returned ${response.status}`);
       state.data = await response.json();
-      const [somaContext, skeletons] = await Promise.all([
+      const [somaContext, skeletons, odorExplorer] = await Promise.all([
         loadOptionalJSON("./data/connectome-soma.json"),
         loadOptionalJSON("./data/selected-skeletons.json"),
+        loadOptionalJSON("./data/o002-odor-explorer.json"),
       ]);
       state.somaContext = somaContext;
       state.skeletons = skeletons;
+      state.odorExplorer = odorExplorer;
 
       if (!Array.isArray(state.data.frames) || state.data.frames.length === 0) {
         throw new Error("showcase.json has no replay frames");
@@ -591,6 +695,7 @@
       qs("timeline").max = "1000";
       setupLegend();
       setupConditionSelect();
+      setupOdorExplorer();
       configureEvidence();
       wireControls();
       renderAll();
