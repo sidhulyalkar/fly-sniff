@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from fly_sniff.olfactory_e001_source import freeze_e001_source
+from fly_sniff.olfactory_e001_source import freeze_e001_source, verify_e001_source
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "authority" / "geosmin-e001-source-v1.json"
@@ -85,3 +85,19 @@ def test_e001_source_manifest_cannot_change_archive_uri(tmp_path: Path) -> None:
             output_dir=tmp_path / "out",
             source_file=source,
         )
+
+
+def test_e001_source_verifier_detects_tampering(tmp_path: Path) -> None:
+    source = _fake_pdf(tmp_path / "source.pdf")
+    output = tmp_path / "frozen"
+    freeze_e001_source(
+        MANIFEST,
+        output_dir=output,
+        source_file=source,
+    )
+    verify_e001_source(output, manifest_path=MANIFEST)
+
+    pdf = output / "stensmyr2012-cell-with-supplement.pdf"
+    pdf.write_bytes(pdf.read_bytes() + b"x")
+    with pytest.raises(ValueError, match="sha256 mismatch"):
+        verify_e001_source(output, manifest_path=MANIFEST)
