@@ -5,7 +5,7 @@ import hashlib
 import json
 import shutil
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -138,7 +138,7 @@ def freeze_e001_source(
         },
         "acquisition": {
             "mode": acquisition_mode,
-            "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
+            "retrieved_at_utc": datetime.now(UTC).isoformat(),
             "pdf_path": str(pdf_path),
             "pdf_bytes": pdf_path.stat().st_size,
             "pdf_sha256": pdf_sha,
