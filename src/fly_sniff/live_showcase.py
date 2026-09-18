@@ -34,6 +34,8 @@ class SensoryMaskController(Controller):
     def act(self, obs: Observation) -> Action:
         left = float(np.clip(obs.left_odor * self.left_scale, 0.0, 1.0))
         right = float(np.clip(obs.right_odor * self.right_scale, 0.0, 1.0))
+        self._effective_left = left
+        self._effective_right = right
         masked = Observation(
             left_odor=left,
             right_odor=right,
@@ -46,7 +48,10 @@ class SensoryMaskController(Controller):
         return self.inner.act(masked)
 
     def diagnostics(self) -> dict[str, float]:
-        return self.inner.diagnostics()
+        result = self.inner.diagnostics()
+        result["input_left_odor"] = float(getattr(self, "_effective_left", 0.0))
+        result["input_right_odor"] = float(getattr(self, "_effective_right", 0.0))
+        return result
 
 
 def _condition(
@@ -112,16 +117,24 @@ def graph_conditions(
     rewire_seed: int,
     allow_candidate: bool,
 ) -> list[dict[str, Any]]:
-    status = str((bundle.manifest or {}).get("qualification_status", "unsealed"))
-    if status != "qualified" and not allow_candidate:
+    manifest = bundle.manifest or {}
+    status = str(manifest.get("qualification_status", "unsealed"))
+    qualified_experiments = {str(x) for x in manifest.get("qualified_experiments", [])}
+    odor_navigation_qualified = status == "qualified" and "odor-plume" in qualified_experiments
+    if not odor_navigation_qualified and not allow_candidate:
         raise ValueError(
-            "claim-bearing live showcase requires a qualified GraphBundle; "
-            "pass --allow-candidate only for visibly labelled development output"
+            "claim-bearing live showcase requires an odor-plume-qualified GraphBundle; "
+            "generic or other-experiment qualification is insufficient. Pass --allow-candidate "
+            "only for visibly labelled development output."
         )
 
     require_qualified = status == "qualified"
     rewired = degree_preserving_rewire(bundle, seed=rewire_seed)
-    evidence = "qualified_modeled_circuit" if require_qualified else "candidate_modeled_circuit"
+    evidence = (
+        "qualified_modeled_circuit"
+        if odor_navigation_qualified
+        else "candidate_modeled_circuit"
+    )
 
     return [
         _condition(
@@ -169,15 +182,19 @@ def _record_frame(
     action: Action,
     diag: dict[str, float],
 ) -> dict[str, Any]:
+    effective_left = float(diag.get("input_left_odor", obs.left_odor))
+    effective_right = float(diag.get("input_right_odor", obs.right_odor))
     return {
         "x": round(float(env.agent.x), 5),
         "y": round(float(env.agent.y), 5),
         "heading": round(float(env.agent.heading), 5),
         "found": bool(env.agent.found),
-        "left_odor": round(float(obs.left_odor), 5),
-        "right_odor": round(float(obs.right_odor), 5),
-        "mean_odor": round(float(obs.mean_odor), 5),
-        "odor_delta": round(float(obs.odor_delta), 5),
+        "world_left_odor": round(float(obs.left_odor), 5),
+        "world_right_odor": round(float(obs.right_odor), 5),
+        "left_odor": round(effective_left, 5),
+        "right_odor": round(effective_right, 5),
+        "mean_odor": round(0.5 * (effective_left + effective_right), 5),
+        "odor_delta": round(effective_right - effective_left, 5),
         "wind_x_body": round(float(obs.wind_x_body), 5),
         "wind_y_body": round(float(obs.wind_y_body), 5),
         "turn": round(float(action.turn), 5),
@@ -276,16 +293,23 @@ def export_live_showcase(
     stride = max(1, round(1.0 / (arena.dt * sample_hz)))
     max_steps = min(arena.max_steps, max(1, round(seconds / arena.dt)))
     frames: list[dict[str, Any]] = []
+    finished = {str(condition["key"]): False for condition in conditions}
+    last_diagnostics = {str(condition["key"]): {} for condition in conditions}
 
     for step in range(max_steps):
         actions: dict[str, Action] = {}
         diagnostics: dict[str, dict[str, float]] = {}
         for condition in conditions:
             key = str(condition["key"])
+            if finished[key]:
+                actions[key] = Action(turn=0.0, speed=0.0)
+                diagnostics[key] = last_diagnostics[key]
+                continue
             controller = controllers[key]
             action = controller.act(observations[key])
             actions[key] = action
             diagnostics[key] = controller.diagnostics()
+            last_diagnostics[key] = diagnostics[key]
 
         if step % stride == 0:
             first_key = str(conditions[0]["key"])
@@ -308,9 +332,13 @@ def export_live_showcase(
         done_all = True
         for condition in conditions:
             key = str(condition["key"])
-            obs, done = envs[key].step(actions[key].turn, actions[key].speed)
+            if finished[key]:
+                obs, done = envs[key].step(0.0, 0.0)
+            else:
+                obs, done = envs[key].step(actions[key].turn, actions[key].speed)
             observations[key] = obs
-            done_all = done_all and done
+            finished[key] = finished[key] or done
+            done_all = done_all and finished[key]
         if done_all:
             break
 
@@ -319,7 +347,14 @@ def export_live_showcase(
         for condition in conditions
     ]
     graph_status = str((bundle.manifest or {}).get("qualification_status", "none")) if bundle else "none"
-    claim_allowed = bool(bundle and graph_status == "qualified")
+    qualified_experiments = {
+        str(x) for x in ((bundle.manifest or {}).get("qualified_experiments", []) if bundle else [])
+    }
+    claim_allowed = bool(
+        bundle
+        and graph_status == "qualified"
+        and "odor-plume" in qualified_experiments
+    )
 
     payload: dict[str, Any] = {
         "schema": SCHEMA,
