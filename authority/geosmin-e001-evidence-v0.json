@@ -7,7 +7,9 @@
     "doi": "10.1016/j.cell.2012.09.046",
     "source_role": "primary_published_experiment",
     "raw_trial_data_status": "not_yet_frozen",
-    "door_crosscheck_status": "source_resolved_ab4B_Stensmyr_column_identified_not_yet_ingested"
+    "door_crosscheck_status": "source_resolved_ab4B_Stensmyr_column_identified_not_yet_ingested",
+    "archive_manifest": "authority/geosmin-e001-source-v1.json",
+    "primary_archive_status": "institutional_uri_frozen_local_sha256_pending"
   },
   "claims": [
     {
@@ -28,7 +30,7 @@
       "population": "ab4B_Or56a_OSN",
       "stimulus": "geosmin",
       "reported_detectable_dilution": 1e-8,
-      "reported_stimulus_pipette_mass_pg": 100.0,
+      "reported_stimulus_pipette_mass_pg": 100,
       "observation": "ab4B response was reported at 10^-8 dilution corresponding to about 100 pg in the stimulus pipette",
       "o001_use": "sensitivity_sanity_check",
       "numeric_model_parameter_allowed": false,
@@ -40,7 +42,10 @@
       "assay": "antennal_lobe_calcium_imaging",
       "population": "olfactory_sensory_input_to_antennal_lobe",
       "stimulus": "geosmin",
-      "reported_dilutions": [0.001, 0.00001],
+      "reported_dilutions": [
+        0.001,
+        0.00001
+      ],
       "observation": "at 10^-5 geosmin elicited repeatable signal from DA2 as the reported selective antennal-lobe locus",
       "o001_use": "qualitative_pathway_localization_constraint",
       "numeric_model_parameter_allowed": false
@@ -98,7 +103,7 @@
   },
   "status": "development_evidence_not_qualified",
   "qualification_blockers": [
-    "freeze exact primary-paper/supplement bytes or an equivalent citable archive",
+    "execute the frozen Max Planck institutional source manifest and record an immutable local SHA-256 receipt",
     "adjudicate which reported quantities have sufficient metadata for numerical calibration",
     "cross-check Stensmyr.2012.WT DoOR response against frozen E006 ingestion",
     "preserve raw-vs-summary distinction for perturbation outcomes"
