@@ -9,6 +9,7 @@ from .olfactory_door import ingest_door, validate_source_authority
 from .olfactory_e006_audit import audit_e006
 from .olfactory_geosmin import validate_geosmin_evidence
 from .olfactory_o002 import run_o002_development
+from .olfactory_o002_robustness import run_o002_robustness
 from .olfactory_program import validate_study
 from .olfactory_structure import validate_da2_authority
 
@@ -177,6 +178,36 @@ def _o002_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _o002_robustness_command(args: argparse.Namespace) -> int:
+    report = run_o002_robustness(
+        args.o002_dir,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": report["status"],
+                "receipt_sha256": report["receipt_sha256"],
+                "frozen_question": report["frozen_question"],
+                "sample": report["sample"],
+                "full_pattern": report["full_pattern"],
+                "amplitude_only": report["amplitude_only"],
+                "direction_only": report["direction_only"],
+                "identity_erased_sorted_profile": report["identity_erased_sorted_profile"],
+                "channel_identity_shuffle_null": report["channel_identity_shuffle_null"],
+                "leave_one_unit": report["leave_one_unit"],
+                "feature_subset_robustness": report["feature_subset_robustness"],
+                "contrasts": report["contrasts"],
+                "output": str(Path(args.output).expanduser().resolve()),
+                "claim_boundary": report["claim_boundary"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="fly-sniff-olfactory",
@@ -230,6 +261,14 @@ def main() -> None:
         help="optional frozen candidate study id; defaults to audit-selected development subset",
     )
     o002.set_defaults(func=_o002_command)
+
+    o002_v2 = sub.add_parser(
+        "run-o002-robustness",
+        help="decompose the frozen O002 class signal with magnitude, identity, and redundancy controls",
+    )
+    o002_v2.add_argument("o002_dir", help="directory containing O002 v1 development outputs")
+    o002_v2.add_argument("--output", required=True, help="new robustness output directory")
+    o002_v2.set_defaults(func=_o002_robustness_command)
 
     args = parser.parse_args()
     raise SystemExit(args.func(args))
