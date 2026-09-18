@@ -262,11 +262,13 @@ def export_live_showcase(
     envs: dict[str, FlySniffEnv] = {}
     controllers: dict[str, Controller] = {}
     observations: dict[str, Observation] = {}
-    for index, condition in enumerate(conditions):
+    for condition in conditions:
         key = str(condition["key"])
         env = FlySniffEnv(seed=seed, arena=arena, plume=plume, sensors=sensors)
         controller = condition["controller"]
-        controller.reset(seed + 101 + index)
+        # Pair controller-internal stochastic state across conditions so the
+        # declared intervention remains the only intentional difference.
+        controller.reset(seed + 101)
         envs[key] = env
         controllers[key] = controller
         observations[key] = env.observe()
