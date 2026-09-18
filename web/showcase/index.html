@@ -153,7 +153,16 @@
             O002 hero image is optional in this build. Run the site builder after the scientific showcase to include it.
           </div>
           <div class="o002-copy">
-            <h3>Why this sits beside the behavior replay</h3>
+            <h3>Measured named-odor fingerprints</h3>
+            <p>
+              Choose a real odor from the frozen O002 matrix and inspect its measured 24-channel response
+              fingerprint. This selector does <em>not</em> drive the movement replay yet.
+            </p>
+            <label class="odor-select-label" for="odorSelect">Measured odor</label>
+            <select id="odorSelect" aria-label="Choose measured O002 odor"></select>
+            <canvas id="odorFingerprintCanvas" aria-label="Measured 24-channel odor response fingerprint"></canvas>
+            <p id="odorExplorerBoundary" class="micro-boundary"></p>
+            <h3 class="o002-second-heading">Why this sits beside the behavior replay</h3>
             <p>
               The measured sensory result establishes that odor responses contain structured information.
               It does <em>not</em> by itself establish that a particular connectome circuit uses that structure
