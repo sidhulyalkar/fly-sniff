@@ -194,25 +194,110 @@
     return Math.min(1, value);
   }
 
-  function drawConnectome() {
-    if (!state.data) return;
-    const dims = fitCanvas(connectomeCanvas, connectomeCtx);
-    connectomeCtx.clearRect(0, 0, dims.width, dims.height);
-
-    const c = state.data.connectome || {};
-    const empty = qs("connectomeEmpty");
-    if (!c.available) {
-      empty.hidden = false;
-      empty.textContent = c.claim_boundary || "No connectome asset is loaded.";
-      return;
+  function anatomyBounds() {
+    if (state.somaContext?.bounds?.min && state.somaContext?.bounds?.max) {
+      return { min: state.somaContext.bounds.min, max: state.somaContext.bounds.max };
     }
-    empty.hidden = true;
+    const all = [];
+    for (const neuron of state.skeletons?.neurons || []) {
+      for (const seg of neuron.segments || []) {
+        all.push([seg[0], seg[1], seg[2]], [seg[3], seg[4], seg[5]]);
+      }
+    }
+    if (!all.length) return null;
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (const p of all) {
+      for (let k = 0; k < 3; k++) {
+        min[k] = Math.min(min[k], Number(p[k]));
+        max[k] = Math.max(max[k], Number(p[k]));
+      }
+    }
+    return { min, max };
+  }
 
-    const frame = state.data.frames[state.frameIndex];
-    const selectedAgent = frame?.agents?.[state.selected] || null;
+  function projectXYZ(x, y, z, dims, bounds) {
+    const center = bounds.min.map((v, i) => (Number(v) + Number(bounds.max[i])) / 2);
+    const span = bounds.min.map((v, i) => Math.max(1, Number(bounds.max[i]) - Number(v)));
+    const scale = Math.min(dims.width, dims.height) * 0.78 / Math.max(...span);
+
+    let px = (Number(x) - center[0]) * scale;
+    let py = (Number(y) - center[1]) * scale;
+    let pz = (Number(z) - center[2]) * scale;
+
+    const cy = Math.cos(state.viewYaw);
+    const sy = Math.sin(state.viewYaw);
+    const x1 = cy * px + sy * pz;
+    const z1 = -sy * px + cy * pz;
+    const cp = Math.cos(state.viewPitch);
+    const sp = Math.sin(state.viewPitch);
+    const y1 = cp * py - sp * z1;
+    const z2 = sp * py + cp * z1;
+
+    return {
+      x: dims.width / 2 + x1,
+      y: dims.height / 2 - y1,
+      depth: z2,
+    };
+  }
+
+  function skeletonColor(roles, agent) {
+    const strength = roleStrength(roles, agent);
+    if ((roles || []).some((r) => r.startsWith("odor_"))) {
+      return `rgba(71,199,243,${0.24 + 0.70 * strength})`;
+    }
+    if ((roles || []).some((r) => r.startsWith("steer_"))) {
+      return `rgba(245,191,66,${0.24 + 0.70 * strength})`;
+    }
+    return `rgba(158,140,255,${0.18 + 0.58 * strength})`;
+  }
+
+  function drawMeasuredAnatomy(dims, selectedAgent) {
+    const bounds = anatomyBounds();
+    if (!bounds) return false;
+
+    if (state.somaContext?.points?.length) {
+      const points = state.somaContext.points;
+      for (let i = 0; i < points.length; i++) {
+        const row = points[i];
+        const p = projectXYZ(row.x, row.y, row.z, dims, bounds);
+        const alpha = 0.10 + Math.max(-0.04, Math.min(0.05, p.depth * 0.000001));
+        connectomeCtx.fillStyle = `rgba(103,137,165,${alpha})`;
+        connectomeCtx.fillRect(p.x, p.y, 1.2, 1.2);
+      }
+    }
+
+    if (state.skeletons?.neurons?.length) {
+      connectomeCtx.lineWidth = 1.0;
+      for (const neuron of state.skeletons.neurons) {
+        connectomeCtx.strokeStyle = skeletonColor(neuron.roles || [], selectedAgent);
+        connectomeCtx.beginPath();
+        for (const seg of neuron.segments || []) {
+          const a = projectXYZ(seg[0], seg[1], seg[2], dims, bounds);
+          const b = projectXYZ(seg[3], seg[4], seg[5], dims, bounds);
+          connectomeCtx.moveTo(a.x, a.y);
+          connectomeCtx.lineTo(b.x, b.y);
+        }
+        connectomeCtx.stroke();
+      }
+    }
+
+    connectomeCtx.fillStyle = "rgba(207,229,244,.72)";
+    connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
+    const label = state.skeletons?.neurons?.length
+      ? "measured soma context + selected SWC skeletons • drag to rotate"
+      : "measured somaLocation context • points are somata, not neurites • drag to rotate";
+    connectomeCtx.fillText(label, 12, dims.height - 14);
+    return true;
+  }
+
+  function drawTopology(dims, selectedAgent) {
+    const c = state.data.connectome || {};
     const nodes = c.nodes || [];
     const positions = new Map();
-    nodes.forEach((node, i) => positions.set(String(node.body_id), topologyPosition(node, i, nodes.length, dims)));
+    nodes.forEach((node, i) => {
+      positions.set(String(node.body_id), topologyPosition(node, i, nodes.length, dims));
+    });
 
     connectomeCtx.strokeStyle = "rgba(89,125,154,.10)";
     connectomeCtx.lineWidth = 0.7;
@@ -241,7 +326,36 @@
 
     connectomeCtx.fillStyle = "rgba(207,229,244,.68)";
     connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
-    connectomeCtx.fillText("graph topology • deterministic layout • not anatomical XYZ", 12, dims.height - 14);
+    connectomeCtx.fillText(
+      "graph topology • deterministic layout • not anatomical XYZ",
+      12,
+      dims.height - 14
+    );
+  }
+
+  function drawConnectome() {
+    if (!state.data) return;
+    const dims = fitCanvas(connectomeCanvas, connectomeCtx);
+    connectomeCtx.clearRect(0, 0, dims.width, dims.height);
+
+    const frame = state.data.frames[state.frameIndex];
+    const selectedAgent = frame?.agents?.[state.selected] || null;
+    const empty = qs("connectomeEmpty");
+
+    if (drawMeasuredAnatomy(dims, selectedAgent)) {
+      empty.hidden = true;
+      return;
+    }
+
+    const c = state.data.connectome || {};
+    if (!c.available) {
+      empty.hidden = false;
+      empty.textContent = c.claim_boundary || "No connectome asset is loaded.";
+      return;
+    }
+
+    empty.hidden = true;
+    drawTopology(dims, selectedAgent);
   }
 
   function updateTelemetry() {
