@@ -14,7 +14,7 @@ EXPECTED_LINEAGE = {
     "v2": {
         "code_head": "0fad162ca1c3e1b9ac8a432dc53bb8675e6d9f79",
         "protocol": "o002-coding-robustness-development-v2",
-        "receipt_sha256": "89f738e5a6b2426f303b5d45bd3015e0d7ac6870e5336013410f4c2c4",
+        "receipt_sha256": "89f738e5a6b2426f303b5d45bd3015e0d7ac6870d1b6907e5336013410f4c2c4",
     },
     "v3": {
         "code_head": "7fe9f622d90967bd1dd9be8c37dc09d48469816c",
