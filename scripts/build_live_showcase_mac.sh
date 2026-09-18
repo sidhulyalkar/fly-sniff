@@ -14,6 +14,8 @@ RENDER_REF="$(git rev-parse --short=12 HEAD)"
 OUT="${FLY_SNIFF_LIVE_SHOWCASE_DIR:-${DATA_ROOT}/artifacts/live-showcase-${RENDER_REF}}"
 SITE="${OUT}/site"
 GRAPH="${FLY_SNIFF_SHOWCASE_GRAPH:-}"
+ANNOTATIONS="${FLY_SNIFF_MALECNS_ANNOTATIONS:-}"
+FETCH_SKELETONS="${FLY_SNIFF_FETCH_SKELETONS:-0}"
 
 VENV="${FLY_SNIFF_VENV:-${ROOT}/.venv-olfactory}"
 if [[ ! -x "${VENV}/bin/python" ]]; then
@@ -47,6 +49,24 @@ fi
 printf '\n== Build live showcase data ==\n'
 "${EXPORT_CMD[@]}"
 
+if [[ -n "${ANNOTATIONS}" ]]; then
+  printf '\n== Add measured whole-connectome soma context ==\n'
+  fly-sniff-morphology-context soma \
+    "${ANNOTATIONS}" \
+    --output "${SITE}/data/connectome-soma.json" \
+    --max-points "${FLY_SNIFF_SHOWCASE_SOMA_POINTS:-12000}"
+fi
+
+if [[ -n "${GRAPH}" && "${FETCH_SKELETONS}" == "1" ]]; then
+  printf '\n== Add exact selected-circuit SWC morphology ==\n'
+  fly-sniff-morphology-context skeletons \
+    "${GRAPH}" \
+    --output "${SITE}/data/selected-skeletons.json" \
+    --cache-dir "${DATA_ROOT}/cache/malecns-v1.0-swc" \
+    --max-neurons "${FLY_SNIFF_SHOWCASE_MAX_SKELETONS:-128}" \
+    --max-segments-per-neuron "${FLY_SNIFF_SHOWCASE_MAX_SEGMENTS:-6000}"
+fi
+
 # Pull the latest O002 truth-card into the site when available.
 O002_GLOB="${DATA_ROOT}/artifacts/o002-showcase-${SOURCE_REF}-render-*/o002-hero-4x5.png"
 O002_RECEIPT_GLOB="${DATA_ROOT}/artifacts/o002-showcase-${SOURCE_REF}-render-*/o002-visual-receipt.json"
@@ -79,7 +99,16 @@ Default build:
   development-proxy movement only
 
 Claim-bearing graph build:
-  FLY_SNIFF_SHOWCASE_GRAPH=/path/to/qualified/graph ./scripts/build_live_showcase_mac.sh
+  FLY_SNIFF_SHOWCASE_GRAPH=/path/to/odor-plume-qualified/graph ./scripts/build_live_showcase_mac.sh
+
+Measured whole-connectome soma context:
+  FLY_SNIFF_MALECNS_ANNOTATIONS=/path/to/body-annotations-male-cns-v1.0-minconf-0.5.feather \
+    ./scripts/build_live_showcase_mac.sh
+
+Exact selected-circuit skeletons:
+  FLY_SNIFF_SHOWCASE_GRAPH=/path/to/graph \
+  FLY_SNIFF_FETCH_SKELETONS=1 \
+    ./scripts/build_live_showcase_mac.sh
 
 The browser replays generated JSON. It does not run the scientific simulation.
 EOF
