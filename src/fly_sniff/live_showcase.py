@@ -178,6 +178,24 @@ def _sample_plume(env: FlySniffEnv, max_points: int = 90) -> list[list[float]]:
     return [[round(float(x), 4), round(float(y), 4), round(float(s), 4)] for x, y, s in snap]
 
 
+def _paired_plume_snapshot(
+    envs: dict[str, FlySniffEnv],
+    *,
+    max_points: int = 90,
+) -> list[list[float]]:
+    snapshots = [env.plume.snapshot(max_points=max_points) for env in envs.values()]
+    reference = snapshots[0]
+    for candidate in snapshots[1:]:
+        if reference.shape != candidate.shape or not np.allclose(reference, candidate, atol=0.0, rtol=0.0):
+            raise RuntimeError(
+                "paired showcase environments no longer share an identical exogenous plume"
+            )
+    return [
+        [round(float(x), 4), round(float(y), 4), round(float(s), 4)]
+        for x, y, s in reference
+    ]
+
+
 def _modeled_node_activity(
     controller: Controller,
     *,
@@ -322,6 +340,16 @@ def export_live_showcase(
         controllers[key] = controller
         observations[key] = env.observe()
 
+    starts = np.asarray(
+        [
+            [env.agent.x, env.agent.y, env.agent.heading]
+            for env in envs.values()
+        ],
+        dtype=float,
+    )
+    if not np.allclose(starts, starts[0], atol=0.0, rtol=0.0):
+        raise RuntimeError("paired showcase environments do not share an identical start state")
+
     stride = max(1, round(1.0 / (arena.dt * sample_hz)))
     max_steps = min(arena.max_steps, max(1, round(seconds / arena.dt)))
     frames: list[dict[str, Any]] = []
@@ -348,7 +376,7 @@ def export_live_showcase(
             frames.append(
                 {
                     "t": round(step * arena.dt, 4),
-                    "plume": _sample_plume(envs[first_key]),
+                    "plume": _paired_plume_snapshot(envs),
                     "agents": {
                         str(condition["key"]): _record_frame(
                             envs[str(condition["key"])],
@@ -400,7 +428,22 @@ def export_live_showcase(
             "qualified_modeled_circuit" if claim_allowed else "development_proxy"
         ),
         "seed": seed,
+        "paired_controller_seed": seed + 101,
         "sample_hz": sample_hz,
+        "pairing_checks": {
+            "identical_initial_agent_state": True,
+            "identical_exogenous_plume_at_exported_frames": True,
+            "browser_simulation": False,
+        },
+        "controller_observation_fields": [
+            "left_odor",
+            "right_odor",
+            "mean_odor",
+            "odor_delta",
+            "wind_x_body",
+            "wind_y_body",
+            "heading",
+        ],
         "arena": asdict(arena),
         "plume_model": {
             **asdict(plume),
