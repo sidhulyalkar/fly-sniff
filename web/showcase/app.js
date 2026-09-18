@@ -483,6 +483,15 @@
       qs("connectomeBoundary").textContent = connectome.claim_boundary || "";
     }
 
+    const stimulus = state.data.stimulus_contract || {};
+    setBadge(
+      qs("odorIdentityBadge"),
+      stimulus.named_odor
+        ? String(stimulus.named_odor)
+        : "GENERIC ODOR • IDENTITY NOT MODELED",
+      stimulus.identity_specific_behavior_claim_allowed ? "badge-qualified" : "badge-warn"
+    );
+
     qs("globalBoundary").textContent = state.data.claim_boundary || "";
     qs("schemaLabel").textContent = state.data.schema || "unknown schema";
   }
