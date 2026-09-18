@@ -7,10 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import matplotlib
-
-matplotlib.use("Agg")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,6 +16,8 @@ from matplotlib.patches import FancyBboxPatch
 from .freeze import current_git_ref
 from .olfactory_door import sha256_file
 from .olfactory_e006_audit import _canonical_sha
+
+plt.switch_backend("Agg")
 
 
 HERO_FILENAME = "o002-hero-4x5.png"
@@ -673,8 +671,10 @@ def render_roadmap(data: O002VisualData, output: str | Path) -> Path:
             "1",
             "MEASURED NOW",
             "O002 sensory geometry",
-            f"{data.eligible_odors} odors × {data.responding_units} channels\n"
-            "chemical-class structure + stability",
+            (
+                f"{data.eligible_odors} odors × {data.responding_units} channels\n"
+                "chemical-class structure + stability"
+            ),
             GOOD,
         ),
         (
@@ -682,8 +682,10 @@ def render_roadmap(data: O002VisualData, output: str | Path) -> Path:
             "2",
             "AUTHORITY GATE",
             "E001 / E002",
-            "freeze primary physiology authority\n"
-            "resolve Or56a/FlyWire cohort identity",
+            (
+                "freeze primary physiology authority\n"
+                "resolve Or56a/FlyWire cohort identity"
+            ),
             WARN,
         ),
         (
@@ -691,8 +693,10 @@ def render_roadmap(data: O002VisualData, output: str | Path) -> Path:
             "3",
             "NEXT MECHANISTIC TEST",
             "O003",
-            "odor conflict + temporal computation\n"
-            "matched models + prespecified lesions",
+            (
+                "odor conflict + temporal computation\n"
+                "matched models + prespecified lesions"
+            ),
             ACCENT_2,
         ),
         (
@@ -700,8 +704,10 @@ def render_roadmap(data: O002VisualData, output: str | Path) -> Path:
             "4",
             "NEXT BEHAVIORAL TEST",
             "O004",
-            "plume evidence → steering\n"
-            "intact topology vs matched nulls",
+            (
+                "plume evidence → steering\n"
+                "intact topology vs matched nulls"
+            ),
             ACCENT,
         ),
     ]
@@ -940,10 +946,7 @@ def render_social_video(
 
 
 def _safe_git_ref() -> str:
-    try:
-        return current_git_ref()
-    except Exception:
-        return "unknown"
+    return current_git_ref()
 
 
 def _deterministic_zip(output_dir: Path, members: list[Path], bundle_path: Path) -> None:
