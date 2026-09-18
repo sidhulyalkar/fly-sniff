@@ -15,6 +15,13 @@
     raf: 0,
     lastTs: 0,
     accumulator: 0,
+    somaContext: null,
+    skeletons: null,
+    viewYaw: -0.55,
+    viewPitch: 0.24,
+    dragging: false,
+    dragX: 0,
+    dragY: 0,
   };
 
   const palette = ["#47c7f3", "#ff6f91", "#f5bf42", "#9e8cff", "#9bd650", "#f06464"];
