@@ -34,8 +34,21 @@ def _load_manifest(path: str | Path) -> dict[str, Any]:
     if source.get("url") != EXPECTED_URL:
         raise ValueError("E001 institutional archive URL changed")
     policy = payload.get("acquisition_policy")
-    if not isinstance(policy, dict) or any(value is not True for value in policy.values()):
+    if not isinstance(policy, dict):
+        raise TypeError("E001 source acquisition_policy must be an object")
+    required_true = {
+        "freeze_exact_bytes_once",
+        "require_pdf_magic",
+        "record_sha256",
+        "do_not_treat_published_pdf_as_raw_trial_data",
+        "do_not_fit_numeric_model_parameters_from_figure_pixels",
+        "o003_conflict_behavior_reserved",
+    }
+    if any(policy.get(key) is not True for key in required_true):
         raise ValueError("E001 source acquisition policy may not be weakened")
+    minimum_bytes = policy.get("minimum_bytes")
+    if not isinstance(minimum_bytes, int) or minimum_bytes < 100000:
+        raise ValueError("E001 source minimum_bytes guard changed")
     if payload.get("status") != "source_uri_frozen_hash_pending":
         raise ValueError("E001 source manifest status changed")
     return payload
