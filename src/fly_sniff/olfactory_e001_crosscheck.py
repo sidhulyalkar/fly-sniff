@@ -171,14 +171,64 @@ def crosscheck_e001_door(
     return report
 
 
+def verify_e001_door_crosscheck(
+    artifact_dir: str | Path,
+    *,
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    artifact = Path(artifact_dir).expanduser().resolve()
+    output = Path(output_dir).expanduser().resolve()
+    receipt_path = output / "e001-door-crosscheck-receipt.json"
+    if not receipt_path.is_file():
+        raise FileNotFoundError(f"missing E001 DoOR cross-check receipt: {receipt_path}")
+    receipt = json.loads(receipt_path.read_text())
+    if receipt.get("protocol") != "e001-door-crosscheck-v1":
+        raise ValueError("E001 DoOR cross-check protocol changed")
+    observed = str(receipt.get("receipt_sha256", ""))
+    unhashed = dict(receipt)
+    unhashed.pop("receipt_sha256", None)
+    if observed != _canonical_sha(unhashed):
+        raise ValueError("E001 DoOR cross-check canonical receipt hash mismatch")
+
+    e006_receipt = artifact / "door-e006-receipt.json"
+    long_path = artifact / "door-responses-long.csv"
+    if not e006_receipt.is_file() or not long_path.is_file():
+        raise FileNotFoundError("E001 DoOR cross-check E006 inputs are missing")
+    if receipt.get("input", {}).get("door_commit") != EXPECTED_DOOR_COMMIT:
+        raise ValueError("E001 DoOR cross-check receipt source commit changed")
+    if receipt.get("input", {}).get("e006_receipt_sha256") != sha256_file(e006_receipt):
+        raise ValueError("E001 DoOR cross-check E006 receipt sha256 mismatch")
+    if receipt.get("input", {}).get("e006_long_form_sha256") != sha256_file(long_path):
+        raise ValueError("E001 DoOR cross-check E006 long-form sha256 mismatch")
+    geosmin = receipt.get("geosmin", {})
+    if geosmin.get("ab4B_raw_response") != EXPECTED_RAW_RESPONSE:
+        raise ValueError("E001 DoOR cross-check sentinel response changed")
+    if geosmin.get("ab4B_exact_source_transcription_match") is not True:
+        raise ValueError("E001 DoOR cross-check lost exact transcription match")
+    if receipt.get("interpretation", {}).get("numeric_model_parameter_allowed") is not False:
+        raise ValueError("E001 DoOR cross-check may not authorize numeric fitting")
+    return receipt
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Cross-check frozen E001 Stensmyr.2012.WT source cells against E006"
     )
     parser.add_argument("artifact_dir")
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--verify-existing",
+        action="store_true",
+        help="verify an existing immutable cross-check receipt instead of recomputing",
+    )
     args = parser.parse_args()
-    report = crosscheck_e001_door(args.artifact_dir, output_dir=args.output)
+    if args.verify_existing:
+        report = verify_e001_door_crosscheck(
+            args.artifact_dir,
+            output_dir=args.output,
+        )
+    else:
+        report = crosscheck_e001_door(args.artifact_dir, output_dir=args.output)
     print(json.dumps(report, indent=2, sort_keys=True))
 
 
