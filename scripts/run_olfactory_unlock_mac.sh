@@ -55,6 +55,7 @@ fly-sniff-olfactory --root "${ROOT}" status | tee "${OUTPUT}/study-status.json"
 python - "${OUTPUT}" "${ROOT}" "${CODE_REF}" <<'PY'
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -71,6 +72,19 @@ e002 = load("e002-adjudication.json")
 o002 = load("o002-freeze.json")
 status = load("study-status.json")
 
+authority_paths = {
+    "E001": root / "authority" / "geosmin-e001-qualified-v1.json",
+    "E002_adjudication": root / "authority" / "flywire-da2-e002-adjudication-v1.json",
+    "O002_freeze": root / "authority" / "o002-development-freeze-v1.json",
+}
+authority_hashes = {
+    key: hashlib.sha256(path.read_bytes()).hexdigest()
+    for key, path in authority_paths.items()
+}
+(out / "authority-sha256.json").write_text(
+    json.dumps(authority_hashes, indent=2, sort_keys=True) + "\n"
+)
+
 lines = [
     "OLFACTORY UNLOCK STATUS V1",
     f"repository: {root}",
@@ -79,11 +93,13 @@ lines = [
     "O002",
     f"status: {o002['status']}",
     f"same_table_model_search_closed: {o002['same_table_model_search_closed']}",
+    f"freeze_artifact_sha256: {authority_hashes['O002_freeze']}",
     "",
     "E001",
     f"status: {e001['status']}",
     f"qualitative_usable: {e001['qualitative_usable']}",
     f"numeric_parameterization_usable: {e001['numeric_parameterization_usable']}",
+    f"artifact_sha256: {authority_hashes['E001']}",
     "",
     "E002",
     f"status: {e002['status']}",
@@ -92,6 +108,7 @@ lines = [
     f"unresolved_osn_body_records: {e002['unresolved_osn_body_records']}",
     f"unresolved_osn_side_records: {e002['unresolved_osn_side_records']}",
     f"da2_lpn_body_records: {e002['da2_lpn_body_records']}",
+    f"adjudication_artifact_sha256: {authority_hashes['E002_adjudication']}",
     "",
     "GLOBAL GATE",
     f"study_status: {status['study_status']}",
