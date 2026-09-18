@@ -414,8 +414,8 @@ def _takeaway_text(data: O002VisualData) -> tuple[str, str, str]:
     direction_holdout = float(data.holdout["direction_only_accuracy"].mean())
     return (
         (
-            f"Direction-normalized responses are strongest here "
-            f"({direction:.2f} vs {full:.2f} full-pattern balanced accuracy)."
+            f"Direction-normalized responses score {direction:.2f} vs "
+            f"{full:.2f} for the full pattern in this frozen development study."
         ),
         (
             f"Erasing stable channel identity reduces class information "
@@ -809,7 +809,10 @@ def render_social_video(
             title_ax.text(
                 0.5,
                 0.26,
-                "Relative response direction carries more signal than amplitude alone.",
+                (
+                    f"Direction-normalized score {values[1]:.2f} • "
+                    f"full pattern {values[0]:.2f} • shuffle q95 {null_q95:.2f}"
+                ),
                 ha="center",
                 color="#bfe8fb",
                 fontsize=11,
