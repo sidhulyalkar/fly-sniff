@@ -213,3 +213,28 @@ ambiguity, sparse coverage, and a legitimate scientific block without uploading 
 Passing the command means the preregistration and source/audit machinery worked at that exact code/source
 state. It does not mean E001/E002/E006 are qualified, O001 calibration passed, biological topology has an
 advantage, or O003 may be run confirmatorily.
+
+
+## 12. Receipt-driven O002 showcase
+
+Once O002 v1/v2/v3 development artifacts exist, render the presentation layer without rerunning science:
+
+    ./scripts/render_o002_showcase_mac.sh
+
+By default the runner consumes the frozen `4d2bdd13bf06` O002 development artifacts. Override only when a new frozen O002 source identity has been reviewed:
+
+    FLY_SNIFF_O002_SOURCE_REF=<12-char-source-ref> ./scripts/render_o002_showcase_mac.sh
+
+When `ffmpeg` is installed, the runner also creates a 1080×1350 4:5 social MP4. Without `ffmpeg`, every static artifact and the deterministic review ZIP are still produced.
+
+Outputs include:
+
+- `o002-hero-4x5.png` — primary shareable result card;
+- `o002-scientific-deep-dive.png` — full scientific evidence plate;
+- `o002-class-recall.png` — class-wise recall view;
+- `o002-next-stage-roadmap.png` — measured result → authority gates → O003/O004 roadmap;
+- `o002-social.mp4` — optional 16 s social explainer;
+- `o002-visual-receipt.json` — verified input lineage and output hashes;
+- `o002-showcase.zip` — deterministic review bundle.
+
+The visualization lane is downstream only. It verifies frozen receipt lineage and CSV hashes, and it never recomputes or selects scientific outcomes. Regenerating presentation outputs with `FLY_SNIFF_FORCE_SHOWCASE=1` may change layout/rendering bytes but must not change the scientific inputs or claim boundary.
