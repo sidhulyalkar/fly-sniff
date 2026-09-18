@@ -178,6 +178,39 @@ def freeze_e001_source(
     return receipt
 
 
+def verify_e001_source(
+    output_dir: str | Path,
+    *,
+    manifest_path: str | Path,
+) -> dict[str, Any]:
+    output = Path(output_dir).expanduser().resolve()
+    manifest = _load_manifest(manifest_path)
+    receipt_path = output / "e001-source-receipt.json"
+    pdf_path = output / "stensmyr2012-cell-with-supplement.pdf"
+    if not receipt_path.is_file() or not pdf_path.is_file():
+        raise FileNotFoundError("E001 frozen archive receipt or PDF is missing")
+    receipt = json.loads(receipt_path.read_text())
+    if receipt.get("protocol") != "e001-primary-archive-freeze-v1":
+        raise ValueError("E001 frozen archive protocol changed")
+    observed = str(receipt.get("receipt_sha256", ""))
+    unhashed = dict(receipt)
+    unhashed.pop("receipt_sha256", None)
+    if observed != _canonical_sha(unhashed):
+        raise ValueError("E001 frozen archive receipt canonical hash mismatch")
+    if receipt.get("source", {}).get("doi") != manifest["source"]["doi"]:
+        raise ValueError("E001 frozen archive DOI does not match manifest")
+    if receipt.get("source", {}).get("url") != manifest["source"]["url"]:
+        raise ValueError("E001 frozen archive URL does not match manifest")
+    minimum_bytes = int(manifest["acquisition_policy"]["minimum_bytes"])
+    _validate_pdf(pdf_path, minimum_bytes=minimum_bytes)
+    observed_pdf_sha = _sha256(pdf_path)
+    if observed_pdf_sha != receipt.get("acquisition", {}).get("pdf_sha256"):
+        raise ValueError("E001 frozen archive PDF sha256 mismatch")
+    if pdf_path.stat().st_size != receipt.get("acquisition", {}).get("pdf_bytes"):
+        raise ValueError("E001 frozen archive PDF byte count mismatch")
+    return receipt
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Freeze exact institutional Stensmyr 2012 E001 source bytes"
@@ -185,12 +218,22 @@ def main() -> None:
     parser.add_argument("manifest")
     parser.add_argument("--output", required=True)
     parser.add_argument("--source-file")
-    args = parser.parse_args()
-    report = freeze_e001_source(
-        args.manifest,
-        output_dir=args.output,
-        source_file=args.source_file,
+    parser.add_argument(
+        "--verify-existing",
+        action="store_true",
+        help="verify an existing immutable archive instead of downloading",
     )
+    args = parser.parse_args()
+    if args.verify_existing:
+        if args.source_file:
+            parser.error("--source-file cannot be combined with --verify-existing")
+        report = verify_e001_source(args.output, manifest_path=args.manifest)
+    else:
+        report = freeze_e001_source(
+            args.manifest,
+            output_dir=args.output,
+            source_file=args.source_file,
+        )
     print(json.dumps(report, indent=2, sort_keys=True))
 
 
