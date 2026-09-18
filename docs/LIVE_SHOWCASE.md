@@ -51,6 +51,24 @@ Python simulation / frozen receipts
 browser presentation only
 ```
 
+## Named odors without overclaiming
+
+The site includes a measured named-odor explorer sourced directly from the frozen O002 v1 matrix. A visitor can select a source odor and inspect its measured 24-channel response fingerprint.
+
+That selector is intentionally **not wired into the movement replay yet**. The current navigation plume carries generic scalar concentration. A named odor may drive movement only after a frozen odor-to-sensory mapping has been independently qualified. This prevents the visual interface from implying a geosmin-, ester-, or acid-specific behavioral result before the experiment actually supports one.
+
+The intended progression is:
+
+```text
+named O002 odor
+   ↓ measured response fingerprint (available now)
+qualified receptor/sensory mapping
+   ↓
+MaleCNS odor-navigation circuit
+   ↓
+movement under the same paired-control protocol
+```
+
 ## Multi-condition arena
 
 The development page currently supports:
