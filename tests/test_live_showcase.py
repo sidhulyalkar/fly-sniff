@@ -56,6 +56,8 @@ def test_development_showcase_is_visibly_non_claim_bearing(tmp_path: Path) -> No
     assert payload["mode"] == "development-proxy"
     assert payload["claim_allowed"] is False
     assert payload["evidence_level"] == "development_proxy"
+    assert payload["stimulus_contract"]["odor_identity_mode"] == "generic_scalar_concentration"
+    assert payload["stimulus_contract"]["identity_specific_behavior_claim_allowed"] is False
     assert payload["connectome"]["available"] is False
     assert len(payload["conditions"]) == 3
     assert {row["key"] for row in payload["conditions"]} == {
@@ -81,6 +83,8 @@ def test_development_conditions_share_one_exogenous_plume_clock(tmp_path: Path) 
         for row in frame["agents"].values()
     }
     assert len(starts) == 1
+    assert payload["pairing_checks"]["identical_initial_agent_state"] is True
+    assert payload["pairing_checks"]["identical_exogenous_plume_at_exported_frames"] is True
 
 
 def test_sensory_mask_reports_effective_controller_input() -> None:
