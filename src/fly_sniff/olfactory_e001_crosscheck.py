@@ -139,7 +139,7 @@ def crosscheck_e001_door(
         },
         "claim_boundary": (
             "This receipt verifies that the frozen E006 transcription retains the exact pinned DoOR "
-            "Stensmyr.2012.WT ab4B geosmin source cell and study DOI. The raw value 146.4 is used only "
+            "Stensmyr.2012.WT ab4B geosmin source cell. The raw value 146.4 is used only "
             "as a source-integrity sentinel. This does not establish a receptor-site concentration, "
             "cross-study numerical scale, raw-trial provenance, or a fitted O001 parameter."
         ),
