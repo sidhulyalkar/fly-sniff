@@ -10,7 +10,7 @@ import fly_sniff.olfactory_authority_unlock as unlock
 
 def _annotation_bytes() -> bytes:
     header = (
-        "supervoxel_id\troot_id\themobrain_type\tside\tvfb_id\tfbbt_id\tstatus\ttop_nt\ttop_nt_conf\n"
+        "supervoxel_id\troot_id\themibrain_type\tside\tvfb_id\tfbbt_id\tstatus\ttop_nt\ttop_nt_conf\n"
     )
     rows = [
         "1\t100\tORN_DA2\tright\tfw1\tFBbt_00067063\t\tacetylcholine\t0.9",
