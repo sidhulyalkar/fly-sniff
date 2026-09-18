@@ -429,6 +429,16 @@ def export_live_showcase(
         "seed": seed,
         "paired_controller_seed": seed + 101,
         "sample_hz": sample_hz,
+        "stimulus_contract": {
+            "odor_identity_mode": "generic_scalar_concentration",
+            "named_odor": None,
+            "identity_specific_behavior_claim_allowed": False,
+            "claim_boundary": (
+                "The current plume supplies concentration, not chemical identity. "
+                "Do not describe condition differences as responses to a named odor until "
+                "an independently qualified odor-to-sensory mapping is loaded."
+            ),
+        },
         "pairing_checks": {
             "identical_initial_agent_state": True,
             "identical_exogenous_plume_at_exported_frames": True,
