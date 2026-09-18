@@ -544,7 +544,8 @@ def render_hero(data: O002VisualData, output: str | Path) -> Path:
         fontsize=7.0,
     )
 
-    fig.savefig(output, bbox_inches="tight", facecolor=fig.get_facecolor())
+    # Preserve the exact 4:5 canvas for social-platform compatibility.
+    fig.savefig(output, facecolor=fig.get_facecolor())
     plt.close(fig)
     return output
 
