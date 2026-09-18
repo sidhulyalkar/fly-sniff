@@ -128,6 +128,16 @@ fly-sniff-demo --output artifacts/fly-sniff-proxy.mp4
 
 No final connectome claim is allowed from these runs.
 
+## Measured-data O002 showcase
+
+While connectome authority gates remain unresolved, the repository can already render a real-data O002 result from frozen DoOR development outputs. The showcase is presentation-only: it verifies v1→v2→v3 receipt lineage and source-file hashes, then renders the existing metrics without recomputing them.
+
+```bash
+./scripts/render_o002_showcase_mac.sh
+```
+
+The primary artifact is a 4:5 result card answering **what measured fly odor-response space looks like**. Supporting outputs include a scientific deep dive, class-wise recall, a next-stage evidence roadmap, and an optional 1080×1350 MP4 when `ffmpeg` is available. The bundle remains explicitly development-only and does not make receptor-specific, behavioral-valence, cross-study, or connectome-topology claims.
+
 ## Start from the real MaleCNS resource
 
 A small-first, token-free path downloads Janelia's public ~13 MB v1.0 annotation table:
