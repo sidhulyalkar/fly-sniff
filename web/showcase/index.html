@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>fly-sniff experiment theater</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">FLY-SNIFF • LIVE EXPERIMENT THEATER</p>
+        <h1>One odor world. Multiple nervous-system conditions.</h1>
+        <p class="lede">
+          Replay the same frozen plume across synchronized controls, inspect the sensory evidence each
+          condition receives, and keep measured data, modeled dynamics, and presentation visibly separate.
+        </p>
+      </div>
+      <div class="evidence-stack" aria-label="Evidence status">
+        <span id="modeBadge" class="badge badge-dev">LOADING</span>
+        <span id="claimBadge" class="badge">claim status</span>
+      </div>
+    </header>
+
+    <section class="principle-strip" aria-label="Scientific invariants">
+      <div><b>Same plume</b><span>identical exogenous odor realization</span></div>
+      <div><b>Same start</b><span>paired initial state and clock</span></div>
+      <div><b>One change</b><span>condition-specific intervention only</span></div>
+      <div><b>Receipt first</b><span>browser replays frozen state</span></div>
+    </section>
+
+    <section class="stage-grid">
+      <article class="panel arena-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">BEHAVIOR REPLAY</p>
+            <h2>Who finds the invisible odor source?</h2>
+          </div>
+          <div class="panel-actions">
+            <span id="odorIdentityBadge" class="badge badge-warn">generic odor</span>
+            <label class="switch"><input id="showPlume" type="checkbox" checked><span>odor visible</span></label>
+            <label class="switch"><input id="showSource" type="checkbox" checked><span>source visible</span></label>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="arenaCanvas" aria-label="Synchronized fly movement in the odor arena"></canvas>
+          <div class="arena-legend" id="arenaLegend"></div>
+          <div class="viewer-note">odor/source overlays are viewer-only</div>
+        </div>
+        <div class="playbar">
+          <button id="playButton" class="play-button" type="button" aria-label="Pause replay">Ⅱ</button>
+          <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Replay time">
+          <output id="timeOutput">0.0 s</output>
+        </div>
+      </article>
+
+      <article class="panel connectome-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">CONNECTOME VIEW</p>
+            <h2 id="connectomeTitle">Topology / anatomy status</h2>
+          </div>
+          <span id="geometryBadge" class="badge">checking geometry</span>
+        </div>
+        <div class="canvas-wrap connectome-wrap">
+          <canvas id="connectomeCanvas" aria-label="Connectome topology view"></canvas>
+          <div id="connectomeEmpty" class="empty-state" hidden></div>
+        </div>
+        <div class="connectome-footer">
+          <p id="connectomeBoundary">Loading provenance…</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="telemetry-grid">
+      <article class="panel telemetry-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">SELECTED CONDITION</p>
+            <h2 id="selectedLabel">Loading…</h2>
+          </div>
+          <select id="conditionSelect" aria-label="Select condition"></select>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric">
+            <span>LEFT ANTENNA</span>
+            <strong id="leftOdorValue">0.00</strong>
+            <div class="meter"><i id="leftOdorBar"></i></div>
+          </div>
+          <div class="metric">
+            <span>RIGHT ANTENNA</span>
+            <strong id="rightOdorValue">0.00</strong>
+            <div class="meter"><i id="rightOdorBar"></i></div>
+          </div>
+          <div class="metric">
+            <span>TURN COMMAND</span>
+            <strong id="turnValue">0.00</strong>
+            <div class="signed-meter"><i id="turnBar"></i></div>
+          </div>
+          <div class="metric">
+            <span>MODELED READOUT</span>
+            <strong id="readoutValue">0.00 / 0.00</strong>
+            <div class="dual-meter"><i id="dnLeftBar"></i><i id="dnRightBar"></i></div>
+          </div>
+        </div>
+
+        <div class="condition-copy">
+          <b id="interventionLabel">Intervention</b>
+          <p id="conditionDescription"></p>
+        </div>
+      </article>
+
+      <article class="panel evidence-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">EVIDENCE RAIL</p>
+            <h2>What may this page actually claim?</h2>
+          </div>
+        </div>
+        <div class="evidence-list">
+          <div class="evidence-row">
+            <span class="evidence-dot measured"></span>
+            <div><b>Measured sensory structure</b><p>O002 DoOR result is shown as a separate measured-data artifact.</p></div>
+          </div>
+          <div class="evidence-row">
+            <span class="evidence-dot modeled"></span>
+            <div><b>Modeled neural dynamics</b><p>When a graph is loaded, activity is simulated over structural connectivity, not recorded physiology.</p></div>
+          </div>
+          <div class="evidence-row">
+            <span class="evidence-dot control"></span>
+            <div><b>Matched controls</b><p>Rewire and sensory-ablation conditions must state exactly what changed.</p></div>
+          </div>
+        </div>
+        <p id="globalBoundary" class="boundary"></p>
+      </article>
+    </section>
+
+    <section class="lower-grid">
+      <article class="panel o002-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">MEASURED DATA • O002</p>
+            <h2>What does the fly odor-response space look like?</h2>
+          </div>
+          <a id="o002Link" class="text-link" href="./data/o002-hero-4x5.png" target="_blank" rel="noreferrer">open full result ↗</a>
+        </div>
+        <div class="o002-body">
+          <img id="o002Image" src="./data/o002-hero-4x5.png" alt="O002 measured odor-space result card">
+          <div id="o002Fallback" class="empty-state" hidden>
+            O002 hero image is optional in this build. Run the site builder after the scientific showcase to include it.
+          </div>
+          <div class="o002-copy">
+            <h3>Measured named-odor fingerprints</h3>
+            <p>
+              Choose a real odor from the frozen O002 matrix and inspect its measured 24-channel response
+              fingerprint. This selector does <em>not</em> drive the movement replay yet.
+            </p>
+            <label class="odor-select-label" for="odorSelect">Measured odor</label>
+            <select id="odorSelect" aria-label="Choose measured O002 odor"></select>
+            <canvas id="odorFingerprintCanvas" aria-label="Measured 24-channel odor response fingerprint"></canvas>
+            <p id="odorExplorerBoundary" class="micro-boundary"></p>
+            <h3 class="o002-second-heading">Why this sits beside the behavior replay</h3>
+            <p>
+              The measured sensory result establishes that odor responses contain structured information.
+              It does <em>not</em> by itself establish that a particular connectome circuit uses that structure
+              to navigate. The behavior panel is the next mechanistic question, not evidence retrofitted onto O002.
+            </p>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel architecture-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">END GOAL</p>
+            <h2>From odor to movement without hiding the seams</h2>
+          </div>
+        </div>
+        <ol class="flow">
+          <li><span>1</span><div><b>Odor world</b><p>Frozen plume, source hidden from controller.</p></div></li>
+          <li><span>2</span><div><b>Sensory channels</b><p>Left/right antenna + wind, displayed live.</p></div></li>
+          <li><span>3</span><div><b>Connectome computation</b><p>Exact topology, with anatomy only when real XYZ morphology is available.</p></div></li>
+          <li><span>4</span><div><b>Descending readout</b><p>Modeled neural output remains distinct from behavior.</p></div></li>
+          <li><span>5</span><div><b>Movement</b><p>Paired intact vs rewire/lesion trajectories in the same world.</p></div></li>
+        </ol>
+      </article>
+    </section>
+
+    <footer>
+      <span id="schemaLabel">loading schema…</span>
+      <span>•</span>
+      <span>presentation replays frozen state; it does not run the scientific model in JavaScript</span>
+    </footer>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

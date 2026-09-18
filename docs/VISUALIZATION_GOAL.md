@@ -125,3 +125,52 @@ The browser renderer, if built, should replay saved scientific trajectories rath
 ## Scientific long-form cut
 
 Keep the existing 24-second square result available for researchers. It can show `MALECNS CONNECTOME`, `DEGREE-PRESERVING REWIRE`, and `CLASSICAL PLUME SEARCH`, modeled ORN/descending channels, followed by the complete 1,000-episode cohort. The funny 4:5 cut earns attention; the square scientific cut earns scrutiny.
+
+
+## O002 measured-data showcase
+
+O002 now has a separate receipt-driven visualization lane. This is the primary public artifact while E001/E002 remain authority-gated.
+
+The visual hierarchy is deliberately:
+
+1. **hero 4:5 result card** — one-screen interpretation of measured DoOR response geometry;
+2. **scientific deep dive** — geometry, confusion, class recall, coding decomposition, paired holdouts, and low-rank retention;
+3. **class-recall panel** — compact answer to which source chemical classes are easier or harder to separate;
+4. **motion explainer** — a 16 s social cut rendered from the same frozen outputs;
+5. **next-stage roadmap** — explicitly separates demonstrated sensory structure from still-gated mechanism and navigation work.
+
+Run the complete presentation pass with:
+
+    ./scripts/render_o002_showcase_mac.sh
+
+The renderer consumes the existing O002 v1/v2/v3 receipts and verifies their lineage plus the hashes of every CSV it plots. It does not recompute PCA, classification, holdout, or subspace metrics. It may change composition, typography, annotations, and animation only.
+
+The primary O002 story is:
+
+> Measured fly olfactory responses contain stable within-study chemical-class geometry. In this development analysis, direction-normalized population responses retain more class information than simple response-magnitude summaries, while erasing stable responding-unit identity weakens the signal.
+
+This remains a **development result**. The visual system must never convert it into a receptor-specific, behavioral-valence, cross-study, or connectome-topology claim.
+
+### Visual separation of evidence levels
+
+The measured O002 artifact and the future connectome command-center view serve different purposes.
+
+- O002 is the current **truth card**: measured sensory data and frozen development analyses.
+- The dark command-center language is a **mechanism interface**: morphology, replay, and independent probes may be shown there only with explicit provenance and clock labels.
+- An integrated behavior + morphology + probe display must never imply that visually synchronized panels are causal measurements of one another unless a qualified receipt actually establishes that relationship.
+- Development composites must retain a large `DEVELOPMENT PROXY` or equivalent label.
+- Claim-bearing MaleCNS vs rewire visuals remain blocked until their own structural and physiological gates pass.
+
+The next-stage visual ladder is therefore:
+
+    measured sensory geometry
+            ↓
+    E001 / E002 authority resolution
+            ↓
+    O003 odor-conflict + temporal mechanism
+            ↓
+    O004 plume evidence → action
+            ↓
+    qualified intact-topology vs matched-null replay
+
+Presentation may preview later boxes. Evidence may not skip them.
