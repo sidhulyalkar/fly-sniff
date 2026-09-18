@@ -35,7 +35,7 @@ It does **not** establish that a specific MaleCNS circuit uses that structure fo
 
 A graph-backed replay may show modeled dynamics over a MaleCNS GraphBundle. Those values are simulated rate-model states over structural connectivity, not neural recordings.
 
-Claim-bearing graph mode must refuse an unqualified bundle by default.
+Claim-bearing graph mode must refuse an unqualified bundle by default. Generic graph qualification is not enough: the manifest must explicitly list `odor-plume` in `qualified_experiments`, so qualification earned by another experiment such as looming cannot leak into navigation claims.
 
 ### C. Behavioral presentation
 
@@ -85,17 +85,35 @@ A deterministic browser layout is only a visualization of graph relationships.
 
 ### Anatomical view
 
-The ultimate live page should add a real MaleCNS spatial context asset:
+The live page now supports real MaleCNS spatial context assets built downstream of the official v1.0 data:
 
-- a low-opacity whole-connectome point/line cloud for anatomical context;
-- exact skeleton morphology for the experimentally relevant circuit;
+- a low-opacity soma-location point cloud for broad CNS context;
+- exact public SWC centerline skeletons for the experimentally relevant circuit;
 - active circuit neurons highlighted over the dim whole-brain context;
 - camera presets for sensory → central computation → descending output;
 - a strict source receipt for every XYZ/skeleton asset.
 
 The page must not generate decorative neuron shapes and call them anatomy.
 
-For performance, the whole-connectome background should be decimated or centroid-based while the selected circuit uses higher-resolution skeletons. Browser presentation should use WebGL, while the scientific graph and activity traces remain unchanged.
+For performance, the whole-connectome context is deterministically bounded by `bodyId` for the current Canvas implementation, while the selected circuit uses higher-resolution skeletons. The next renderer upgrade should move the soma cloud to WebGL so all available measured soma positions can be shown on desktop while mobile uses a lower level of detail. The scientific graph and activity traces remain unchanged.
+
+Build the measured context layer from the local official annotation feather:
+
+```bash
+fly-sniff-morphology-context soma \
+  data/raw/body-annotations-male-cns-v1.0-minconf-0.5.feather \
+  --output artifacts/connectome-soma.json
+```
+
+With a bounded GraphBundle, fetch exact public SWC skeletons for those body IDs:
+
+```bash
+fly-sniff-morphology-context skeletons path/to/graph \
+  --output artifacts/selected-skeletons.json \
+  --cache-dir ~/fly-sniff-data/cache/malecns-v1.0-swc
+```
+
+The live builder can include both layers automatically through `FLY_SNIFF_MALECNS_ANNOTATIONS` and `FLY_SNIFF_FETCH_SKELETONS=1`.
 
 ## Critique-resistant design rules
 
