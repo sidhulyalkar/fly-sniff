@@ -10,6 +10,7 @@ from fly_sniff.olfactory_door import sha256_file
 from fly_sniff.olfactory_e001_crosscheck import (
     EXPECTED_DOOR_COMMIT,
     crosscheck_e001_door,
+    verify_e001_door_crosscheck,
 )
 
 
@@ -121,3 +122,17 @@ def test_e001_door_crosscheck_refuses_overwrite(tmp_path: Path) -> None:
     (output / "keep.txt").write_text("keep\n")
     with pytest.raises(ValueError, match="refusing to overwrite"):
         crosscheck_e001_door(artifact, output_dir=output)
+
+
+def test_e001_door_crosscheck_verifier_detects_tampering(tmp_path: Path) -> None:
+    artifact = _artifact(tmp_path / "e006")
+    output = tmp_path / "out"
+    crosscheck_e001_door(artifact, output_dir=output)
+    verify_e001_door_crosscheck(artifact, output_dir=output)
+
+    receipt_path = output / "e001-door-crosscheck-receipt.json"
+    receipt = json.loads(receipt_path.read_text())
+    receipt["geosmin"]["ab4B_raw_response"] = 0.0
+    receipt_path.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError, match="canonical receipt hash mismatch"):
+        verify_e001_door_crosscheck(artifact, output_dir=output)
