@@ -11,6 +11,7 @@ cd "${ROOT}"
 DATA_ROOT="${FLY_SNIFF_DATA_DIR:-${HOME}/fly-sniff-data}"
 CODE_REF="$(git rev-parse HEAD)"
 OUT_ROOT="${FLY_SNIFF_AUTHORITY_UNLOCK_DIR:-${DATA_ROOT}/artifacts/olfactory-authority-unlock-${CODE_REF:0:12}}"
+BUNDLE="${DATA_ROOT}/artifacts/olfactory-authority-unlock-${CODE_REF:0:12}.zip"
 E002_OUT="${OUT_ROOT}/e002"
 E001_OUT="${OUT_ROOT}/e001"
 E001_PDF="${FLY_SNIFF_E001_PDF:-${DATA_ROOT}/sources/stensmyr-2012-cell.pdf}"
@@ -73,6 +74,13 @@ if [[ -f "${E001_OUT}/e001-primary-paper-byte-freeze.json" ]]; then
 else
   echo "E001: pending local primary-paper PDF"
 fi
+
+rm -f "${BUNDLE}"
+(
+  cd "$(dirname "${OUT_ROOT}")"
+  zip -qr "$(basename "${BUNDLE}")" "$(basename "${OUT_ROOT}")"
+)
+echo "Bundle: ${BUNDLE}"
 
 cat <<'EOF'
 
