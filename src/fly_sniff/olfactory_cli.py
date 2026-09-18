@@ -10,6 +10,7 @@ from .olfactory_e002_adjudication import validate_da2_adjudication
 from .olfactory_e006_audit import audit_e006
 from .olfactory_geosmin import validate_geosmin_evidence
 from .olfactory_o002 import run_o002_development
+from .olfactory_o002_freeze import validate_o002_freeze
 from .olfactory_o002_robustness import run_o002_robustness
 from .olfactory_o002_stability import run_o002_stability
 from .olfactory_program import validate_study
@@ -22,6 +23,7 @@ O001 = "authority/geosmin-o001-development-v0.json"
 E001 = "authority/geosmin-e001-qualified-v1.json"
 E002 = "authority/flywire-da2-e002-v0.json"
 E002_ADJUDICATION = "authority/flywire-da2-e002-adjudication-v1.json"
+O002_FREEZE = "authority/o002-development-freeze-v1.json"
 E006_SOURCE = "authority/door-e006-source-v0.json"
 
 
@@ -52,6 +54,7 @@ def study_status(root: str | Path = ".") -> dict[str, Any]:
     e002_adjudication = validate_da2_adjudication(
         _load(_path(repo, E002_ADJUDICATION))
     )
+    o002_freeze = validate_o002_freeze(_load(_path(repo, O002_FREEZE)))
     e006_source = _load(_path(repo, E006_SOURCE))
     validate_source_authority(e006_source)
 
@@ -63,6 +66,11 @@ def study_status(root: str | Path = ".") -> dict[str, Any]:
             "E001_numeric_parameterization_usable": e001["numeric_parameterization_usable"],
             "E002": e002["status"],
             "E002_adjudication": e002_adjudication,
+        },
+        "O002_development": {
+            "status": o002_freeze["status"],
+            "same_table_model_search_closed": o002_freeze["same_table_model_search_closed"],
+            "confirmatory_usable": o002_freeze["confirmatory_usable"],
         },
         "O003_flagship": {
             "status": "blocked_pending_evidence_and_benchmark_lock",
@@ -162,6 +170,19 @@ def _e006_audit_command(args: argparse.Namespace) -> int:
                 "output": str(Path(args.output).expanduser().resolve()),
                 "claim_boundary": report["claim_boundary"],
             },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _o002_freeze_command(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    path = Path(args.path).resolve() if args.path else _path(root, O002_FREEZE)
+    print(
+        json.dumps(
+            validate_o002_freeze(_load(path)),
             indent=2,
             sort_keys=True,
         )
@@ -303,6 +324,13 @@ def main() -> None:
     e006.add_argument("--door-checkout", required=True, help="exact pinned clean DoOR checkout")
     e006.add_argument("--output", required=True, help="directory for audit outputs")
     e006.set_defaults(func=_e006_audit_command)
+
+    o002_freeze = sub.add_parser(
+        "validate-o002-freeze",
+        help="validate the frozen completed O002 development finding",
+    )
+    o002_freeze.add_argument("--path")
+    o002_freeze.set_defaults(func=_o002_freeze_command)
 
     o002 = sub.add_parser(
         "run-o002-dev",
