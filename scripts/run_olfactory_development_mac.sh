@@ -15,6 +15,7 @@ E006_ROOT="${FLY_SNIFF_OUTPUT_DIR:-${DATA_ROOT}/artifacts/e006-door-${DOOR_COMMI
 AUDIT_ROOT="${FLY_SNIFF_AUDIT_DIR:-${DATA_ROOT}/artifacts/e006-audit-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}}"
 O002_ROOT="${FLY_SNIFF_O002_DIR:-${DATA_ROOT}/artifacts/o002-dev-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}}"
 O002_V2_ROOT="${FLY_SNIFF_O002_V2_DIR:-${DATA_ROOT}/artifacts/o002-robustness-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}}"
+O002_V3_ROOT="${FLY_SNIFF_O002_V3_DIR:-${DATA_ROOT}/artifacts/o002-stability-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}}"
 BUNDLE="${DATA_ROOT}/artifacts/olfactory-dev-cycle-${DOOR_COMMIT:0:12}-${CODE_REF:0:12}.zip"
 
 printf '\n== Phase 1: source/evidence first light ==\n'
@@ -44,14 +45,26 @@ else
     --output "${O002_V2_ROOT}"
 fi
 
-printf '\n== Phase 4: compact combined review bundle ==\n'
+printf '\n== Phase 4: O002 frozen subspace and resampling stability ==\n'
+if [[ -d "${O002_V3_ROOT}" ]] && [[ -n "$(find "${O002_V3_ROOT}" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
+  echo "Existing O002 v3 stability artifact found: ${O002_V3_ROOT}"
+  echo "Not overwriting deterministic output for the same code/source identity."
+else
+  fly-sniff-olfactory --root "${ROOT}" run-o002-stability \
+    "${O002_ROOT}" \
+    "${O002_V2_ROOT}" \
+    --output "${O002_V3_ROOT}"
+fi
+
+printf '\n== Phase 5: compact combined review bundle ==\n'
 rm -f "${BUNDLE}"
 (
   cd "${DATA_ROOT}/artifacts"
   zip -qr "$(basename "${BUNDLE}")" \
     "$(basename "${AUDIT_ROOT}")" \
     "$(basename "${O002_ROOT}")" \
-    "$(basename "${O002_V2_ROOT}")"
+    "$(basename "${O002_V2_ROOT}")" \
+    "$(basename "${O002_V3_ROOT}")"
 )
 
 printf '\n== O002 v1 summary ==\n'
@@ -59,6 +72,9 @@ cat "${O002_ROOT}/SUMMARY.txt"
 
 printf '\n== O002 v2 robustness summary ==\n'
 cat "${O002_V2_ROOT}/SUMMARY.txt"
+
+printf '\n== O002 v3 stability summary ==\n'
+cat "${O002_V3_ROOT}/SUMMARY.txt"
 
 echo
 echo "Combined review bundle: ${BUNDLE}"
@@ -79,5 +95,7 @@ The O002 development cycle:
   * uses only complete odor rows for multivariate geometry;
   * runs a frozen v2 decomposition of magnitude-only, direction-only, identity-erased, channel-shuffle,
     leave-one-unit, and fixed feature-subset controls;
+  * runs a frozen v3 class-wise, paired balanced-holdout, and low-rank subspace stability analysis;
+  * treats repeated holdouts as stability diagnostics rather than independent biological replicates;
   * explicitly reports unsupported identity, valence, concentration-generalization, and topology claims.
 EOF
