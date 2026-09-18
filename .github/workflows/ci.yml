@@ -31,5 +31,6 @@ jobs:
       - run: fly-sniff-dna02-threshold-freeze --help
       - run: fly-sniff-o002-visual --help
       - run: fly-sniff-live-showcase --help
+      - run: fly-sniff-morphology-context --help
       - run: ruff check src tests
       - run: pytest -q
