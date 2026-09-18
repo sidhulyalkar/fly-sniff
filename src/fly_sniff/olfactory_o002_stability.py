@@ -171,7 +171,10 @@ def _balanced_holdout_stability(
     summary: dict[str, Any] = {
         "draws": HOLDOUT_DRAWS,
         "seed": HOLDOUT_SEED,
-        "test_design": "one randomly selected odor per eligible class per draw; paired transforms use identical test odors",
+        "test_design": (
+            "one randomly selected odor per eligible class per draw; paired transforms use "
+            "identical test odors"
+        ),
     }
     for column in (
         "full_pattern_accuracy",
