@@ -112,7 +112,7 @@ def test_sensory_mask_reports_effective_controller_input() -> None:
 
 def test_candidate_graph_refuses_claim_bearing_export(tmp_path: Path) -> None:
     graph = _write_graph(tmp_path / "candidate", qualified=False)
-    with pytest.raises(ValueError, match="requires a qualified GraphBundle"):
+    with pytest.raises(ValueError, match="requires an odor-plume-qualified GraphBundle"):
         export_live_showcase(
             tmp_path / "showcase.json",
             seconds=0.2,
