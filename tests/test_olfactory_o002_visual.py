@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
 import pytest
@@ -205,6 +206,10 @@ def test_static_showcase_renders_receipt_and_bundle(tmp_path: Path) -> None:
         path = out / name
         assert path.is_file()
         assert path.stat().st_size > 0
+
+    hero = mpimg.imread(out / HERO_FILENAME)
+    height, width = hero.shape[:2]
+    assert width * 5 == height * 4
 
     receipt = json.loads((out / RECEIPT_FILENAME).read_text())
     assert receipt["protocol"] == "o002-visual-showcase-v1"
