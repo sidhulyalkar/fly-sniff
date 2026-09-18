@@ -69,6 +69,7 @@ fly-sniff-dna02-threshold-freeze = "fly_sniff.dna02_threshold_manifest:main"
 fly-sniff-olfactory = "fly_sniff.olfactory_cli:main"
 fly-sniff-o002-visual = "fly_sniff.olfactory_o002_visual:main"
 fly-sniff-live-showcase = "fly_sniff.live_showcase:main"
+fly-sniff-morphology-context = "fly_sniff.morphology_context:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
