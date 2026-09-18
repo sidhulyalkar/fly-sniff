@@ -33,6 +33,10 @@ def validate_geosmin_evidence(payload: dict[str, Any]) -> dict[str, Any]:
     source = payload.get("source")
     if not isinstance(source, dict) or source.get("doi") != "10.1016/j.cell.2012.09.046":
         raise ValueError("E001 must retain the primary Stensmyr 2012 source authority")
+    if source.get("archive_manifest") != "authority/geosmin-e001-source-v1.json":
+        raise ValueError("E001 must retain the frozen institutional archive manifest")
+    if source.get("primary_archive_status") != "institutional_uri_frozen_local_sha256_pending":
+        raise ValueError("E001 primary archive provenance status changed")
 
     claims = payload.get("claims")
     if not isinstance(claims, list):
