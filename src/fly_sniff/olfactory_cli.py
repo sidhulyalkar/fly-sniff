@@ -10,6 +10,7 @@ from .olfactory_e006_audit import audit_e006
 from .olfactory_geosmin import validate_geosmin_evidence
 from .olfactory_o002 import run_o002_development
 from .olfactory_o002_robustness import run_o002_robustness
+from .olfactory_o002_stability import run_o002_stability
 from .olfactory_program import validate_study
 from .olfactory_structure import validate_da2_authority
 
@@ -208,6 +209,32 @@ def _o002_robustness_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _o002_stability_command(args: argparse.Namespace) -> int:
+    report = run_o002_stability(
+        args.o002_dir,
+        args.robustness_dir,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": report["status"],
+                "receipt_sha256": report["receipt_sha256"],
+                "frozen_question": report["frozen_question"],
+                "sample": report["sample"],
+                "class_diagnostics": report["class_diagnostics"],
+                "balanced_holdout_stability": report["balanced_holdout_stability"],
+                "subspace_curve": report["subspace_curve"],
+                "output": str(Path(args.output).expanduser().resolve()),
+                "claim_boundary": report["claim_boundary"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="fly-sniff-olfactory",
@@ -269,6 +296,15 @@ def main() -> None:
     o002_v2.add_argument("o002_dir", help="directory containing O002 v1 development outputs")
     o002_v2.add_argument("--output", required=True, help="new robustness output directory")
     o002_v2.set_defaults(func=_o002_robustness_command)
+
+    o002_v3 = sub.add_parser(
+        "run-o002-stability",
+        help="run frozen class, resampling, and low-rank O002 stability diagnostics",
+    )
+    o002_v3.add_argument("o002_dir", help="directory containing O002 v1 outputs")
+    o002_v3.add_argument("robustness_dir", help="directory containing O002 v2 outputs")
+    o002_v3.add_argument("--output", required=True, help="new stability output directory")
+    o002_v3.set_defaults(func=_o002_stability_command)
 
     args = parser.parse_args()
     raise SystemExit(args.func(args))
