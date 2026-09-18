@@ -29,29 +29,39 @@ printf '\n== E002 pinned FlyWire candidate discovery ==\n'
 python -m fly_sniff.olfactory_authority_unlock scan-e002 --out "${E002_OUT}"
 
 printf '\n== E001 primary-paper byte freeze ==\n'
+if [[ ! -f "${E001_PDF}" ]]; then
+  TMP_PDF="${E001_PDF}.download"
+  rm -f "${TMP_PDF}"
+  echo "Attempting bounded open-archive publisher download..."
+  if curl -L --fail --retry 3 --connect-timeout 20 --max-time 120 \
+    -A 'Mozilla/5.0' \
+    'https://www.cell.com/article/S0092867412013578/pdf' \
+    -o "${TMP_PDF}"; then
+    if [[ "$(head -c 5 "${TMP_PDF}" 2>/dev/null || true)" == "%PDF-" ]]; then
+      mv "${TMP_PDF}" "${E001_PDF}"
+      echo "Verified PDF magic and promoted download to ${E001_PDF}"
+    else
+      echo "Publisher endpoint did not return PDF bytes; deleting temporary response." >&2
+      rm -f "${TMP_PDF}"
+    fi
+  else
+    rm -f "${TMP_PDF}"
+  fi
+fi
+
 if [[ -f "${E001_PDF}" ]]; then
   python -m fly_sniff.olfactory_authority_unlock freeze-e001-paper \
     --paper "${E001_PDF}" \
     --out "${E001_OUT}"
 else
   cat <<EOF
-E001 paper not found at:
+E001 publisher auto-fetch did not yield a PDF.
+
+Use the Cell open-archive browser page for DOI 10.1016/j.cell.2012.09.046, download the article PDF,
+and save it exactly here:
   ${E001_PDF}
 
-Fetch the open-archive Cell PDF into that exact path with:
-
-  curl -L --fail --retry 3 \
-    -A 'Mozilla/5.0' \
-    'https://www.cell.com/article/S0092867412013578/pdf' \
-    -o '${E001_PDF}'
-
-Then verify:
-  file '${E001_PDF}'
-  head -c 5 '${E001_PDF}'
-
-The first bytes must be %PDF-. If the endpoint returns HTML, do not rename it as a PDF.
-Download the paper through the publisher/open-archive browser UI instead, save it to the same path,
-and rerun this script.
+Then rerun this script. The freezer will reject HTML or other non-PDF bytes.
 EOF
 fi
 
