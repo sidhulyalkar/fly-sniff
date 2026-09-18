@@ -48,28 +48,28 @@ for path in "${required[@]}"; do
   fi
 done
 
-VIDEO_ARGS=()
+RENDER_CMD=(
+  fly-sniff-o002-visual
+  "${V1}"
+  "${V2}"
+  "${V3}"
+  --output "${OUT}"
+)
+
 if command -v ffmpeg >/dev/null 2>&1; then
-  VIDEO_ARGS=(--video)
+  RENDER_CMD+=(--video)
   echo "ffmpeg: found; 4:5 social MP4 will be rendered"
 else
   echo "ffmpeg: not found; static scientific artifacts will still be rendered"
   echo "Install with: brew install ffmpeg"
 fi
 
-FORCE_ARGS=()
 if [[ "${FLY_SNIFF_FORCE_SHOWCASE:-0}" == "1" ]]; then
-  FORCE_ARGS=(--force)
+  RENDER_CMD+=(--force)
 fi
 
 printf '\n== Receipt-driven visualization render ==\n'
-fly-sniff-o002-visual \
-  "${V1}" \
-  "${V2}" \
-  "${V3}" \
-  --output "${OUT}" \
-  "${VIDEO_ARGS[@]}" \
-  "${FORCE_ARGS[@]}"
+"${RENDER_CMD[@]}"
 
 printf '\n== Output integrity ==\n'
 for path in \
