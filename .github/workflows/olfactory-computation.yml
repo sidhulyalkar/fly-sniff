@@ -6,10 +6,12 @@ on:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
       - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/geosmin-e001-source-v1.json"
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
+      - "scripts/run_olfactory_authority_acquisition_mac.sh"
       - "scripts/run_olfactory_development_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
@@ -20,6 +22,8 @@ on:
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
+      - "src/fly_sniff/olfactory_e001_source.py"
+      - "src/fly_sniff/olfactory_e001_crosscheck.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
@@ -29,28 +33,36 @@ on:
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
+      - "tests/test_olfactory_e001_source.py"
+      - "tests/test_olfactory_e001_crosscheck.py"
       - ".github/workflows/olfactory-computation.yml"
   push:
     paths:
       - "authority/olfactory-*.json"
       - "authority/geosmin-o001-development-v0.json"
       - "authority/geosmin-e001-evidence-v0.json"
+      - "authority/geosmin-e001-source-v1.json"
       - "authority/door-e006-source-v0.json"
       - "authority/flywire-da2-e002-v0.json"
       - "docs/OLFACTORY_*.md"
       - "scripts/run_olfactory_first_light_mac.sh"
+      - "scripts/run_olfactory_authority_acquisition_mac.sh"
       - "src/fly_sniff/olfactory_program.py"
       - "src/fly_sniff/olfactory_door.py"
       - "src/fly_sniff/olfactory_e006_audit.py"
       - "src/fly_sniff/olfactory_cli.py"
       - "src/fly_sniff/olfactory_structure.py"
       - "src/fly_sniff/olfactory_geosmin.py"
+      - "src/fly_sniff/olfactory_e001_source.py"
+      - "src/fly_sniff/olfactory_e001_crosscheck.py"
       - "tests/test_olfactory_program.py"
       - "tests/test_olfactory_door.py"
       - "tests/test_olfactory_e006_audit.py"
       - "tests/test_olfactory_cli.py"
       - "tests/test_olfactory_structure.py"
       - "tests/test_olfactory_geosmin.py"
+      - "tests/test_olfactory_e001_source.py"
+      - "tests/test_olfactory_e001_crosscheck.py"
       - ".github/workflows/olfactory-computation.yml"
 
 jobs:
@@ -76,9 +88,10 @@ jobs:
         run: python -m fly_sniff.olfactory_structure authority/flywire-da2-e002-v0.json
       - name: Validate Mac runner shell contract
         run: |
-          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh
+          bash -n scripts/run_olfactory_first_light_mac.sh scripts/run_olfactory_development_mac.sh scripts/run_olfactory_authority_acquisition_mac.sh
           test -x scripts/run_olfactory_first_light_mac.sh
           test -x scripts/run_olfactory_development_mac.sh
+          test -x scripts/run_olfactory_authority_acquisition_mac.sh
       - name: Smoke olfactory CLI and E006 ingester
         run: |
           fly-sniff-olfactory --help
@@ -86,6 +99,8 @@ jobs:
           fly-sniff-olfactory run-o002-dev --help
           fly-sniff-olfactory run-o002-robustness --help
           fly-sniff-olfactory run-o002-stability --help
+          python -m fly_sniff.olfactory_e001_source --help
+          python -m fly_sniff.olfactory_e001_crosscheck --help
           python -m fly_sniff.olfactory_door --help
       - name: Ruff
         run: >-
@@ -99,6 +114,8 @@ jobs:
           src/fly_sniff/olfactory_cli.py
           src/fly_sniff/olfactory_structure.py
           src/fly_sniff/olfactory_geosmin.py
+          src/fly_sniff/olfactory_e001_source.py
+          src/fly_sniff/olfactory_e001_crosscheck.py
           tests/test_olfactory_program.py
           tests/test_olfactory_door.py
           tests/test_olfactory_e006_audit.py
@@ -108,6 +125,8 @@ jobs:
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
+          tests/test_olfactory_e001_source.py
+          tests/test_olfactory_e001_crosscheck.py
       - name: Focused tests
         run: >-
           pytest -q
@@ -117,3 +136,5 @@ jobs:
           tests/test_olfactory_cli.py
           tests/test_olfactory_structure.py
           tests/test_olfactory_geosmin.py
+          tests/test_olfactory_e001_source.py
+          tests/test_olfactory_e001_crosscheck.py

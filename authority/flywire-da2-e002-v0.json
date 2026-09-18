@@ -13,6 +13,26 @@
     "annotation_table_path": "supplemental_files/Supplemental_file1_neuron_annotations.tsv",
     "annotation_table_git_blob": "1a3168731618ee62a47392252d3af7664e739e9e"
   },
+  "source_evidence": {
+    "publication": {
+      "citation": "Acharya et al., Frontiers in Cellular Neuroscience (2025), Type-specific molecular signaling architectures and synaptic plasticity of Drosophila olfactory sensory neurons",
+      "doi": "10.3389/fncel.2025.1579821",
+      "reported_or56a_total": 41,
+      "reported_flywire_annotated_or56a": 40,
+      "reported_manually_identified_additional_afferents": 1,
+      "reported_right_da2_ipsilateral": 22,
+      "reported_right_da2_contralateral": 19
+    },
+    "frozen_annotation_observation": {
+      "ORN_DA2_records": 39,
+      "ORN_DA2_left": 16,
+      "ORN_DA2_right": 22,
+      "ORN_DA2_side_na": 1,
+      "DA2_lPN_records": 11,
+      "DA2_lPN_left": 5,
+      "DA2_lPN_right": 6
+    }
+  },
   "known_anchors": [
     {
       "role": "DA2_lPN",
@@ -22,7 +42,17 @@
       "authority": "Virtual Fly Brain VFB_fw032296 cross-reference to FlyWire v783",
       "cell_type": "DA2_lPN",
       "hemibrain_type": "DA2_lPN",
-      "neurotransmitter_note": "VFB describes this neuron as cholinergic; transmitter evidence must be independently graded before dynamic use"
+      "neurotransmitter_note": "VFB/FlyWire annotations support cholinergic identity; transmitter evidence remains separate from synaptic-sign qualification"
+    },
+    {
+      "role": "ORN_DA2_Or56a_identity_crosscheck",
+      "root_id": "720575940626411097",
+      "side": "unresolved",
+      "identity_grade": "direct_public_cross_reference",
+      "authority": "Virtual Fly Brain VFB_fw044213 classifies this v783 ORN_DA2 as adult olfactory receptor neuron Or56a",
+      "cell_type": "ORN_DA2",
+      "hemibrain_type": "ORN_DA2",
+      "caveat": "VFB confirms Or56a identity but does not resolve left/right side on the inspected public record"
     }
   ],
   "population_constraints": [
@@ -32,23 +62,473 @@
       "expected_total": 41,
       "expected_ipsilateral": 22,
       "expected_contralateral": 19,
-      "count_authority": "2025 type-specific Or56a/Or22a FlyWire ultrastructure study",
-      "body_records": [],
+      "expected_side_reference": "right_DA2_glomerulus",
+      "count_authority": "Acharya et al. 2025 FlyWire v783 ultrastructure study",
+      "publication_reported_annotated_count": 40,
+      "publication_reported_manual_additional_count": 1,
+      "frozen_annotation_count": 39,
+      "candidate_discovery_rule": "exact frozen v2.1.0 FlyWire hemibrain_type/cell_type ORN_DA2 only; no connectivity- or outcome-based expansion",
+      "body_records": [
+        {
+          "root_id": "720575940620055905",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw042667",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940627805096",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw042742",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940609633378",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw042777",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940613671330",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw042997",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940630257772",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw043088",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940626357586",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw043207",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940618946901",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw043243",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940626411097",
+          "side": "unresolved",
+          "source_side": "na",
+          "vfb_id": "fw044213",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940654069409",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045325",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940628086607",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045333",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940644590116",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045413",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940619539182",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045759",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940627318696",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045760",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940612019442",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045761",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940632041043",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045762",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940608928324",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw045763",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940635705963",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045764",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940616536209",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045765",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940615427734",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045766",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940659222657",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045767",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940624211470",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045768",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940631467591",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045769",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940612972328",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045770",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940633031085",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045771",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940634614367",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045772",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940639931893",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw045773",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940632190765",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw046140",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "outlier_bio"
+        },
+        {
+          "root_id": "720575940637704676",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047514",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940621106102",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw047516",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940641403021",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw047621",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940628380827",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047748",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940629830508",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw047787",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940603832288",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047836",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940622713578",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047840",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940634955188",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw047888",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940615923131",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047985",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940616095318",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw047987",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940622553420",
+          "side": "right",
+          "source_side": "right",
+          "vfb_id": "fw048226",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "standard"
+        },
+        {
+          "root_id": "720575940611437973",
+          "side": "left",
+          "source_side": "left",
+          "vfb_id": "fw048351",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type ORN_DA2, mapped to Or56a/DA2 by Acharya et al. 2025",
+          "annotation_status": "outlier_bio"
+        }
+      ],
       "enumeration_complete": false
     },
     {
       "population_id": "DA2_lPN_publication_matched",
       "role": "projection_neuron",
       "candidate_discovery_rule": "exact publication-matched annotation hemibrain_type/cell_type DA2_lPN only",
+      "frozen_annotation_count": 11,
       "body_records": [
+        {
+          "root_id": "720575940639337461",
+          "side": "right",
+          "vfb_id": "fw006312",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940628259407",
+          "side": "right",
+          "vfb_id": "fw031560",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940611849187",
+          "side": "left",
+          "vfb_id": "fw031968",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940622364184",
+          "side": "left",
+          "vfb_id": "fw032285",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
         {
           "root_id": "720575940624106442",
           "side": "right",
+          "vfb_id": "fw032296",
           "identity_grade": "direct_public_cross_reference",
           "identity_authority": "Virtual Fly Brain VFB_fw032296 cross-reference to FlyWire v783"
+        },
+        {
+          "root_id": "720575940622734835",
+          "side": "left",
+          "vfb_id": "fw032457",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940622762995",
+          "side": "right",
+          "vfb_id": "fw032477",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940626937617",
+          "side": "left",
+          "vfb_id": "fw032992",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940622311704",
+          "side": "right",
+          "vfb_id": "fw033007",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940610052266",
+          "side": "right",
+          "vfb_id": "fw033115",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
+        },
+        {
+          "root_id": "720575940638719104",
+          "side": "left",
+          "vfb_id": "fw033169",
+          "identity_grade": "publication_matched_annotation",
+          "identity_authority": "FlyWire v783 annotation release v2.1.0 exact blob 1a3168731618ee62a47392252d3af7664e739e9e; hemibrain_type DA2_lPN"
         }
       ],
-      "enumeration_complete": false
+      "enumeration_complete": true
+    }
+  ],
+  "unresolved_discrepancies": [
+    {
+      "id": "orn_da2_annotation_count_gap",
+      "observed": "The exact frozen v2.1.0 annotation table contains 39 ORN_DA2 rows.",
+      "expected": "Acharya et al. 2025 reports 40 FlyWire-annotated Or56a OSNs before adding one additional afferent.",
+      "resolution_required": "identify the publication's 40th annotated body ID or document the annotation-version discrepancy from a citable source"
+    },
+    {
+      "id": "orn_da2_manual_additional_root_id_missing",
+      "observed": "Acharya et al. 2025 reports one additional afferent neuron in DA2, bringing Or56a OSNs to 41.",
+      "expected": "A frozen root ID and hemisphere for that manually identified additional afferent.",
+      "resolution_required": "recover the exact v783 root ID from publication supplementary/source data or author-provided public authority"
+    },
+    {
+      "id": "orn_da2_side_unresolved_fw044213",
+      "root_id": "720575940626411097",
+      "vfb_id": "fw044213",
+      "observed": "Frozen FlyWire annotation side is 'na'; VFB independently confirms ORN_DA2 / adult olfactory receptor neuron Or56a identity.",
+      "resolution_required": "freeze an independent left/right anatomical authority before cohort qualification"
     }
   ],
   "qualification_rules": {
@@ -62,5 +542,5 @@
     "cross_dataset_type_mapping_uncertainty_explicit": true
   },
   "status": "blocked_incomplete_body_id_adjudication",
-  "claim_boundary": "This artifact freezes the v783 publication-matched annotation authority and currently known DA2 anchor/count constraints. It does not yet define a complete Or56a/DA2 cohort and cannot be used for confirmatory connectivity or dynamics claims."
+  "claim_boundary": "This artifact now freezes every ORN_DA2 and DA2_lPN identity present in the exact FlyWire v783 v2.1.0 annotation table. It reconciles 39 annotated ORN_DA2 records and 11 DA2_lPN records, while explicitly retaining the publication-vs-table count gap, one unresolved OSN side, and the unpublished root ID of the manually identified additional afferent. It is not yet a complete 41-cell Or56a cohort and cannot authorize confirmatory connectivity or dynamics claims."
 }
