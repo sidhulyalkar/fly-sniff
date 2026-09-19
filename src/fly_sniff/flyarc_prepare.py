@@ -18,6 +18,20 @@ MALECNS_RELEASE = "male-cns:v1.0"
 EXPECTED_RETAINED_NEURONS = 166_700
 EXPECTED_RETAINED_EDGES = 25_582_938
 SIGN_POLICY = "consensus-fallback-whole-neuron-sign-v1"
+SOURCE_LOCKS = {
+    "annotations": {
+        "bytes": 14_483_314,
+        "sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    },
+    "neurotransmitters": {
+        "bytes": 43_282_834,
+        "sha256": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621",
+    },
+    "connectivity": {
+        "bytes": 1_051_241_946,
+        "sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    },
+}
 
 POSITIVE_NT = {
     "acetylcholine",
@@ -38,6 +52,22 @@ def sha256_file(path: str | Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def verify_source_lock(path: str | Path, source_key: str) -> dict[str, Any]:
+    if source_key not in SOURCE_LOCKS:
+        raise ValueError(f"unknown FlyARC source lock {source_key!r}")
+    source = Path(path)
+    expected = SOURCE_LOCKS[source_key]
+    observed_bytes = source.stat().st_size
+    observed_sha = sha256_file(source)
+    if observed_bytes != expected["bytes"] or observed_sha != expected["sha256"]:
+        raise ValueError(
+            f"{source_key} source lock mismatch: "
+            f"bytes expected={expected['bytes']} observed={observed_bytes}; "
+            f"sha256 expected={expected['sha256']} observed={observed_sha}"
+        )
+    return {"bytes": observed_bytes, "sha256": observed_sha}
 
 
 def _resolve_column(columns: Sequence[str], candidates: Sequence[str], label: str) -> str:
@@ -291,9 +321,21 @@ def prepare_graph(
     unresolved_sign: int = 1,
     expected_neurons: int | None = EXPECTED_RETAINED_NEURONS,
     expected_edges: int | None = EXPECTED_RETAINED_EDGES,
+    verify_sources: bool = True,
 ) -> dict[str, Any]:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
+
+    source_locks = None
+    if verify_sources:
+        source_locks = {
+            "annotations": verify_source_lock(annotations, "annotations"),
+            "connectivity": verify_source_lock(connectivity, "connectivity"),
+            "neurotransmitters": verify_source_lock(
+                neurotransmitters,
+                "neurotransmitters",
+            ),
+        }
 
     retained = retained_annotations(annotations)
     if expected_neurons is not None and len(retained) != expected_neurons:
@@ -370,6 +412,8 @@ def prepare_graph(
         "unresolved_sign": unresolved_sign,
         "neurotransmitter_counts": {str(k): int(v) for k, v in nt_counts.items()},
         "sign_counts": {str(k): int(v) for k, v in sign_counts.items()},
+        "source_lock_verified": bool(verify_sources),
+        "source_locks": source_locks,
         "sources": {
             "annotations": {
                 "path": str(Path(annotations)),
@@ -425,6 +469,11 @@ def main() -> None:
         action="store_true",
         help="development escape hatch for noncanonical/future source tables",
     )
+    parser.add_argument(
+        "--skip-source-locks",
+        action="store_true",
+        help="development only: bypass canonical MaleCNS v1.0 byte/SHA-256 locks",
+    )
     args = parser.parse_args()
 
     manifest = prepare_graph(
@@ -437,6 +486,7 @@ def main() -> None:
         unresolved_sign=args.unresolved_sign,
         expected_neurons=None if args.skip_count_checks else EXPECTED_RETAINED_NEURONS,
         expected_edges=None if args.skip_count_checks else EXPECTED_RETAINED_EDGES,
+        verify_sources=not args.skip_source_locks,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))
 
