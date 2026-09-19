@@ -30,5 +30,8 @@ jobs:
       - run: fly-sniff-dna02-threshold-distribution-review --help
       - run: fly-sniff-dna02-threshold-freeze --help
       - run: fly-sniff-dna02-threshold-freeze-v2 --help
+      - run: fly-sniff-arc --help
+      - run: fly-sniff-arc-prepare --help
+      - run: fly-sniff-arc-render --help
       - run: ruff check src tests
       - run: pytest -q
