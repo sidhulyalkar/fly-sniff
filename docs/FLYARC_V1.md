@@ -137,6 +137,7 @@ flyarc-ls20-v1/
   intact/
     steps.jsonl
     states.npz
+    frames.npz
     metrics.json
   rewire/
     ...
@@ -147,9 +148,22 @@ flyarc-ls20-v1/
 ```
 
 `states.npz` contains the full float32 modeled reservoir state and selected MaleCNS body IDs
-for every executed action. `steps.jsonl` contains the action, reward, frame hash, game state,
-Q values, activity summaries, and the most active body IDs. Those files are intended to drive
-the later browser replay without reproducing the science in JavaScript.
+for every executed action. `frames.npz` contains the actual categorical ARC observations,
+including reset observations, in a padded uint8 tensor with original shapes. `steps.jsonl`
+binds each action to the exact post-action observation index and contains the action, reward,
+frame hash, game state, Q values, activity summaries, and the most active body IDs.
+
+The public renderer is strictly downstream of those hashed outputs:
+
+```bash
+fly-sniff-arc-render artifacts/flyarc-ls20-v1 \
+  --output artifacts/flyarc-ls20-v1.gif \
+  --fps 8
+```
+
+For MP4, install `ffmpeg` and use an `.mp4` output path. The renderer first validates every
+file named in `receipt.json`; a missing or modified scientific artifact aborts rendering.
+The reservoir panel is explicitly labelled as a structural-rank layout rather than anatomy.
 
 ## Interpretation
 
