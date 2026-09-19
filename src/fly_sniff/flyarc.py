@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
@@ -29,6 +30,28 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _package_version(distribution: str) -> str | None:
+    try:
+        return version(distribution)
+    except PackageNotFoundError:
+        return None
+
+
+def _graph_artifact_hashes(graph_root: str | Path) -> dict[str, str]:
+    root = Path(graph_root)
+    required = ("nodes.parquet", "edges.parquet", "roles.json")
+    hashes: dict[str, str] = {}
+    for name in required:
+        path = root / name
+        if not path.exists():
+            raise ValueError(f"GraphBundle is missing required artifact {path}")
+        hashes[name] = _sha256(path)
+    manifest = root / "manifest.json"
+    if manifest.exists():
+        hashes["manifest.json"] = _sha256(manifest)
+    return hashes
 
 
 def _git_head() -> str | None:
@@ -837,6 +860,7 @@ def run_comparison(
     config: RunConfig,
     allow_candidate: bool,
     render_mode: str | None,
+    graph_artifacts: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     unknown = [variant for variant in variants if variant not in VARIANTS]
     if unknown:
@@ -856,12 +880,17 @@ def run_comparison(
             "state for ARC-AGI-3 interaction than matched topology controls?"
         ),
         "model_id": MODEL_ID,
+        "arc_toolkit": {
+            "distribution": "arc-agi",
+            "version": _package_version("arc-agi"),
+        },
         "encoder_id": ENCODER_ID,
         "reward_id": REWARD_ID,
         "selection_policy": SELECTION_POLICY,
         "variants": list(variants),
         "config": asdict(config),
         "graph_manifest": bundle.manifest,
+        "graph_artifacts": graph_artifacts,
         "git_head": _git_head(),
         "claim_boundaries": [
             (
@@ -976,7 +1005,9 @@ def main() -> None:
         policy_seed=args.policy_seed,
     )
     variants = tuple(args.variant or VARIANTS)
-    bundle = GraphBundle.load(args.graph)
+    graph_root = Path(args.graph)
+    bundle = GraphBundle.load(graph_root)
+    graph_artifacts = _graph_artifact_hashes(graph_root)
     comparison = run_comparison(
         bundle,
         variants=variants,
@@ -984,6 +1015,7 @@ def main() -> None:
         config=config,
         allow_candidate=args.allow_candidate,
         render_mode=args.render,
+        graph_artifacts=graph_artifacts,
     )
     print(json.dumps(comparison, indent=2, sort_keys=True))
 
