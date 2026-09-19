@@ -14,7 +14,11 @@ if [[ "$(python -c 'import sys; print(int(sys.version_info >= (3, 12)))')" != "1
   exit 2
 fi
 
-python -m pytest -q tests/test_flyarc.py
+python -m pytest -q \
+  tests/test_flyarc.py \
+  tests/test_flyarc_prepare.py \
+  tests/test_flyarc_render.py \
+  tests/test_flyarc_live_runner.py
 
 fly-sniff-arc "$GRAPH" \
   --game ls20 \
@@ -23,7 +27,12 @@ fly-sniff-arc "$GRAPH" \
   --allow-candidate \
   --output "$OUT"
 
+GIF="$OUT.gif"
+fly-sniff-arc-render "$OUT" --output "$GIF" --fps 8
+
 echo
 echo "FlyARC artifacts:"
 echo "$OUT/comparison.json"
 echo "$OUT/receipt.json"
+echo "$GIF"
+echo "$GIF.receipt.json"
