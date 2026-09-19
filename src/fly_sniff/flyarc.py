@@ -4,10 +4,10 @@ import argparse
 import hashlib
 import json
 import subprocess
-from importlib.metadata import PackageNotFoundError, version
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
