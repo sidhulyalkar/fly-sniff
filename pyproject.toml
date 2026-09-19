@@ -22,7 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 malecns = ["neuprint-python>=0.5"]
 source = ["h5py>=3.10"]
-arc = ["arc-agi>=0.9.9"]
+arc = ["arc-agi==0.9.9"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
