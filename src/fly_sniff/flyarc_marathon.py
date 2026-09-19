@@ -177,7 +177,7 @@ def _summary_stats(values: pd.Series) -> dict[str, float | int]:
     if data.empty:
         return {"n": 0}
     return {
-        "n": int(len(data)),
+        "n": len(data),
         "mean": float(data.mean()),
         "std": float(data.std(ddof=1)) if len(data) > 1 else 0.0,
         "median": float(data.median()),
@@ -234,8 +234,8 @@ def aggregate_results(
         record: dict[str, Any] = {
             "projection_seed": int(pseed),
             "intact_memory_excess_mean_r2": intact_value,
-            "rewire_n": int(len(rewires)),
-            "random_n": int(len(randoms)),
+            "rewire_n": len(rewires),
+            "random_n": len(randoms),
         }
         if not rewires.empty:
             rewire_values = rewires[primary].astype(float)
@@ -291,13 +291,17 @@ def _write_report(root: Path, aggregate: dict[str, Any]) -> None:
     lines = [
         "# FlyARC representation marathon v1",
         "",
-        f"- Completed jobs: **{aggregate['completed_jobs']}** / "
-        f"**{aggregate['configured_jobs']}**",
+        (
+            f"- Completed jobs: **{aggregate['completed_jobs']}** / "
+            f"**{aggregate['configured_jobs']}**"
+        ),
         "- Status: **development-descriptive**",
         "- Primary developmental metric: mean excess memory R² across frozen lags",
         "",
-        "Excess memory R² is the linear decodability of past frame information from reservoir "
-        "state minus the decodability available from the current frame alone.",
+        (
+            "Excess memory R² is the linear decodability of past frame information from reservoir "
+            "state minus the decodability available from the current frame alone."
+        ),
         "",
         "## Variant summaries",
         "",
@@ -342,12 +346,16 @@ def _write_report(root: Path, aggregate: dict[str, Any]) -> None:
             "",
             "## Interpretation guardrail",
             "",
-            "Do not select a new leak, gain, projection, reservoir size, or target sketch because "
-            "it makes intact topology look better. Any confirmatory follow-up must be frozen "
-            "in a new authority manifest before inspecting its outcome.",
+            (
+                "Do not select a new leak, gain, projection, reservoir size, or target sketch "
+                "because it makes intact topology look better. Any confirmatory follow-up must "
+                "be frozen in a new authority manifest before inspecting its outcome."
+            ),
             "",
-            "See memory_curve.png, primary_metric_distribution.png, summary.csv, and "
-            "aggregate.json for machine-readable detail.",
+            (
+                "See memory_curve.png, primary_metric_distribution.png, summary.csv, and "
+                "aggregate.json for machine-readable detail."
+            ),
             "",
         ]
     )
@@ -446,8 +454,10 @@ def _manifest(
         "primary_developmental_metric": "memory_excess_mean_r2",
         "claim_boundaries": [
             "All topologies receive the exact same recorded ARC observation stream.",
-            "The input projection changes only between frozen projection blocks and is shared "
-            "within each block.",
+            (
+                "The input projection changes only between frozen projection blocks and is "
+                "shared within each block."
+            ),
             "Excess memory is measured relative to current-frame decodability.",
             "Marathon results are developmental and descriptive, not confirmatory.",
             "A confirmatory topology test requires a separately frozen multi-game manifest.",
