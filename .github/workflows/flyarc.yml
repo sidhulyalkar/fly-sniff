@@ -1,0 +1,42 @@
+name: flyarc
+
+on:
+  pull_request:
+    paths:
+      - "src/fly_sniff/flyarc.py"
+      - "src/fly_sniff/flyarc_prepare.py"
+      - "src/fly_sniff/flyarc_render.py"
+      - "tests/test_flyarc*.py"
+      - "authority/flyarc-*.json"
+      - "scripts/*flyarc*.sh"
+      - "docs/FLYARC_V1.md"
+      - "pyproject.toml"
+      - ".github/workflows/flyarc.yml"
+  workflow_dispatch:
+
+jobs:
+  python312:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e '.[arc,dev]'
+      - name: Verify pinned ARC toolkit
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          import arc_agi
+
+          observed = version("arc-agi")
+          print("arc-agi", observed)
+          assert observed == "0.9.9", observed
+          assert hasattr(arc_agi, "Arcade")
+          PY
+      - run: fly-sniff-arc --help
+      - run: fly-sniff-arc-prepare --help
+      - run: fly-sniff-arc-render --help
+      - run: ruff check src/fly_sniff/flyarc.py src/fly_sniff/flyarc_prepare.py src/fly_sniff/flyarc_render.py tests/test_flyarc*.py
+      - run: pytest -q tests/test_flyarc.py tests/test_flyarc_prepare.py tests/test_flyarc_render.py tests/test_flyarc_live_runner.py

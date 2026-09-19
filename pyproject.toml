@@ -22,6 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 malecns = ["neuprint-python>=0.5"]
 source = ["h5py>=3.10"]
+arc = ["arc-agi==0.9.9"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -67,6 +68,9 @@ fly-sniff-dna02-threshold-waveform-review = "fly_sniff.dna02_threshold_waveform_
 fly-sniff-dna02-threshold-distribution-review = "fly_sniff.dna02_threshold_distribution_review:main"
 fly-sniff-dna02-threshold-freeze = "fly_sniff.dna02_threshold_manifest:main"
 fly-sniff-dna02-threshold-freeze-v2 = "fly_sniff.dna02_threshold_manifest_v2:main"
+fly-sniff-arc = "fly_sniff.flyarc:main"
+fly-sniff-arc-prepare = "fly_sniff.flyarc_prepare:main"
+fly-sniff-arc-render = "fly_sniff.flyarc_render:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
