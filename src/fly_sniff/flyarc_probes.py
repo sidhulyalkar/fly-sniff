@@ -572,7 +572,7 @@ def run_probe(
         )
         current_r2 = float(input_baselines["memory"][str(lag)])
         memory[str(lag)] = {
-            "samples": int(len(index)),
+            "samples": len(index),
             "reservoir_r2": reservoir_r2,
             "current_input_r2": current_r2,
             "excess_r2": reservoir_r2 - current_r2,
