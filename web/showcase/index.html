@@ -7,15 +7,15 @@
   <title>fly-sniff experiment theater</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body data-view-mode="watch">
   <main class="shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">FLY-SNIFF • LIVE EXPERIMENT THEATER</p>
-        <h1>One odor world. Multiple nervous-system conditions.</h1>
+        <p class="eyebrow">FLY-SNIFF • SHOWCASE V2 • ANATOMICAL EXPERIMENT THEATER</p>
+        <h1>From odor evidence to steering, one intervention at a time.</h1>
         <p class="lede">
-          Replay the same frozen plume across synchronized controls, inspect the sensory evidence each
-          condition receives, and keep measured data, modeled dynamics, and presentation visibly separate.
+          Replay the same frozen plume across paired controllers, inspect what each controller receives
+          and produces, and keep measured sensory data, modeled circuit dynamics, and presentation visibly separate.
         </p>
       </div>
       <div class="evidence-stack" aria-label="Evidence status">
@@ -31,12 +31,32 @@
       <div><b>Receipt first</b><span>browser replays frozen state</span></div>
     </section>
 
-    <section class="stage-grid">
+    <nav class="theater-nav" aria-label="Showcase mode">
+      <button class="theater-tab active" type="button" data-mode="watch">
+        <span>01</span><b>WATCH</b><small>odor → sensing → action</small>
+      </button>
+      <button class="theater-tab" type="button" data-mode="compare">
+        <span>02</span><b>COMPARE</b><small>paired counterfactuals</small>
+      </button>
+      <button class="theater-tab" type="button" data-mode="prove">
+        <span>03</span><b>PROVE</b><small>evidence + provenance</small>
+      </button>
+    </nav>
+
+    <section id="watchIntro" class="mode-intro">
+      <div>
+        <p class="kicker">LIVE REPLAY</p>
+        <h2>Follow one controller through the entire transformation.</h2>
+      </div>
+      <p>Plume contact, bilateral evidence, controller output, and steering stay locked to the same frozen frame.</p>
+    </section>
+
+    <section class="stage-grid mode-stage">
       <article class="panel arena-panel">
         <div class="panel-head">
           <div>
             <p class="kicker">BEHAVIOR REPLAY</p>
-            <h2>Who finds the invisible odor source?</h2>
+            <h2 id="behaviorQuestion">How do paired controllers respond to the same plume?</h2>
           </div>
           <div class="panel-actions">
             <span id="odorIdentityBadge" class="badge badge-warn">generic odor</span>
@@ -48,7 +68,18 @@
           <canvas id="arenaCanvas" aria-label="Synchronized fly movement in the odor arena"></canvas>
           <div class="arena-legend" id="arenaLegend"></div>
           <div class="viewer-note">odor/source overlays are viewer-only</div>
+          <div id="worldHud" class="world-hud">
+            <span id="hudCondition">selected controller</span>
+            <b id="hudDistance">—</b>
+            <small>distance to source</small>
+          </div>
         </div>
+        <div id="signalReadout" class="replay-signal-strip" aria-label="Current replay signals">
+          <div><span>ODOR MAX</span><i id="signalSensory"></i><b id="signalSensoryValue">0.00</b></div>
+          <div><span>BILATERAL Δ</span><i id="signalBilateral"></i><b id="signalBilateralValue">0.00</b></div>
+          <div><span>|TURN|</span><i id="signalOutput"></i><b id="signalOutputValue">0.00</b></div>
+        </div>
+        <div id="eventStrip" class="event-strip" aria-label="Replay events"></div>
         <div class="playbar">
           <button id="playButton" class="play-button" type="button" aria-label="Pause replay">Ⅱ</button>
           <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Replay time">
@@ -59,14 +90,21 @@
       <article class="panel connectome-panel">
         <div class="panel-head">
           <div>
-            <p class="kicker">CONNECTOME VIEW</p>
+            <p id="circuitKicker" class="kicker">CIRCUIT / CONTROLLER VIEW</p>
             <h2 id="connectomeTitle">Topology / anatomy status</h2>
           </div>
-          <span id="geometryBadge" class="badge">checking geometry</span>
+          <div class="panel-actions">
+            <div id="viewPresets" class="view-presets" aria-label="Anatomy view presets" hidden>
+              <button class="view-button" type="button" data-view="front">front</button>
+              <button class="view-button active" type="button" data-view="oblique">oblique</button>
+              <button class="view-button" type="button" data-view="side">side</button>
+            </div>
+            <span id="geometryBadge" class="badge">checking geometry</span>
+          </div>
         </div>
         <div class="canvas-wrap connectome-wrap">
-          <canvas id="connectomeCanvas" aria-label="Connectome topology view"></canvas>
-          <div id="connectomeEmpty" class="empty-state" hidden></div>
+          <canvas id="connectomeCanvas" aria-label="Connectome topology or measured anatomy view"></canvas>
+          <div id="connectomeEmpty" class="connectome-empty" hidden></div>
         </div>
         <div class="connectome-footer">
           <p id="connectomeBoundary">Loading provenance…</p>
@@ -74,7 +112,18 @@
       </article>
     </section>
 
-    <section class="telemetry-grid">
+    <section id="compareSummary" class="compare-summary" hidden>
+      <div class="compare-head">
+        <div>
+          <p class="kicker">PAIRED COUNTERFACTUALS</p>
+          <h2>What changes when only the intervention changes?</h2>
+        </div>
+        <p>Every card is evaluated at the same replay time against the same external plume realization.</p>
+      </div>
+      <div id="compareCards" class="compare-cards"></div>
+    </section>
+
+    <section class="telemetry-grid mode-telemetry">
       <article class="panel telemetry-panel">
         <div class="panel-head">
           <div>
@@ -101,7 +150,7 @@
             <div class="signed-meter"><i id="turnBar"></i></div>
           </div>
           <div class="metric">
-            <span>MODELED READOUT</span>
+            <span id="readoutLabel">CONTROLLER READOUT</span>
             <strong id="readoutValue">0.00 / 0.00</strong>
             <div class="dual-meter"><i id="dnLeftBar"></i><i id="dnRightBar"></i></div>
           </div>
@@ -113,7 +162,7 @@
         </div>
       </article>
 
-      <article class="panel evidence-panel">
+      <article class="panel evidence-panel prove-panel">
         <div class="panel-head">
           <div>
             <p class="kicker">EVIDENCE RAIL</p>
@@ -123,34 +172,52 @@
         <div class="evidence-list">
           <div class="evidence-row">
             <span class="evidence-dot measured"></span>
-            <div><b>Measured sensory structure</b><p>O002 DoOR result is shown as a separate measured-data artifact.</p></div>
+            <div><b>Measured sensory structure</b><p id="measuredEvidenceText">Loading frozen O002 evidence status…</p></div>
           </div>
           <div class="evidence-row">
             <span class="evidence-dot modeled"></span>
-            <div><b>Modeled neural dynamics</b><p>When a graph is loaded, activity is simulated over structural connectivity, not recorded physiology.</p></div>
+            <div><b>Circuit-model evidence</b><p id="circuitEvidenceText">No graph-backed circuit result has been loaded yet.</p></div>
           </div>
           <div class="evidence-row">
             <span class="evidence-dot control"></span>
-            <div><b>Matched controls</b><p>Rewire and sensory-ablation conditions must state exactly what changed.</p></div>
+            <div><b>Paired controls</b><p id="controlEvidenceText">Every condition shares the same plume, start state, clock, and paired controller seed.</p></div>
           </div>
         </div>
         <p id="globalBoundary" class="boundary"></p>
       </article>
     </section>
 
-    <section class="lower-grid">
+    <section id="proveIntro" class="mode-intro prove-intro" hidden>
+      <div>
+        <p class="kicker">EVIDENCE LAYER</p>
+        <h2>Every visual claim should have a source class and a failure boundary.</h2>
+      </div>
+      <p>Measured sensory data, modeled circuit state, anatomy, and browser presentation remain separate artifacts.</p>
+    </section>
+
+    <section class="lower-grid prove-grid">
       <article class="panel o002-panel">
         <div class="panel-head">
           <div>
             <p class="kicker">MEASURED DATA • O002</p>
             <h2>What does the fly odor-response space look like?</h2>
           </div>
-          <a id="o002Link" class="text-link" href="./data/o002-hero-4x5.png" target="_blank" rel="noreferrer">open full result ↗</a>
+          <span class="badge badge-dev">MEASURED • DEVELOPMENT ONLY</span>
         </div>
         <div class="o002-body">
-          <img id="o002Image" src="./data/o002-hero-4x5.png" alt="O002 measured odor-space result card">
-          <div id="o002Fallback" class="empty-state" hidden>
-            O002 hero image is optional in this build. Run the site builder after the scientific showcase to include it.
+          <div class="o002-summary">
+            <p class="kicker">FROZEN DEVELOPMENT MATRIX</p>
+            <div class="o002-stat-grid">
+              <div><strong id="o002OdorCount">—</strong><span>measured odors</span></div>
+              <div><strong id="o002UnitCount">—</strong><span>response channels</span></div>
+              <div><strong id="o002ClassCount">—</strong><span>chemical classes</span></div>
+            </div>
+            <p id="o002StudyLabel" class="o002-study">Waiting for the frozen O002 explorer artifact.</p>
+            <p class="o002-summary-copy">
+              This panel is a browser view of frozen within-study measured responses. It is evidence about
+              sensory response structure, not evidence that the movement replay uses a named odor or a specific circuit.
+            </p>
+            <a id="o002Link" class="text-link" href="./data/o002-hero-4x5.png" target="_blank" rel="noreferrer" hidden>open archived figure ↗</a>
           </div>
           <div class="o002-copy">
             <h3>Measured named-odor fingerprints</h3>
@@ -176,15 +243,15 @@
         <div class="panel-head">
           <div>
             <p class="kicker">END GOAL</p>
-            <h2>From odor to movement without hiding the seams</h2>
+            <h2>The evidence ladder we are trying to close</h2>
           </div>
         </div>
         <ol class="flow">
-          <li><span>1</span><div><b>Odor world</b><p>Frozen plume, source hidden from controller.</p></div></li>
-          <li><span>2</span><div><b>Sensory channels</b><p>Left/right antenna + wind, displayed live.</p></div></li>
-          <li><span>3</span><div><b>Connectome computation</b><p>Exact topology, with anatomy only when real XYZ morphology is available.</p></div></li>
-          <li><span>4</span><div><b>Descending readout</b><p>Modeled neural output remains distinct from behavior.</p></div></li>
-          <li><span>5</span><div><b>Movement</b><p>Paired intact vs rewire/lesion trajectories in the same world.</p></div></li>
+          <li><span>1</span><div><b>Measured odor evidence</b><p>Frozen receptor/response data with explicit provenance.</p></div></li>
+          <li><span>2</span><div><b>Qualified sensory mapping</b><p>Map a named odor into independently supported sensory channels without fitting to navigation.</p></div></li>
+          <li><span>3</span><div><b>Independently constrained circuit</b><p>Exact topology, with anatomy only when sourced XYZ/SWC morphology is available.</p></div></li>
+          <li><span>4</span><div><b>Modeled output prediction</b><p>Predeclared circuit dynamics produce descending/steering predictions.</p></div></li>
+          <li><span>5</span><div><b>Held-out behavior</b><p>Evaluate intact, lesion, and matched-null models on the same unseen plume conditions.</p></div></li>
         </ol>
       </article>
     </section>

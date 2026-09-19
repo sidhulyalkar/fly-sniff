@@ -36,5 +36,6 @@ jobs:
       - run: fly-sniff-live-showcase --output /tmp/live-showcase.json --seconds 0.5 --sample-hz 5
       - run: python -m json.tool /tmp/live-showcase.json > /dev/null
       - run: node --check web/showcase/app.js
+      - run: bash -n scripts/build_live_showcase_mac.sh
       - run: ruff check src tests
       - run: pytest -q

@@ -15,7 +15,11 @@ OUT="${FLY_SNIFF_LIVE_SHOWCASE_DIR:-${DATA_ROOT}/artifacts/live-showcase-${RENDE
 SITE="${OUT}/site"
 GRAPH="${FLY_SNIFF_SHOWCASE_GRAPH:-}"
 O2_DIR="${FLY_SNIFF_O002_DIR:-${DATA_ROOT}/artifacts/o002-dev-db323a496577-${SOURCE_REF}}"
+DEFAULT_ANNOTATIONS="${DATA_ROOT}/sources/malecns/body-annotations-male-cns-v1.0-minconf-0.5.feather"
 ANNOTATIONS="${FLY_SNIFF_MALECNS_ANNOTATIONS:-}"
+if [[ -z "${ANNOTATIONS}" && -s "${DEFAULT_ANNOTATIONS}" ]]; then
+  ANNOTATIONS="${DEFAULT_ANNOTATIONS}"
+fi
 FETCH_SKELETONS="${FLY_SNIFF_FETCH_SKELETONS:-0}"
 
 VENV="${FLY_SNIFF_VENV:-${ROOT}/.venv-olfactory}"
@@ -24,7 +28,11 @@ if [[ ! -x "${VENV}/bin/python" ]]; then
   "${PYTHON_BIN}" -m venv "${VENV}"
 fi
 source "${VENV}/bin/activate"
-python -m pip install -q -e '.[dev]'
+if [[ "${FLY_SNIFF_SKIP_INSTALL:-0}" != "1" ]]; then
+  python -m pip install -q -e '.[dev]'
+else
+  echo "Skipping editable reinstall (FLY_SNIFF_SKIP_INSTALL=1)"
+fi
 
 rm -rf "${SITE}"
 mkdir -p "${SITE}/data"
@@ -52,6 +60,7 @@ printf '\n== Build live showcase data ==\n'
 
 if [[ -n "${ANNOTATIONS}" ]]; then
   printf '\n== Add measured whole-connectome soma context ==\n'
+  echo "annotations: ${ANNOTATIONS}"
   fly-sniff-morphology-context soma \
     "${ANNOTATIONS}" \
     --output "${SITE}/data/connectome-soma.json" \
@@ -112,8 +121,15 @@ Claim-bearing graph build:
   FLY_SNIFF_SHOWCASE_GRAPH=/path/to/odor-plume-qualified/graph ./scripts/build_live_showcase_mac.sh
 
 Measured whole-connectome soma context:
-  FLY_SNIFF_MALECNS_ANNOTATIONS=/path/to/body-annotations-male-cns-v1.0-minconf-0.5.feather \
-    ./scripts/build_live_showcase_mac.sh
+  Automatically included when present at:
+    ${DEFAULT_ANNOTATIONS}
+
+  Override with:
+    FLY_SNIFF_MALECNS_ANNOTATIONS=/path/to/body-annotations-male-cns-v1.0-minconf-0.5.feather \
+      ./scripts/build_live_showcase_mac.sh
+
+Fast repeat builds after the environment is already installed:
+  FLY_SNIFF_SKIP_INSTALL=1 ./scripts/build_live_showcase_mac.sh
 
 Exact selected-circuit skeletons:
   FLY_SNIFF_SHOWCASE_GRAPH=/path/to/graph \

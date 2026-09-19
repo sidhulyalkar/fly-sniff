@@ -24,6 +24,8 @@
     dragging: false,
     dragX: 0,
     dragY: 0,
+    viewMode: "watch",
+    events: [],
   };
 
   const palette = ["#47c7f3", "#ff6f91", "#f5bf42", "#9e8cff", "#9bd650", "#f06464"];
@@ -53,6 +55,82 @@
       x: pad + (x / a.width) * Math.max(1, dims.width - 2 * pad),
       y: dims.height - pad - (y / a.height) * Math.max(1, dims.height - 2 * pad),
     };
+  }
+
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, Number(value) || 0));
+  }
+
+  function drawFly(agent, color, selected) {
+    const left = clamp01(agent.left_odor);
+    const right = clamp01(agent.right_odor);
+    const pulse = 0.75 + 0.25 * Math.sin(state.frameIndex * 0.55);
+
+    arenaCtx.save();
+    arenaCtx.rotate(-agent.heading);
+    arenaCtx.scale(selected ? 1.28 : 1, selected ? 1.28 : 1);
+    arenaCtx.lineCap = "round";
+    arenaCtx.lineJoin = "round";
+
+    // Wings stay translucent so the condition color reads as identity rather than anatomy.
+    arenaCtx.fillStyle = "rgba(210,232,245,.16)";
+    arenaCtx.strokeStyle = "rgba(210,232,245,.30)";
+    arenaCtx.lineWidth = 0.8;
+    for (const side of [-1, 1]) {
+      arenaCtx.beginPath();
+      arenaCtx.ellipse(-2, side * 5.2, 6.2, 2.8, side * 0.28, 0, Math.PI * 2);
+      arenaCtx.fill();
+      arenaCtx.stroke();
+    }
+
+    // Abdomen + thorax + head form a compact fly silhouette.
+    arenaCtx.shadowColor = color;
+    arenaCtx.shadowBlur = selected ? 16 : 5;
+    arenaCtx.fillStyle = color;
+    arenaCtx.beginPath();
+    arenaCtx.ellipse(-4.8, 0, 6.8, 3.5, 0, 0, Math.PI * 2);
+    arenaCtx.fill();
+    arenaCtx.beginPath();
+    arenaCtx.arc(1.7, 0, 3.8, 0, Math.PI * 2);
+    arenaCtx.fill();
+    arenaCtx.fillStyle = "#dceaf4";
+    arenaCtx.beginPath();
+    arenaCtx.arc(6.1, 0, 2.5, 0, Math.PI * 2);
+    arenaCtx.fill();
+
+    // Antennae are the live sensory cue. Their intensity comes only from replayed inputs.
+    for (const row of [
+      { y: -1.2, bend: -4.5, value: left },
+      { y: 1.2, bend: 4.5, value: right },
+    ]) {
+      const alpha = 0.28 + 0.72 * row.value;
+      arenaCtx.shadowColor = "#47c7f3";
+      arenaCtx.shadowBlur = row.value * 12 * pulse;
+      arenaCtx.strokeStyle = `rgba(71,199,243,${alpha})`;
+      arenaCtx.lineWidth = 1.1 + row.value * 1.4;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(7.7, row.y);
+      arenaCtx.quadraticCurveTo(11.2, row.bend * 0.45, 13.4, row.bend);
+      arenaCtx.stroke();
+      arenaCtx.fillStyle = `rgba(71,199,243,${alpha})`;
+      arenaCtx.beginPath();
+      arenaCtx.arc(13.4, row.bend, 1 + row.value * 1.5, 0, Math.PI * 2);
+      arenaCtx.fill();
+    }
+
+    // Turn command is a tiny local vector, useful when trajectories overlap.
+    const turn = Math.max(-1, Math.min(1, Number(agent.turn) || 0));
+    if (Math.abs(turn) > 0.04) {
+      arenaCtx.shadowBlur = 0;
+      arenaCtx.strokeStyle = turn >= 0 ? "rgba(158,140,255,.9)" : "rgba(245,191,66,.9)";
+      arenaCtx.lineWidth = 1.2;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(-2, 0);
+      arenaCtx.lineTo(-9, turn * 7);
+      arenaCtx.stroke();
+    }
+
+    arenaCtx.restore();
   }
 
   function drawArena() {
@@ -87,40 +165,67 @@
     if (!frame) return;
 
     if (qs("showPlume").checked) {
-      for (const puff of frame.plume || []) {
-        const p = arenaPoint(puff[0], puff[1], dims);
-        const radius = Math.max(2, puff[2] * 14);
-        const g = arenaCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.2);
-        g.addColorStop(0, "rgba(139,207,76,.24)");
-        g.addColorStop(1, "rgba(139,207,76,0)");
-        arenaCtx.fillStyle = g;
-        arenaCtx.beginPath();
-        arenaCtx.arc(p.x, p.y, radius * 2.2, 0, Math.PI * 2);
-        arenaCtx.fill();
+      // Short replay history makes the frozen puff field read as intermittent filaments.
+      for (let lag = 3; lag >= 0; lag--) {
+        const plumeFrame = state.data.frames[Math.max(0, state.frameIndex - lag)];
+        const age = 1 - lag / 4;
+        for (const puff of plumeFrame?.plume || []) {
+          const p = arenaPoint(puff[0], puff[1], dims);
+          const strength = clamp01(puff[2]);
+          const radius = Math.max(2.5, strength * 17);
+          const g = arenaCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.5);
+          g.addColorStop(0, `rgba(155,214,80,${0.07 + 0.22 * age * strength})`);
+          g.addColorStop(0.38, `rgba(78,193,157,${0.04 + 0.13 * age * strength})`);
+          g.addColorStop(1, "rgba(71,199,243,0)");
+          arenaCtx.fillStyle = g;
+          arenaCtx.beginPath();
+          arenaCtx.ellipse(p.x, p.y, radius * 2.5, radius * 1.25, -0.08, 0, Math.PI * 2);
+          arenaCtx.fill();
+
+          if (lag === 0 && strength > 0.34) {
+            arenaCtx.strokeStyle = `rgba(155,214,80,${0.08 + strength * 0.13})`;
+            arenaCtx.lineWidth = 0.7;
+            arenaCtx.beginPath();
+            arenaCtx.ellipse(p.x, p.y, radius * 1.55, radius * 0.8, -0.08, 0, Math.PI * 2);
+            arenaCtx.stroke();
+          }
+        }
       }
     }
 
     if (qs("showSource").checked) {
       const s = arenaPoint(state.data.arena.source_x, state.data.arena.source_y, dims);
-      arenaCtx.strokeStyle = "#9bd650";
-      arenaCtx.lineWidth = 2;
-      arenaCtx.setLineDash([5, 4]);
-      arenaCtx.beginPath();
-      arenaCtx.arc(s.x, s.y, 11, 0, Math.PI * 2);
-      arenaCtx.stroke();
+      const pulse = 13 + 3 * Math.sin(state.frameIndex * 0.18);
+      arenaCtx.strokeStyle = "rgba(155,214,80,.72)";
+      arenaCtx.lineWidth = 1.4;
+      arenaCtx.setLineDash([5, 5]);
+      for (const r of [pulse, pulse + 9]) {
+        arenaCtx.beginPath();
+        arenaCtx.arc(s.x, s.y, r, 0, Math.PI * 2);
+        arenaCtx.stroke();
+      }
       arenaCtx.setLineDash([]);
       arenaCtx.fillStyle = "#9bd650";
-      arenaCtx.font = "600 10px system-ui";
-      arenaCtx.fillText("VIEWER-ONLY SOURCE", s.x + 16, s.y + 4);
+      arenaCtx.shadowColor = "#9bd650";
+      arenaCtx.shadowBlur = 12;
+      arenaCtx.beginPath();
+      arenaCtx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+      arenaCtx.fill();
+      arenaCtx.shadowBlur = 0;
+      arenaCtx.font = "700 9px system-ui";
+      arenaCtx.fillText("VIEWER-ONLY SOURCE", s.x + 18, s.y + 4);
     }
 
+    const compareMode = state.viewMode === "compare";
     state.data.conditions.forEach((condition, index) => {
       const agent = frame.agents[condition.key];
       if (!agent) return;
       const color = palette[index % palette.length];
+      const selected = condition.key === state.selected;
 
-      arenaCtx.strokeStyle = color + "88";
-      arenaCtx.lineWidth = 1.6;
+      arenaCtx.strokeStyle = color + (selected ? "dd" : compareMode ? "99" : "30");
+      arenaCtx.lineWidth = selected ? 2.35 : compareMode ? 1.5 : 1.0;
+      arenaCtx.setLineDash(!selected && !compareMode ? [5, 6] : []);
       arenaCtx.beginPath();
       let started = false;
       for (let i = 0; i <= state.frameIndex; i++) {
@@ -135,24 +240,17 @@
         }
       }
       arenaCtx.stroke();
+      arenaCtx.setLineDash([]);
 
       const p = arenaPoint(agent.x, agent.y, dims);
-      arenaCtx.save();
-      arenaCtx.translate(p.x, p.y);
-      arenaCtx.rotate(-agent.heading);
-      arenaCtx.fillStyle = color;
-      arenaCtx.shadowColor = color;
-      arenaCtx.shadowBlur = condition.key === state.selected ? 15 : 4;
-      arenaCtx.beginPath();
-      arenaCtx.moveTo(10, 0);
-      arenaCtx.lineTo(-6, -5);
-      arenaCtx.lineTo(-3, 0);
-      arenaCtx.lineTo(-6, 5);
-      arenaCtx.closePath();
-      arenaCtx.fill();
-      arenaCtx.restore();
+      if (selected || compareMode) {
+        arenaCtx.save();
+        arenaCtx.translate(p.x, p.y);
+        drawFly(agent, color, selected);
+        arenaCtx.restore();
+      }
 
-      if (condition.key === state.selected) {
+      if (selected) {
         arenaCtx.strokeStyle = color;
         arenaCtx.lineWidth = 1;
         arenaCtx.beginPath();
@@ -164,6 +262,71 @@
     arenaCtx.fillStyle = "rgba(190,210,228,.65)";
     arenaCtx.font = "11px ui-monospace, SFMono-Regular, monospace";
     arenaCtx.fillText("wind →", dims.width - 75, 22);
+  }
+
+  function distanceToSource(agent) {
+    if (!agent || !state.data?.arena) return NaN;
+    return Math.hypot(
+      Number(agent.x) - Number(state.data.arena.source_x),
+      Number(agent.y) - Number(state.data.arena.source_y)
+    );
+  }
+
+  function drawDevelopmentController(dims, agent) {
+    if (!agent) return;
+    const left = clamp01(agent.left_odor);
+    const right = clamp01(agent.right_odor);
+    const delta = Math.max(-1, Math.min(1, right - left));
+    const turn = Math.max(-1, Math.min(1, Number(agent.turn) || 0));
+    const cx = dims.width / 2;
+    const cy = dims.height / 2;
+
+    connectomeCtx.fillStyle = "rgba(71,199,243,.05)";
+    connectomeCtx.beginPath();
+    connectomeCtx.arc(cx, cy, Math.min(dims.width, dims.height) * .29, 0, Math.PI * 2);
+    connectomeCtx.fill();
+
+    const nodes = [
+      {x: cx - 120, y: cy - 72, label: "LEFT ODOR", value: left, color: "#47c7f3"},
+      {x: cx - 120, y: cy + 72, label: "RIGHT ODOR", value: right, color: "#47c7f3"},
+      {x: cx + 5, y: cy, label: "BILATERAL Δ", value: Math.abs(delta), color: "#9e8cff"},
+      {x: cx + 130, y: cy, label: "TURN", value: Math.abs(turn), color: "#f5bf42"},
+    ];
+    const links = [[0,2],[1,2],[2,3]];
+    connectomeCtx.lineWidth = 1.2;
+    for (const [a,b] of links) {
+      connectomeCtx.strokeStyle = "rgba(91,126,155,.28)";
+      connectomeCtx.beginPath();
+      connectomeCtx.moveTo(nodes[a].x, nodes[a].y);
+      connectomeCtx.lineTo(nodes[b].x, nodes[b].y);
+      connectomeCtx.stroke();
+    }
+    for (const node of nodes) {
+      const r = 17 + 12 * node.value;
+      connectomeCtx.shadowColor = node.color;
+      connectomeCtx.shadowBlur = 6 + 18 * node.value;
+      connectomeCtx.fillStyle = node.color;
+      connectomeCtx.globalAlpha = .28 + .68 * node.value;
+      connectomeCtx.beginPath();
+      connectomeCtx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      connectomeCtx.fill();
+      connectomeCtx.globalAlpha = 1;
+      connectomeCtx.shadowBlur = 0;
+      connectomeCtx.fillStyle = "#dbeaf4";
+      connectomeCtx.font = "700 9px ui-monospace, SFMono-Regular, monospace";
+      connectomeCtx.textAlign = "center";
+      connectomeCtx.fillText(node.label, node.x, node.y + r + 18);
+      connectomeCtx.fillStyle = "#8197aa";
+      connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
+      connectomeCtx.fillText(node.value.toFixed(2), node.x, node.y + 3);
+    }
+    connectomeCtx.textAlign = "left";
+    connectomeCtx.fillStyle = "rgba(245,191,66,.76)";
+    connectomeCtx.font = "700 10px ui-monospace, SFMono-Regular, monospace";
+    connectomeCtx.fillText("DEVELOPMENT CONTROLLER • NOT MALECNS ACTIVITY", 14, 22);
+    connectomeCtx.fillStyle = "rgba(143,162,183,.78)";
+    connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
+    connectomeCtx.fillText("visualized from replayed controller inputs/outputs only", 14, 38);
   }
 
   function hashUnit(id) {
@@ -194,6 +357,43 @@
       if (role === "steer_right") value = Math.max(value, agent?.dn_right || 0);
     }
     return Math.min(1, value);
+  }
+
+  function updateSignalReadout(agent) {
+    if (!agent) return;
+    const sensory = Math.max(clamp01(agent.left_odor), clamp01(agent.right_odor));
+    const bilateral = clamp01(Math.abs((Number(agent.right_odor) || 0) - (Number(agent.left_odor) || 0)));
+    const output = Math.max(
+      clamp01(Math.abs(Number(agent.turn) || 0)),
+      clamp01(Math.abs(Number(agent.dn_left) || 0)),
+      clamp01(Math.abs(Number(agent.dn_right) || 0))
+    );
+    const rows = [
+      ["signalSensory", "signalSensoryValue", sensory],
+      ["signalBilateral", "signalBilateralValue", bilateral],
+      ["signalOutput", "signalOutputValue", output],
+    ];
+    for (const [barId, valueId, value] of rows) {
+      const bar = qs(barId);
+      const label = qs(valueId);
+      if (bar) bar.style.transform = `scaleX(${value})`;
+      if (label) label.textContent = value.toFixed(2);
+    }
+  }
+
+  function setViewPreset(name) {
+    const presets = {
+      front: { yaw: 0, pitch: 0.05 },
+      oblique: { yaw: -0.55, pitch: 0.24 },
+      side: { yaw: -Math.PI / 2, pitch: 0.12 },
+    };
+    const preset = presets[name] || presets.oblique;
+    state.viewYaw = preset.yaw;
+    state.viewPitch = preset.pitch;
+    document.querySelectorAll(".view-button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.view === name);
+    });
+    drawConnectome();
   }
 
   function anatomyBounds() {
@@ -355,6 +555,7 @@
     const frame = state.data.frames[state.frameIndex];
     const selectedAgent = frame?.agents?.[state.selected] || null;
     const empty = qs("connectomeEmpty");
+    updateSignalReadout(selectedAgent);
 
     if (drawMeasuredAnatomy(dims, selectedAgent)) {
       empty.hidden = true;
@@ -363,8 +564,8 @@
 
     const c = state.data.connectome || {};
     if (!c.available) {
-      empty.hidden = false;
-      empty.textContent = c.claim_boundary || "No connectome asset is loaded.";
+      empty.hidden = true;
+      drawDevelopmentController(dims, selectedAgent);
       return;
     }
 
@@ -400,6 +601,9 @@
       condition.intervention === "none" ? "No intervention" : condition.intervention;
     qs("conditionDescription").textContent = condition.description || "";
     qs("timeOutput").textContent = `${Number(frame.t).toFixed(1)} s`;
+    const distance = distanceToSource(agent);
+    if (qs("hudCondition")) qs("hudCondition").textContent = condition.label;
+    if (qs("hudDistance")) qs("hudDistance").textContent = Number.isFinite(distance) ? distance.toFixed(2) : "—";
     qs("timeline").value = String(
       state.data.frames.length <= 1
         ? 0
@@ -471,9 +675,24 @@
       select.disabled = true;
       qs("odorExplorerBoundary").textContent =
         "Run the live site builder with the frozen O002 v1 artifacts to enable named-odor fingerprints.";
+      if (qs("o002OdorCount")) qs("o002OdorCount").textContent = "0";
+      if (qs("o002UnitCount")) qs("o002UnitCount").textContent = "0";
+      if (qs("o002ClassCount")) qs("o002ClassCount").textContent = "0";
+      if (qs("o002StudyLabel")) qs("o002StudyLabel").textContent =
+        "Frozen O002 explorer artifact unavailable in this build.";
       drawOdorFingerprint();
       return;
     }
+
+    const classes = new Set(explorer.odors.map((odor) => odor.odor_class || "unlabeled"));
+    if (qs("o002OdorCount")) qs("o002OdorCount").textContent = String(explorer.odors.length);
+    if (qs("o002UnitCount")) qs("o002UnitCount").textContent =
+      String((explorer.responding_units || []).length);
+    if (qs("o002ClassCount")) qs("o002ClassCount").textContent = String(classes.size);
+    if (qs("o002StudyLabel")) qs("o002StudyLabel").textContent =
+      `${explorer.study_id} • receipt ${String(explorer.source_receipt_sha256 || "").slice(0, 12)}…`;
+    if (qs("measuredEvidenceText")) qs("measuredEvidenceText").textContent =
+      `${explorer.odors.length} frozen within-study measured odor vectors across ${(explorer.responding_units || []).length} response channels; development-only, not a navigation result.`;
 
     const groups = new Map();
     explorer.odors.forEach((odor, index) => {
@@ -504,10 +723,135 @@
     drawOdorFingerprint();
   }
 
+  function deriveEvents() {
+    if (!state.data || !state.selected) return [];
+    const rows = state.data.frames.map((frame, index) => ({
+      index,
+      t: Number(frame.t),
+      agent: frame.agents?.[state.selected],
+    })).filter((row) => row.agent);
+    if (!rows.length) return [];
+
+    const contact = rows.find((row) =>
+      Math.max(row.agent.left_odor, row.agent.right_odor) > 0.12) || rows[0];
+    const asym = rows.reduce((best, row) =>
+      Math.abs(row.agent.odor_delta) > Math.abs(best.agent.odor_delta) ? row : best, rows[0]);
+    const turn = rows.reduce((best, row) =>
+      Math.abs(row.agent.turn) > Math.abs(best.agent.turn) ? row : best, rows[0]);
+    const close = rows.reduce((best, row) =>
+      distanceToSource(row.agent) < distanceToSource(best.agent) ? row : best, rows[0]);
+    const found = rows.find((row) => row.agent.found);
+
+    const raw = [
+      ["plume contact", contact],
+      ["max L/R Δ", asym],
+      ["peak turn", turn],
+      ["closest approach", close],
+    ];
+    if (found) raw.push(["source found", found]);
+
+    const seen = new Set();
+    return raw.filter(([, row]) => {
+      if (seen.has(row.index)) return false;
+      seen.add(row.index);
+      return true;
+    }).map(([label, row]) => ({label, index: row.index, t: row.t}));
+  }
+
+  function renderEventStrip() {
+    const strip = qs("eventStrip");
+    if (!strip) return;
+    state.events = deriveEvents();
+    strip.innerHTML = "";
+    for (const event of state.events) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "event-chip";
+      button.dataset.frame = String(event.index);
+      button.innerHTML = `<i></i><span>${event.label}</span><b>${event.t.toFixed(1)}s</b>`;
+      button.addEventListener("click", () => {
+        state.frameIndex = event.index;
+        state.playing = false;
+        qs("playButton").textContent = "▶";
+        renderAll();
+      });
+      strip.appendChild(button);
+    }
+  }
+
+  function setupCompareCards() {
+    const root = qs("compareCards");
+    if (!root) return;
+    root.innerHTML = "";
+    state.data.conditions.forEach((condition, index) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "compare-card";
+      card.dataset.key = condition.key;
+      card.style.setProperty("--card-color", palette[index % palette.length]);
+      card.innerHTML = `
+        <h3></h3>
+        <p></p>
+        <div class="compare-metrics">
+          <div><strong data-metric="distance">—</strong><span>distance</span></div>
+          <div><strong data-metric="odor">—</strong><span>odor max</span></div>
+          <div><strong data-metric="turn">—</strong><span>|turn|</span></div>
+        </div>
+        <div class="compare-track"><i></i></div>`;
+      card.querySelector("h3").textContent = condition.label;
+      card.querySelector("p").textContent =
+        condition.intervention === "none" ? "No intervention" : condition.intervention;
+      card.addEventListener("click", () => selectCondition(condition.key));
+      root.appendChild(card);
+    });
+    updateCompareCards();
+  }
+
+  function updateCompareCards() {
+    if (!state.data) return;
+    const frame = state.data.frames[state.frameIndex];
+    document.querySelectorAll(".compare-card").forEach((card) => {
+      const key = card.dataset.key;
+      const agent = frame?.agents?.[key];
+      if (!agent) return;
+      const distance = distanceToSource(agent);
+      card.dataset.selected = key === state.selected ? "true" : "false";
+      card.querySelector('[data-metric="distance"]').textContent =
+        Number.isFinite(distance) ? distance.toFixed(2) : "—";
+      card.querySelector('[data-metric="odor"]').textContent =
+        Math.max(agent.left_odor, agent.right_odor).toFixed(2);
+      card.querySelector('[data-metric="turn"]').textContent =
+        Math.abs(agent.turn).toFixed(2);
+      const startAgent = state.data.frames[0]?.agents?.[key];
+      const startDistance = Math.max(1e-6, distanceToSource(startAgent));
+      const progress = Number.isFinite(distance) ? clamp01(1 - distance / startDistance) : 0;
+      card.querySelector(".compare-track i").style.transform = `scaleX(${progress})`;
+    });
+  }
+
+  function setMode(mode) {
+    const allowed = new Set(["watch", "compare", "prove"]);
+    state.viewMode = allowed.has(mode) ? mode : "watch";
+    document.body.dataset.viewMode = state.viewMode;
+    document.querySelectorAll(".theater-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.mode === state.viewMode);
+    });
+    if (qs("compareSummary")) qs("compareSummary").hidden = state.viewMode !== "compare";
+    if (qs("proveIntro")) qs("proveIntro").hidden = state.viewMode !== "prove";
+    requestAnimationFrame(() => {
+      renderAll();
+      drawOdorFingerprint();
+    });
+  }
+
   function renderAll() {
     drawArena();
     drawConnectome();
     updateTelemetry();
+    updateCompareCards();
+    document.querySelectorAll(".event-chip").forEach((chip) => {
+      chip.classList.toggle("active", Number(chip.dataset.frame) === state.frameIndex);
+    });
   }
 
   function setupLegend() {
@@ -528,6 +872,10 @@
   function selectCondition(key) {
     state.selected = key;
     qs("conditionSelect").value = key;
+    document.querySelectorAll(".legend-item").forEach((item) => {
+      item.dataset.selected = item.dataset.key === key ? "true" : "false";
+    });
+    renderEventStrip();
     renderAll();
   }
 
@@ -557,7 +905,12 @@
     );
 
     const connectome = state.data.connectome || {};
-    if (state.somaContext || state.skeletons) {
+    const hasMeasuredAnatomy = Boolean(state.somaContext || state.skeletons);
+    if (qs("viewPresets")) qs("viewPresets").hidden = !hasMeasuredAnatomy;
+    if (qs("readoutLabel")) qs("readoutLabel").textContent =
+      qualified ? "MODELED DESCENDING READOUT" : "CONTROLLER READOUT";
+
+    if (hasMeasuredAnatomy) {
       qs("connectomeTitle").textContent = state.skeletons
         ? "Measured MaleCNS context + selected circuit morphology"
         : "Measured MaleCNS soma context";
@@ -570,16 +923,30 @@
       if (state.somaContext?.point_meaning) pieces.push(state.somaContext.point_meaning);
       if (state.skeletons?.claim_boundary) pieces.push(state.skeletons.claim_boundary);
       qs("connectomeBoundary").textContent = pieces.join(" ");
-    } else {
-      qs("connectomeTitle").textContent = connectome.label || "Connectome status";
-      setBadge(
-        qs("geometryBadge"),
-        connectome.geometry_kind === "topology_only"
-          ? "TOPOLOGY • NOT MORPHOLOGY"
-          : "NO CONNECTOME ASSET",
-        "badge-warn"
-      );
+    } else if (connectome.available) {
+      qs("connectomeTitle").textContent = connectome.label || "Connectome topology";
+      setBadge(qs("geometryBadge"), "TOPOLOGY • NOT MORPHOLOGY", "badge-warn");
       qs("connectomeBoundary").textContent = connectome.claim_boundary || "";
+    } else {
+      qs("connectomeTitle").textContent = "Development controller state";
+      setBadge(qs("geometryBadge"), "NOT MALECNS ACTIVITY", "badge-dev");
+      qs("connectomeBoundary").textContent =
+        "This panel visualizes replayed controller inputs and outputs only. It is intentionally not drawn as neural anatomy.";
+    }
+
+    if (qs("circuitEvidenceText")) {
+      qs("circuitEvidenceText").textContent = qualified
+        ? "An odor-plume-qualified graph is loaded; displayed neural values remain modeled states over measured structure, not neural recordings."
+        : connectome.available
+          ? "A graph-backed development model is loaded, but it is not qualified for a MaleCNS odor-navigation claim."
+          : "No graph-backed circuit result is loaded. The right panel shows development-controller state, not neural activity.";
+    }
+    if (qs("behaviorQuestion")) {
+      qs("behaviorQuestion").textContent = qualified
+        ? "How does the modeled circuit transform the same plume into steering?"
+        : state.viewMode === "compare"
+          ? "How do paired interventions diverge in the same plume?"
+          : "How does the selected development controller transform plume evidence into steering?";
     }
 
     const stimulus = state.data.stimulus_contract || {};
@@ -633,6 +1000,16 @@
 
     qs("showPlume").addEventListener("change", drawArena);
     qs("showSource").addEventListener("change", drawArena);
+
+    document.querySelectorAll(".view-button").forEach((button) => {
+      button.addEventListener("click", () => setViewPreset(button.dataset.view || "oblique"));
+    });
+    document.querySelectorAll(".theater-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        setMode(tab.dataset.mode || "watch");
+        configureEvidence();
+      });
+    });
 
     connectomeCanvas.addEventListener("pointerdown", (event) => {
       state.dragging = true;
@@ -696,15 +1073,13 @@
       setupLegend();
       setupConditionSelect();
       setupOdorExplorer();
-      configureEvidence();
+      setupCompareCards();
       wireControls();
+      setMode("watch");
+      selectCondition(state.selected);
+      configureEvidence();
+      renderEventStrip();
       renderAll();
-
-      qs("o002Image").addEventListener("error", () => {
-        qs("o002Image").hidden = true;
-        qs("o002Fallback").hidden = false;
-        qs("o002Link").hidden = true;
-      }, { once: true });
 
       state.raf = requestAnimationFrame(animationLoop);
     } catch (error) {
