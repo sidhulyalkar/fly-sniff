@@ -24,6 +24,8 @@
     dragging: false,
     dragX: 0,
     dragY: 0,
+    viewMode: "watch",
+    events: [],
   };
 
   const palette = ["#47c7f3", "#ff6f91", "#f5bf42", "#9e8cff", "#9bd650", "#f06464"];
@@ -66,6 +68,7 @@
 
     arenaCtx.save();
     arenaCtx.rotate(-agent.heading);
+    arenaCtx.scale(selected ? 1.28 : 1, selected ? 1.28 : 1);
     arenaCtx.lineCap = "round";
     arenaCtx.lineJoin = "round";
 
@@ -162,40 +165,67 @@
     if (!frame) return;
 
     if (qs("showPlume").checked) {
-      for (const puff of frame.plume || []) {
-        const p = arenaPoint(puff[0], puff[1], dims);
-        const radius = Math.max(2, puff[2] * 14);
-        const g = arenaCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.2);
-        g.addColorStop(0, "rgba(139,207,76,.24)");
-        g.addColorStop(1, "rgba(139,207,76,0)");
-        arenaCtx.fillStyle = g;
-        arenaCtx.beginPath();
-        arenaCtx.arc(p.x, p.y, radius * 2.2, 0, Math.PI * 2);
-        arenaCtx.fill();
+      // Short replay history makes the frozen puff field read as intermittent filaments.
+      for (let lag = 3; lag >= 0; lag--) {
+        const plumeFrame = state.data.frames[Math.max(0, state.frameIndex - lag)];
+        const age = 1 - lag / 4;
+        for (const puff of plumeFrame?.plume || []) {
+          const p = arenaPoint(puff[0], puff[1], dims);
+          const strength = clamp01(puff[2]);
+          const radius = Math.max(2.5, strength * 17);
+          const g = arenaCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.5);
+          g.addColorStop(0, `rgba(155,214,80,${0.07 + 0.22 * age * strength})`);
+          g.addColorStop(0.38, `rgba(78,193,157,${0.04 + 0.13 * age * strength})`);
+          g.addColorStop(1, "rgba(71,199,243,0)");
+          arenaCtx.fillStyle = g;
+          arenaCtx.beginPath();
+          arenaCtx.ellipse(p.x, p.y, radius * 2.5, radius * 1.25, -0.08, 0, Math.PI * 2);
+          arenaCtx.fill();
+
+          if (lag === 0 && strength > 0.34) {
+            arenaCtx.strokeStyle = `rgba(155,214,80,${0.08 + strength * 0.13})`;
+            arenaCtx.lineWidth = 0.7;
+            arenaCtx.beginPath();
+            arenaCtx.ellipse(p.x, p.y, radius * 1.55, radius * 0.8, -0.08, 0, Math.PI * 2);
+            arenaCtx.stroke();
+          }
+        }
       }
     }
 
     if (qs("showSource").checked) {
       const s = arenaPoint(state.data.arena.source_x, state.data.arena.source_y, dims);
-      arenaCtx.strokeStyle = "#9bd650";
-      arenaCtx.lineWidth = 2;
-      arenaCtx.setLineDash([5, 4]);
-      arenaCtx.beginPath();
-      arenaCtx.arc(s.x, s.y, 11, 0, Math.PI * 2);
-      arenaCtx.stroke();
+      const pulse = 13 + 3 * Math.sin(state.frameIndex * 0.18);
+      arenaCtx.strokeStyle = "rgba(155,214,80,.72)";
+      arenaCtx.lineWidth = 1.4;
+      arenaCtx.setLineDash([5, 5]);
+      for (const r of [pulse, pulse + 9]) {
+        arenaCtx.beginPath();
+        arenaCtx.arc(s.x, s.y, r, 0, Math.PI * 2);
+        arenaCtx.stroke();
+      }
       arenaCtx.setLineDash([]);
       arenaCtx.fillStyle = "#9bd650";
-      arenaCtx.font = "600 10px system-ui";
-      arenaCtx.fillText("VIEWER-ONLY SOURCE", s.x + 16, s.y + 4);
+      arenaCtx.shadowColor = "#9bd650";
+      arenaCtx.shadowBlur = 12;
+      arenaCtx.beginPath();
+      arenaCtx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+      arenaCtx.fill();
+      arenaCtx.shadowBlur = 0;
+      arenaCtx.font = "700 9px system-ui";
+      arenaCtx.fillText("VIEWER-ONLY SOURCE", s.x + 18, s.y + 4);
     }
 
+    const compareMode = state.viewMode === "compare";
     state.data.conditions.forEach((condition, index) => {
       const agent = frame.agents[condition.key];
       if (!agent) return;
       const color = palette[index % palette.length];
+      const selected = condition.key === state.selected;
 
-      arenaCtx.strokeStyle = color + "88";
-      arenaCtx.lineWidth = 1.6;
+      arenaCtx.strokeStyle = color + (selected ? "dd" : compareMode ? "99" : "30");
+      arenaCtx.lineWidth = selected ? 2.35 : compareMode ? 1.5 : 1.0;
+      arenaCtx.setLineDash(!selected && !compareMode ? [5, 6] : []);
       arenaCtx.beginPath();
       let started = false;
       for (let i = 0; i <= state.frameIndex; i++) {
@@ -210,14 +240,17 @@
         }
       }
       arenaCtx.stroke();
+      arenaCtx.setLineDash([]);
 
       const p = arenaPoint(agent.x, agent.y, dims);
-      arenaCtx.save();
-      arenaCtx.translate(p.x, p.y);
-      drawFly(agent, color, condition.key === state.selected);
-      arenaCtx.restore();
+      if (selected || compareMode) {
+        arenaCtx.save();
+        arenaCtx.translate(p.x, p.y);
+        drawFly(agent, color, selected);
+        arenaCtx.restore();
+      }
 
-      if (condition.key === state.selected) {
+      if (selected) {
         arenaCtx.strokeStyle = color;
         arenaCtx.lineWidth = 1;
         arenaCtx.beginPath();
@@ -229,6 +262,71 @@
     arenaCtx.fillStyle = "rgba(190,210,228,.65)";
     arenaCtx.font = "11px ui-monospace, SFMono-Regular, monospace";
     arenaCtx.fillText("wind →", dims.width - 75, 22);
+  }
+
+  function distanceToSource(agent) {
+    if (!agent || !state.data?.arena) return NaN;
+    return Math.hypot(
+      Number(agent.x) - Number(state.data.arena.source_x),
+      Number(agent.y) - Number(state.data.arena.source_y)
+    );
+  }
+
+  function drawDevelopmentController(dims, agent) {
+    if (!agent) return;
+    const left = clamp01(agent.left_odor);
+    const right = clamp01(agent.right_odor);
+    const delta = Math.max(-1, Math.min(1, right - left));
+    const turn = Math.max(-1, Math.min(1, Number(agent.turn) || 0));
+    const cx = dims.width / 2;
+    const cy = dims.height / 2;
+
+    connectomeCtx.fillStyle = "rgba(71,199,243,.05)";
+    connectomeCtx.beginPath();
+    connectomeCtx.arc(cx, cy, Math.min(dims.width, dims.height) * .29, 0, Math.PI * 2);
+    connectomeCtx.fill();
+
+    const nodes = [
+      {x: cx - 120, y: cy - 72, label: "LEFT ODOR", value: left, color: "#47c7f3"},
+      {x: cx - 120, y: cy + 72, label: "RIGHT ODOR", value: right, color: "#47c7f3"},
+      {x: cx + 5, y: cy, label: "BILATERAL Δ", value: Math.abs(delta), color: "#9e8cff"},
+      {x: cx + 130, y: cy, label: "TURN", value: Math.abs(turn), color: "#f5bf42"},
+    ];
+    const links = [[0,2],[1,2],[2,3]];
+    connectomeCtx.lineWidth = 1.2;
+    for (const [a,b] of links) {
+      connectomeCtx.strokeStyle = "rgba(91,126,155,.28)";
+      connectomeCtx.beginPath();
+      connectomeCtx.moveTo(nodes[a].x, nodes[a].y);
+      connectomeCtx.lineTo(nodes[b].x, nodes[b].y);
+      connectomeCtx.stroke();
+    }
+    for (const node of nodes) {
+      const r = 17 + 12 * node.value;
+      connectomeCtx.shadowColor = node.color;
+      connectomeCtx.shadowBlur = 6 + 18 * node.value;
+      connectomeCtx.fillStyle = node.color;
+      connectomeCtx.globalAlpha = .28 + .68 * node.value;
+      connectomeCtx.beginPath();
+      connectomeCtx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      connectomeCtx.fill();
+      connectomeCtx.globalAlpha = 1;
+      connectomeCtx.shadowBlur = 0;
+      connectomeCtx.fillStyle = "#dbeaf4";
+      connectomeCtx.font = "700 9px ui-monospace, SFMono-Regular, monospace";
+      connectomeCtx.textAlign = "center";
+      connectomeCtx.fillText(node.label, node.x, node.y + r + 18);
+      connectomeCtx.fillStyle = "#8197aa";
+      connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
+      connectomeCtx.fillText(node.value.toFixed(2), node.x, node.y + 3);
+    }
+    connectomeCtx.textAlign = "left";
+    connectomeCtx.fillStyle = "rgba(245,191,66,.76)";
+    connectomeCtx.font = "700 10px ui-monospace, SFMono-Regular, monospace";
+    connectomeCtx.fillText("DEVELOPMENT CONTROLLER • NOT MALECNS ACTIVITY", 14, 22);
+    connectomeCtx.fillStyle = "rgba(143,162,183,.78)";
+    connectomeCtx.font = "10px ui-monospace, SFMono-Regular, monospace";
+    connectomeCtx.fillText("visualized from replayed controller inputs/outputs only", 14, 38);
   }
 
   function hashUnit(id) {
@@ -466,8 +564,8 @@
 
     const c = state.data.connectome || {};
     if (!c.available) {
-      empty.hidden = false;
-      empty.textContent = c.claim_boundary || "No connectome asset is loaded.";
+      empty.hidden = true;
+      drawDevelopmentController(dims, selectedAgent);
       return;
     }
 
@@ -503,6 +601,9 @@
       condition.intervention === "none" ? "No intervention" : condition.intervention;
     qs("conditionDescription").textContent = condition.description || "";
     qs("timeOutput").textContent = `${Number(frame.t).toFixed(1)} s`;
+    const distance = distanceToSource(agent);
+    if (qs("hudCondition")) qs("hudCondition").textContent = condition.label;
+    if (qs("hudDistance")) qs("hudDistance").textContent = Number.isFinite(distance) ? distance.toFixed(2) : "—";
     qs("timeline").value = String(
       state.data.frames.length <= 1
         ? 0
