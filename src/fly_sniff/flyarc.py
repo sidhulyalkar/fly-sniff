@@ -76,6 +76,30 @@ def _extract_frame(observation: Any) -> np.ndarray:
     return frame
 
 
+
+def _pack_frames(frames: Sequence[np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+    """Pack variable-size ARC grids into a compact padded uint8 tensor."""
+
+    if not frames:
+        return np.zeros((0, 0, 0), dtype=np.uint8), np.zeros((0, 2), dtype=np.int16)
+    shapes = np.asarray([np.asarray(frame).shape for frame in frames], dtype=np.int16)
+    if shapes.ndim != 2 or shapes.shape[1] != 2:
+        raise ValueError("all replay frames must be two-dimensional")
+    max_height = int(shapes[:, 0].max())
+    max_width = int(shapes[:, 1].max())
+    if max_height > 64 or max_width > 64:
+        raise ValueError(
+            f"ARC replay frame exceeds 64x64 contract: max={max_height}x{max_width}"
+        )
+    packed = np.zeros((len(frames), max_height, max_width), dtype=np.uint8)
+    for index, frame in enumerate(frames):
+        array = np.asarray(frame)
+        height, width = array.shape
+        if array.min() < 0 or array.max() > 15:
+            raise ValueError("ARC replay frames must contain categorical values 0..15")
+        packed[index, :height, :width] = array.astype(np.uint8, copy=False)
+    return packed, shapes
+
 def _frame_hash(frame: np.ndarray) -> str:
     array = np.ascontiguousarray(frame.astype(np.uint8, copy=False))
     return hashlib.sha256(array.tobytes()).hexdigest()
@@ -641,8 +665,10 @@ def run_live_variant(
     output_dir.mkdir(parents=True, exist_ok=False)
     step_path = output_dir / "steps.jsonl"
     state_path = output_dir / "states.npz"
+    frame_path = output_dir / "frames.npz"
     seen_frames: set[str] = set()
     state_rows: list[np.ndarray] = []
+    frame_rows: list[np.ndarray] = []
     action_counts: Counter[str] = Counter()
     total_reward = 0.0
     td_values: list[float] = []
@@ -656,6 +682,7 @@ def run_live_variant(
     reservoir.reset()
     frame = _extract_frame(observation)
     seen_frames.add(_frame_hash(frame))
+    frame_rows.append(frame.astype(np.uint8, copy=True))
     state = reservoir.step(encoder.encode(frame))
 
     with step_path.open("x") as handle:
@@ -703,6 +730,7 @@ def run_live_variant(
             observed_game_ids.add(game_id)
             row = {
                 "step": step,
+                "observation_index": step + 1,
                 "game_id": game_id,
                 "variant": variant,
                 "action": action_names[action_index],
@@ -720,6 +748,7 @@ def run_live_variant(
             }
             handle.write(json.dumps(row, sort_keys=True) + "\n")
             state_rows.append(next_state.astype(np.float32, copy=True))
+            frame_rows.append(next_frame.astype(np.uint8, copy=True))
             action_counts[action_names[action_index]] += 1
             total_reward += reward
             td_values.append(td)
@@ -755,6 +784,12 @@ def run_live_variant(
         states=states,
         body_ids=np.asarray(core.body_ids, dtype=np.int64),
     )
+    packed_frames, frame_shapes = _pack_frames(frame_rows)
+    np.savez_compressed(
+        frame_path,
+        frames=packed_frames,
+        shapes=frame_shapes,
+    )
 
     scorecard_payload = None
     try:
@@ -788,6 +823,7 @@ def run_live_variant(
         "metrics_path": metrics_path,
         "steps_path": step_path,
         "states_path": state_path,
+        "frames_path": frame_path,
     }
 
 
@@ -874,7 +910,12 @@ def run_comparison(
     receipt_files = [manifest_path, comparison_path]
     for result in runs.values():
         receipt_files.extend(
-            [result["metrics_path"], result["steps_path"], result["states_path"]]
+            [
+                result["metrics_path"],
+                result["steps_path"],
+                result["states_path"],
+                result["frames_path"],
+            ]
         )
     receipt = {
         "experiment": "flyarc-v1",
