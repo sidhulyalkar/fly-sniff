@@ -466,20 +466,26 @@ def run_probe(
     *,
     variant: str,
     config: ProbeConfig,
+    core: CoreSelection | None = None,
+    features: np.ndarray | None = None,
+    targets: np.ndarray | None = None,
 ) -> dict[str, Any]:
     if variant not in PROBE_VARIANTS:
         raise ValueError(f"unknown probe variant {variant!r}")
-    core = select_structural_core(bundle, max_nodes=config.max_nodes)
-    features = encode_trajectory(
-        trajectory,
-        pool=config.pool,
-        colors=config.colors,
-    )
-    targets = frame_target_sketch(
-        features,
-        seed=config.target_sketch_seed,
-        output_dim=config.target_sketch_dim,
-    )
+    if core is None:
+        core = select_structural_core(bundle, max_nodes=config.max_nodes)
+    if features is None:
+        features = encode_trajectory(
+            trajectory,
+            pool=config.pool,
+            colors=config.colors,
+        )
+    if targets is None:
+        targets = frame_target_sketch(
+            features,
+            seed=config.target_sketch_seed,
+            output_dim=config.target_sketch_dim,
+        )
     states, reservoir = replay_states(
         core,
         trajectory,
