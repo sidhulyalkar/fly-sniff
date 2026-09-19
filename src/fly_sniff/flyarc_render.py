@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-import matplotlib.animation as animation
+from matplotlib import animation
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import BoundaryNorm
@@ -56,7 +56,7 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
                 continue
             value = json.loads(line)
             if not isinstance(value, dict):
-                raise ValueError(f"{path}:{line_number} is not a JSON object")
+                raise TypeError(f"{path}:{line_number} is not a JSON object")
             rows.append(value)
     return rows
 
@@ -74,7 +74,7 @@ def _unpack_frame(
 
 def _state_grid(state: np.ndarray) -> np.ndarray:
     values = np.asarray(state, dtype=float).ravel()
-    side = int(math.ceil(math.sqrt(max(1, len(values)))))
+    side = math.ceil(math.sqrt(max(1, len(values))))
     grid = np.full(side * side, np.nan, dtype=float)
     grid[: len(values)] = values
     return grid.reshape(side, side)
