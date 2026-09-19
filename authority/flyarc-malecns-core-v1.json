@@ -4,9 +4,21 @@
   "status": "development_pre_data_freeze",
   "dataset": "male-cns:v1.0",
   "sources": {
-    "annotations": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
-    "neurotransmitters": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
-    "connectivity": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+    "annotations": {
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "bytes": 14483314,
+      "sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2"
+    },
+    "neurotransmitters": {
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
+      "bytes": 43282834,
+      "sha256": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621"
+    },
+    "connectivity": {
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "bytes": 1051241946,
+      "sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1"
+    }
   },
   "retention": {
     "rule": "retain neurons with non-empty curated superclass",
@@ -47,7 +59,9 @@
     "roles_json": "empty",
     "source_sha256_required": true,
     "derived_artifact_sha256_required": true,
-    "overwrite_forbidden": true
+    "overwrite_forbidden": true,
+    "source_lock_enforced_by_default": true,
+    "source_lock_bypass": "development-only --skip-source-locks"
   },
   "claim_boundaries": [
     "The core is selected from structure only and is not a natural ARC-processing circuit.",
