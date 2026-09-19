@@ -459,6 +459,45 @@ def state_health(
     }
 
 
+def compute_input_baselines(
+    trajectory: SharedTrajectory,
+    features: np.ndarray,
+    targets: np.ndarray,
+    *,
+    config: ProbeConfig,
+) -> dict[str, Any]:
+    memory: dict[str, float] = {}
+    for lag in config.lags:
+        index = _valid_lag_indices(trajectory.segment_ids, lag)
+        if len(index) < 24:
+            memory[str(lag)] = float("nan")
+            continue
+        memory[str(lag)] = cross_validated_r2(
+            features[index],
+            targets[index - lag],
+            index,
+            trajectory.segment_ids[index],
+            alpha=config.ridge_alpha,
+            folds=config.blocked_folds,
+            purge=max(config.purge, lag),
+        )
+
+    future_index = _valid_future_indices(trajectory.segment_ids)
+    future_r2 = cross_validated_r2(
+        features[future_index],
+        targets[future_index + 1],
+        future_index,
+        trajectory.segment_ids[future_index],
+        alpha=config.ridge_alpha,
+        folds=config.blocked_folds,
+        purge=config.purge,
+    )
+    return {
+        "memory": memory,
+        "future_r2": future_r2,
+    }
+
+
 def run_probe(
     bundle: GraphBundle,
     trajectory: SharedTrajectory,
@@ -468,6 +507,7 @@ def run_probe(
     core: CoreSelection | None = None,
     features: np.ndarray | None = None,
     targets: np.ndarray | None = None,
+    input_baselines: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if variant not in PROBE_VARIANTS:
         raise ValueError(f"unknown probe variant {variant!r}")
@@ -485,6 +525,14 @@ def run_probe(
             seed=config.target_sketch_seed,
             output_dim=config.target_sketch_dim,
         )
+    if input_baselines is None:
+        input_baselines = compute_input_baselines(
+            trajectory,
+            features,
+            targets,
+            config=config,
+        )
+
     states, reservoir = replay_states(
         core,
         trajectory,
@@ -522,15 +570,7 @@ def run_probe(
             folds=config.blocked_folds,
             purge=max(config.purge, lag),
         )
-        current_r2 = cross_validated_r2(
-            features[index],
-            y,
-            index,
-            sample_segments,
-            alpha=config.ridge_alpha,
-            folds=config.blocked_folds,
-            purge=max(config.purge, lag),
-        )
+        current_r2 = float(input_baselines["memory"][str(lag)])
         memory[str(lag)] = {
             "samples": int(len(index)),
             "reservoir_r2": reservoir_r2,
@@ -560,15 +600,7 @@ def run_probe(
         folds=config.blocked_folds,
         purge=config.purge,
     )
-    future_current_r2 = cross_validated_r2(
-        features[future_index],
-        future_y,
-        future_index,
-        trajectory.segment_ids[future_index],
-        alpha=config.ridge_alpha,
-        folds=config.blocked_folds,
-        purge=config.purge,
-    )
+    future_current_r2 = float(input_baselines["future_r2"])
 
     excess_values = [
         value["excess_r2"]
