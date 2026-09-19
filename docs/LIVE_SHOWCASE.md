@@ -4,22 +4,52 @@ The live webpage is a presentation layer over frozen scientific outputs. It is n
 
 ## Public question
 
-> If the same odor world drives multiple nervous-system conditions, how differently do they move, and what exactly changed inside the controller?
+> How does intermittent odor evidence become a steering decision, and what changes under controlled interventions?
 
-The page is designed to answer that question in one synchronized view.
+The page answers that question through three deliberately separate modes:
+
+- **WATCH** — one selected controller followed through plume → sensory evidence → controller/circuit state → steering;
+- **COMPARE** — paired counterfactual conditions in the same plume, start state, clock, and paired RNG;
+- **PROVE** — measured O002 data, provenance, claim boundaries, anatomy/source receipts, and the evidence ladder.
+
+The visual hierarchy is intentional: cinematic presentation may make an experiment legible, but it may never upgrade the evidence class of the underlying artifact.
 
 ## End-state experience
 
 A visitor should be able to:
 
-1. watch several fly/controller conditions move through the **same frozen plume**;
-2. toggle the plume and hidden source as viewer-only overlays;
-3. select one condition and inspect left/right antenna signals, turn command, and modeled descending readouts;
-4. scrub time and see the arena, sensory channels, and connectome view remain synchronized;
-5. switch between intact topology, a matched degree-preserving rewire, and explicit sensory/lesion controls when qualified inputs exist;
-6. inspect the whole-connectome context without confusing topology with anatomy;
-7. open the measured O002 result beside the behavioral replay;
-8. see the provenance and claim boundary without opening developer tools.
+1. follow one selected controller through the **same frozen plume** with ghost counterfactual trajectories in WATCH mode;
+2. jump to automatically derived replay events such as first plume contact, maximum bilateral asymmetry, peak turn, and closest source approach;
+3. toggle plume and hidden source as viewer-only overlays;
+4. inspect left/right sensory inputs, bilateral difference, steering command, and controller/circuit readouts at the exact same replay frame;
+5. compare all paired interventions at the same replay time in COMPARE mode;
+6. switch between development-controller state, topology, and independently sourced anatomy without conflating them;
+7. inspect measured O002 named-odor fingerprints natively in the browser rather than depending on a dense static figure;
+8. inspect provenance and claim boundaries in PROVE mode without opening developer tools.
+
+## Presentation modes
+
+### WATCH
+
+WATCH is the default public entry point. Only the selected controller is drawn as the primary fly. Other conditions remain visible as low-emphasis trajectory counterfactuals. The plume renderer may use short histories of already exported frames to communicate intermittent filament structure, but it must never synthesize new scientific state.
+
+The event strip is derived exclusively from frozen replay fields. Event labels are descriptive replay landmarks, not inferred biological events.
+
+### COMPARE
+
+COMPARE renders all conditions with equal visual status and adds same-time metrics such as distance to source, maximum current odor input, and absolute turn command. Comparison cards are presentation summaries of the frozen replay and must not be promoted to statistical claims.
+
+### PROVE
+
+PROVE contains the material that justifies or limits the public story:
+
+- measured O002 response vectors and source receipt;
+- current circuit qualification status;
+- morphology/topology provenance;
+- paired-control contract;
+- claim boundaries and the unresolved evidence ladder.
+
+The archived O002 figure may remain available as a secondary artifact, but the primary page should use native responsive views of the frozen data.
 
 ## Evidence layers
 
@@ -93,7 +123,7 @@ There are two very different things we may visualize.
 
 ### Topology view
 
-The current graph-backed frontend can display nodes, edges, role labels, and activity-linked highlighting from a GraphBundle.
+The graph-backed frontend can display nodes, edges, role labels, and activity-linked highlighting from a GraphBundle. When no GraphBundle is present, the right-hand panel must render an explicitly labelled **development controller state** diagram from replayed controller inputs/outputs instead of decorative neurons or an empty faux-anatomy view.
 
 This view is labelled:
 
@@ -108,7 +138,7 @@ The live page now supports real MaleCNS spatial context assets built downstream 
 - a low-opacity soma-location point cloud for broad CNS context;
 - exact public SWC centerline skeletons for the experimentally relevant circuit;
 - active circuit neurons highlighted over the dim whole-brain context;
-- camera presets for sensory → central computation → descending output;
+- neutral geometric camera presets (front / oblique / side);
 - a strict source receipt for every XYZ/skeleton asset.
 
 The page must not generate decorative neuron shapes and call them anatomy.
@@ -214,12 +244,14 @@ FLY_SNIFF_SHOWCASE_ALLOW_CANDIDATE=1 \
 
 ### Stage 1 — integrated development theater
 
-- synchronized multi-condition plume replay;
-- sensory telemetry;
-- explicit interventions;
-- topology-only connectome panel;
-- O002 measured-data card;
-- evidence rail and claim boundary.
+- cinematic WATCH mode with one selected fly and ghost counterfactuals;
+- event-indexed frozen replay;
+- COMPARE mode with same-time paired condition summaries;
+- explicit development-controller state when no graph is loaded;
+- sensory telemetry and explicit interventions;
+- topology/anatomy panel with fail-honest labels;
+- native O002 measured-data explorer;
+- PROVE mode with evidence rail and claim boundary.
 
 ### Stage 2 — qualified odor-navigation circuit
 
