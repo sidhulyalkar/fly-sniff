@@ -5,9 +5,10 @@ import hashlib
 import json
 import subprocess
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -409,7 +410,7 @@ class FlyARCReservoir:
                 seed=topology_seed,
             )
 
-        self.edge_count = int(len(edges))
+        self.edge_count = len(edges)
         self.rewire_swaps = int(rewire_swaps)
         self.w = (
             None
@@ -759,14 +760,14 @@ def run_live_variant(
     try:
         scorecard = arcade.close_scorecard()
         scorecard_payload = _jsonable(scorecard) if scorecard is not None else None
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         scorecard_payload = {"error": type(exc).__name__, "message": str(exc)}
 
     metrics = {
         "variant": variant,
         "game": config.game,
         "observed_game_ids": sorted(observed_game_ids),
-        "steps": int(len(state_rows)),
+        "steps": len(state_rows),
         "won": won,
         "max_levels_completed": max_levels,
         "game_overs": game_overs,
