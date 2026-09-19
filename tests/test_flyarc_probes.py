@@ -54,8 +54,8 @@ def _make_shared_run(tmp_path):
 
     # Frame 20 is a reset observation with no action row.
     rows = []
-    step = 0
-    for observation_index in list(range(1, 20)) + list(range(21, 40)):
+    observation_indices = list(range(1, 20)) + list(range(21, 40))
+    for step, observation_index in enumerate(observation_indices):
         state = "GAME_OVER" if observation_index == 19 else "NOT_FINISHED"
         rows.append(
             {
@@ -64,7 +64,6 @@ def _make_shared_run(tmp_path):
                 "state": state,
             }
         )
-        step += 1
 
     for variant in ("intact", "rewire"):
         with (root / variant / "steps.jsonl").open("w") as handle:
