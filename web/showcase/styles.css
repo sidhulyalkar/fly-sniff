@@ -39,7 +39,18 @@ button,input,select{font:inherit}
 .panel{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),#07111d);border-radius:18px;overflow:hidden}
 .panel-head{min-height:72px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line)}
 .panel-head h2{margin:0;font-size:1.03rem}
-.panel-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.panel-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.view-presets{display:flex;gap:5px;padding:3px;border:1px solid #203248;border-radius:999px;background:#07111d}
+.view-button{border:0;border-radius:999px;padding:5px 9px;background:transparent;color:#71879d;font-size:.64rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.view-button:hover{color:#dff5ff;background:#102238}
+.view-button.active{color:#dff5ff;background:#16384a}
+.signal-readout{position:absolute;left:12px;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;pointer-events:none}
+.signal-readout>div{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;padding:7px 9px;border:1px solid rgba(45,70,94,.8);border-radius:9px;background:rgba(4,12,21,.82);backdrop-filter:blur(6px)}
+.signal-readout span{font-size:.55rem;font-weight:800;letter-spacing:.08em;color:#71879d}
+.signal-readout i{height:4px;border-radius:999px;background:linear-gradient(90deg,#47c7f3,#9e8cff);transform-origin:left center;transform:scaleX(0)}
+.signal-readout b{font-size:.62rem;color:#cfe3f2;font-variant-numeric:tabular-nums}
+.legend-item{cursor:pointer}
+.legend-item[data-selected="true"]{border-color:#4a718f;background:rgba(13,32,51,.94);box-shadow:0 0 0 1px rgba(71,199,243,.12) inset}
 .switch{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:.72rem;cursor:pointer}
 .switch input{accent-color:var(--cyan)}
 .canvas-wrap{position:relative;min-height:440px;background:#06111d}
@@ -113,6 +124,11 @@ footer{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:18px 4
 }
 @media (max-width:720px){
   .shell{padding:10px}
+  .signal-readout{grid-template-columns:1fr;right:auto;max-width:220px}
+  .signal-readout>div{grid-template-columns:72px 1fr 34px}
+  .view-presets{order:2}
+  .panel-actions{justify-content:flex-start}
+
   .hero{grid-template-columns:1fr}
   .evidence-stack{justify-content:flex-start}
   .principle-strip{grid-template-columns:repeat(2,1fr)}
