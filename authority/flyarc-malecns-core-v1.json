@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "authority_id": "flyarc-malecns-core-v1",
+  "status": "development_pre_data_freeze",
+  "dataset": "male-cns:v1.0",
+  "sources": {
+    "annotations": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+    "neurotransmitters": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
+    "connectivity": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+  },
+  "retention": {
+    "rule": "retain neurons with non-empty curated superclass",
+    "expected_neurons": 166700,
+    "expected_directed_edges_at_min_weight_1": 25582938,
+    "status_only_filtering_allowed": false
+  },
+  "selection": {
+    "task_data_allowed": false,
+    "arc_rewards_allowed": false,
+    "score": "sqrt(in_log1p_synapse_strength * out_log1p_synapse_strength)",
+    "tie_break": "ascending bodyId",
+    "default_selected_neurons": 4096,
+    "induced_edges_only": true,
+    "minimum_synapse_weight": 1
+  },
+  "transmitter_policy": {
+    "preferred_field": "consensus_nt",
+    "fallback_1": "predicted_nt when predicted_nt_confidence >= 0.5",
+    "fallback_2": "celltype_predicted_nt",
+    "positive": [
+      "acetylcholine",
+      "dopamine",
+      "octopamine",
+      "serotonin"
+    ],
+    "negative": [
+      "gaba",
+      "glutamate",
+      "histamine"
+    ],
+    "unresolved_default_sign": 1,
+    "unresolved_default_is_modeling_assumption": true,
+    "whole_neuron_sign": true
+  },
+  "output_policy": {
+    "qualification_status": "candidate",
+    "roles_json": "empty",
+    "source_sha256_required": true,
+    "derived_artifact_sha256_required": true,
+    "overwrite_forbidden": true
+  },
+  "claim_boundaries": [
+    "The core is selected from structure only and is not a natural ARC-processing circuit.",
+    "Neurotransmitter identity does not uniquely determine receptor-specific synaptic effect.",
+    "The sign map is a whole-neuron modeling approximation.",
+    "Unresolved transmitters mapped to +1 are an explicit development assumption.",
+    "The graph remains candidate and cannot by itself support a biological ARC claim."
+  ]
+}
