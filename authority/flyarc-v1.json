@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "experiment_id": "flyarc-v1",
+  "status": "development_preregistration",
+  "scientific_question": "Does fixed biological MaleCNS recurrent topology provide a more useful internal state for ARC-AGI-3 interaction than matched topology controls under an identical engineered interface?",
+  "primary_demo_game": "ls20",
+  "scope": {
+    "simple_actions_only": true,
+    "complex_coordinate_actions_allowed": false,
+    "default_max_nodes": 4096,
+    "core_selection": "top-sqrt-in-out-log1p-synapse-strength-v1",
+    "selection_may_inspect_arc_outcomes": false
+  },
+  "encoder": {
+    "id": "categorical-spatial-8x8-plus-change-v1",
+    "colors": 16,
+    "pool": [8, 8],
+    "color_ids_are_categorical": true,
+    "learned_visual_frontend": false,
+    "frame_change_channel": true
+  },
+  "reservoir": {
+    "model": "flyarc-rate-reservoir-v1",
+    "signed_edges_required": true,
+    "edge_transform": "sign * log1p(synapse_count), row-L1 normalized",
+    "leak": 0.82,
+    "gain": 1.6,
+    "input_projection": "fixed seeded sparse signed projection",
+    "input_fanout": 4
+  },
+  "variants": {
+    "intact": "selected biological MaleCNS topology",
+    "rewire": "exact directed in/out-degree preserving target-swap null",
+    "random": "same node count, edge count, weight multiset, and sign multiset with random directed non-self topology",
+    "stateless": "same state size and input projection with recurrence removed"
+  },
+  "policy": {
+    "type": "linear Q head",
+    "biological_claim": false,
+    "trainable_component": "readout only",
+    "learning_rate": 0.08,
+    "gamma": 0.95,
+    "epsilon": 0.15
+  },
+  "reward": {
+    "id": "arc-progress-novelty-v1",
+    "step_cost": -0.001,
+    "first_seen_frame": 0.01,
+    "level_increment": 1.0,
+    "win": 2.0,
+    "game_over": -1.0,
+    "task_specific_semantic_shaping_allowed": false
+  },
+  "pairing": {
+    "same_arc_seed": true,
+    "same_projection_seed": true,
+    "same_policy_seed": true,
+    "same_learning_budget": true,
+    "same_action_budget": true,
+    "different_observation_trajectories_after_actions": true,
+    "game_version_mismatch_invalidates_paired_interpretation": true
+  },
+  "claim_boundaries": [
+    "A game win does not mean a fruit fly understands ARC or abstract reasoning.",
+    "ARC frame encoding and action semantics are engineered interfaces.",
+    "Reservoir states are modeled neural activity, not measured neural recordings.",
+    "The policy head is engineered learning and must not be described as a natural fly motor decoder.",
+    "A single hero run cannot establish topology advantage.",
+    "Any topology advantage requires repeated seeds and matched nulls."
+  ],
+  "next_confirmatory_requirement": "freeze a multi-seed, multi-game evaluation manifest before inspecting topology-level performance"
+}
