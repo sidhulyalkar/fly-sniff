@@ -675,9 +675,24 @@
       select.disabled = true;
       qs("odorExplorerBoundary").textContent =
         "Run the live site builder with the frozen O002 v1 artifacts to enable named-odor fingerprints.";
+      if (qs("o002OdorCount")) qs("o002OdorCount").textContent = "0";
+      if (qs("o002UnitCount")) qs("o002UnitCount").textContent = "0";
+      if (qs("o002ClassCount")) qs("o002ClassCount").textContent = "0";
+      if (qs("o002StudyLabel")) qs("o002StudyLabel").textContent =
+        "Frozen O002 explorer artifact unavailable in this build.";
       drawOdorFingerprint();
       return;
     }
+
+    const classes = new Set(explorer.odors.map((odor) => odor.odor_class || "unlabeled"));
+    if (qs("o002OdorCount")) qs("o002OdorCount").textContent = String(explorer.odors.length);
+    if (qs("o002UnitCount")) qs("o002UnitCount").textContent =
+      String((explorer.responding_units || []).length);
+    if (qs("o002ClassCount")) qs("o002ClassCount").textContent = String(classes.size);
+    if (qs("o002StudyLabel")) qs("o002StudyLabel").textContent =
+      `${explorer.study_id} • receipt ${String(explorer.source_receipt_sha256 || "").slice(0, 12)}…`;
+    if (qs("measuredEvidenceText")) qs("measuredEvidenceText").textContent =
+      `${explorer.odors.length} frozen within-study measured odor vectors across ${(explorer.responding_units || []).length} response channels; development-only, not a navigation result.`;
 
     const groups = new Map();
     explorer.odors.forEach((odor, index) => {
@@ -708,10 +723,135 @@
     drawOdorFingerprint();
   }
 
+  function deriveEvents() {
+    if (!state.data || !state.selected) return [];
+    const rows = state.data.frames.map((frame, index) => ({
+      index,
+      t: Number(frame.t),
+      agent: frame.agents?.[state.selected],
+    })).filter((row) => row.agent);
+    if (!rows.length) return [];
+
+    const contact = rows.find((row) =>
+      Math.max(row.agent.left_odor, row.agent.right_odor) > 0.12) || rows[0];
+    const asym = rows.reduce((best, row) =>
+      Math.abs(row.agent.odor_delta) > Math.abs(best.agent.odor_delta) ? row : best, rows[0]);
+    const turn = rows.reduce((best, row) =>
+      Math.abs(row.agent.turn) > Math.abs(best.agent.turn) ? row : best, rows[0]);
+    const close = rows.reduce((best, row) =>
+      distanceToSource(row.agent) < distanceToSource(best.agent) ? row : best, rows[0]);
+    const found = rows.find((row) => row.agent.found);
+
+    const raw = [
+      ["plume contact", contact],
+      ["max L/R Δ", asym],
+      ["peak turn", turn],
+      ["closest approach", close],
+    ];
+    if (found) raw.push(["source found", found]);
+
+    const seen = new Set();
+    return raw.filter(([, row]) => {
+      if (seen.has(row.index)) return false;
+      seen.add(row.index);
+      return true;
+    }).map(([label, row]) => ({label, index: row.index, t: row.t}));
+  }
+
+  function renderEventStrip() {
+    const strip = qs("eventStrip");
+    if (!strip) return;
+    state.events = deriveEvents();
+    strip.innerHTML = "";
+    for (const event of state.events) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "event-chip";
+      button.dataset.frame = String(event.index);
+      button.innerHTML = `<i></i><span>${event.label}</span><b>${event.t.toFixed(1)}s</b>`;
+      button.addEventListener("click", () => {
+        state.frameIndex = event.index;
+        state.playing = false;
+        qs("playButton").textContent = "▶";
+        renderAll();
+      });
+      strip.appendChild(button);
+    }
+  }
+
+  function setupCompareCards() {
+    const root = qs("compareCards");
+    if (!root) return;
+    root.innerHTML = "";
+    state.data.conditions.forEach((condition, index) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "compare-card";
+      card.dataset.key = condition.key;
+      card.style.setProperty("--card-color", palette[index % palette.length]);
+      card.innerHTML = `
+        <h3></h3>
+        <p></p>
+        <div class="compare-metrics">
+          <div><strong data-metric="distance">—</strong><span>distance</span></div>
+          <div><strong data-metric="odor">—</strong><span>odor max</span></div>
+          <div><strong data-metric="turn">—</strong><span>|turn|</span></div>
+        </div>
+        <div class="compare-track"><i></i></div>`;
+      card.querySelector("h3").textContent = condition.label;
+      card.querySelector("p").textContent =
+        condition.intervention === "none" ? "No intervention" : condition.intervention;
+      card.addEventListener("click", () => selectCondition(condition.key));
+      root.appendChild(card);
+    });
+    updateCompareCards();
+  }
+
+  function updateCompareCards() {
+    if (!state.data) return;
+    const frame = state.data.frames[state.frameIndex];
+    document.querySelectorAll(".compare-card").forEach((card) => {
+      const key = card.dataset.key;
+      const agent = frame?.agents?.[key];
+      if (!agent) return;
+      const distance = distanceToSource(agent);
+      card.dataset.selected = key === state.selected ? "true" : "false";
+      card.querySelector('[data-metric="distance"]').textContent =
+        Number.isFinite(distance) ? distance.toFixed(2) : "—";
+      card.querySelector('[data-metric="odor"]').textContent =
+        Math.max(agent.left_odor, agent.right_odor).toFixed(2);
+      card.querySelector('[data-metric="turn"]').textContent =
+        Math.abs(agent.turn).toFixed(2);
+      const startAgent = state.data.frames[0]?.agents?.[key];
+      const startDistance = Math.max(1e-6, distanceToSource(startAgent));
+      const progress = Number.isFinite(distance) ? clamp01(1 - distance / startDistance) : 0;
+      card.querySelector(".compare-track i").style.transform = `scaleX(${progress})`;
+    });
+  }
+
+  function setMode(mode) {
+    const allowed = new Set(["watch", "compare", "prove"]);
+    state.viewMode = allowed.has(mode) ? mode : "watch";
+    document.body.dataset.viewMode = state.viewMode;
+    document.querySelectorAll(".theater-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.mode === state.viewMode);
+    });
+    if (qs("compareSummary")) qs("compareSummary").hidden = state.viewMode !== "compare";
+    if (qs("proveIntro")) qs("proveIntro").hidden = state.viewMode !== "prove";
+    requestAnimationFrame(() => {
+      renderAll();
+      drawOdorFingerprint();
+    });
+  }
+
   function renderAll() {
     drawArena();
     drawConnectome();
     updateTelemetry();
+    updateCompareCards();
+    document.querySelectorAll(".event-chip").forEach((chip) => {
+      chip.classList.toggle("active", Number(chip.dataset.frame) === state.frameIndex);
+    });
   }
 
   function setupLegend() {
@@ -735,6 +875,7 @@
     document.querySelectorAll(".legend-item").forEach((item) => {
       item.dataset.selected = item.dataset.key === key ? "true" : "false";
     });
+    renderEventStrip();
     renderAll();
   }
 
@@ -764,7 +905,12 @@
     );
 
     const connectome = state.data.connectome || {};
-    if (state.somaContext || state.skeletons) {
+    const hasMeasuredAnatomy = Boolean(state.somaContext || state.skeletons);
+    if (qs("viewPresets")) qs("viewPresets").hidden = !hasMeasuredAnatomy;
+    if (qs("readoutLabel")) qs("readoutLabel").textContent =
+      qualified ? "MODELED DESCENDING READOUT" : "CONTROLLER READOUT";
+
+    if (hasMeasuredAnatomy) {
       qs("connectomeTitle").textContent = state.skeletons
         ? "Measured MaleCNS context + selected circuit morphology"
         : "Measured MaleCNS soma context";
@@ -777,16 +923,30 @@
       if (state.somaContext?.point_meaning) pieces.push(state.somaContext.point_meaning);
       if (state.skeletons?.claim_boundary) pieces.push(state.skeletons.claim_boundary);
       qs("connectomeBoundary").textContent = pieces.join(" ");
-    } else {
-      qs("connectomeTitle").textContent = connectome.label || "Connectome status";
-      setBadge(
-        qs("geometryBadge"),
-        connectome.geometry_kind === "topology_only"
-          ? "TOPOLOGY • NOT MORPHOLOGY"
-          : "NO CONNECTOME ASSET",
-        "badge-warn"
-      );
+    } else if (connectome.available) {
+      qs("connectomeTitle").textContent = connectome.label || "Connectome topology";
+      setBadge(qs("geometryBadge"), "TOPOLOGY • NOT MORPHOLOGY", "badge-warn");
       qs("connectomeBoundary").textContent = connectome.claim_boundary || "";
+    } else {
+      qs("connectomeTitle").textContent = "Development controller state";
+      setBadge(qs("geometryBadge"), "NOT MALECNS ACTIVITY", "badge-dev");
+      qs("connectomeBoundary").textContent =
+        "This panel visualizes replayed controller inputs and outputs only. It is intentionally not drawn as neural anatomy.";
+    }
+
+    if (qs("circuitEvidenceText")) {
+      qs("circuitEvidenceText").textContent = qualified
+        ? "An odor-plume-qualified graph is loaded; displayed neural values remain modeled states over measured structure, not neural recordings."
+        : connectome.available
+          ? "A graph-backed development model is loaded, but it is not qualified for a MaleCNS odor-navigation claim."
+          : "No graph-backed circuit result is loaded. The right panel shows development-controller state, not neural activity.";
+    }
+    if (qs("behaviorQuestion")) {
+      qs("behaviorQuestion").textContent = qualified
+        ? "How does the modeled circuit transform the same plume into steering?"
+        : state.viewMode === "compare"
+          ? "How do paired interventions diverge in the same plume?"
+          : "How does the selected development controller transform plume evidence into steering?";
     }
 
     const stimulus = state.data.stimulus_contract || {};
@@ -843,6 +1003,12 @@
 
     document.querySelectorAll(".view-button").forEach((button) => {
       button.addEventListener("click", () => setViewPreset(button.dataset.view || "oblique"));
+    });
+    document.querySelectorAll(".theater-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        setMode(tab.dataset.mode || "watch");
+        configureEvidence();
+      });
     });
 
     connectomeCanvas.addEventListener("pointerdown", (event) => {
@@ -906,17 +1072,14 @@
       qs("timeline").max = "1000";
       setupLegend();
       setupConditionSelect();
-      selectCondition(state.selected);
       setupOdorExplorer();
-      configureEvidence();
+      setupCompareCards();
       wireControls();
+      setMode("watch");
+      selectCondition(state.selected);
+      configureEvidence();
+      renderEventStrip();
       renderAll();
-
-      qs("o002Image").addEventListener("error", () => {
-        qs("o002Image").hidden = true;
-        qs("o002Fallback").hidden = false;
-        qs("o002Link").hidden = true;
-      }, { once: true });
 
       state.raf = requestAnimationFrame(animationLoop);
     } catch (error) {
