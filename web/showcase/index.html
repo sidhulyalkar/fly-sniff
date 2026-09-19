@@ -11,7 +11,7 @@
   <main class="shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">FLY-SNIFF • LIVE EXPERIMENT THEATER</p>
+        <p class="eyebrow">FLY-SNIFF • SHOWCASE V2 • ANATOMICAL EXPERIMENT THEATER</p>
         <h1>One odor world. Multiple nervous-system conditions.</h1>
         <p class="lede">
           Replay the same frozen plume across synchronized controls, inspect the sensory evidence each
@@ -62,11 +62,23 @@
             <p class="kicker">CONNECTOME VIEW</p>
             <h2 id="connectomeTitle">Topology / anatomy status</h2>
           </div>
-          <span id="geometryBadge" class="badge">checking geometry</span>
+          <div class="panel-actions">
+            <div class="view-presets" aria-label="Anatomy view presets">
+              <button class="view-button" type="button" data-view="front">front</button>
+              <button class="view-button active" type="button" data-view="oblique">oblique</button>
+              <button class="view-button" type="button" data-view="side">side</button>
+            </div>
+            <span id="geometryBadge" class="badge">checking geometry</span>
+          </div>
         </div>
         <div class="canvas-wrap connectome-wrap">
-          <canvas id="connectomeCanvas" aria-label="Connectome topology view"></canvas>
+          <canvas id="connectomeCanvas" aria-label="Connectome topology or measured anatomy view"></canvas>
           <div id="connectomeEmpty" class="empty-state" hidden></div>
+          <div id="signalReadout" class="signal-readout" aria-label="Synchronized signal readout">
+            <div><span>SENSORY</span><i id="signalSensory"></i><b id="signalSensoryValue">0.00</b></div>
+            <div><span>BILATERAL Δ</span><i id="signalBilateral"></i><b id="signalBilateralValue">0.00</b></div>
+            <div><span>OUTPUT</span><i id="signalOutput"></i><b id="signalOutputValue">0.00</b></div>
+          </div>
         </div>
         <div class="connectome-footer">
           <p id="connectomeBoundary">Loading provenance…</p>
