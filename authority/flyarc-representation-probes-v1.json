@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "authority_id": "flyarc-representation-probes-v1",
+  "status": "development_preregistered",
+  "parent_checkpoint": {
+    "git_commit": "4ed40fa205f54c276cace7150ab6a685e59b447c",
+    "experiment": "flyarc-v1"
+  },
+  "scientific_question": "Under an identical recorded ARC-AGI-3 sensory trajectory, does fixed MaleCNS recurrent topology preserve or expose temporal information differently from matched topology controls?",
+  "source_trajectory_gate": {
+    "receipt_validation_required": true,
+    "all_condition_frame_sha256_must_match": true,
+    "reset_boundaries_reconstructed_from_unreferenced_observation_frames": true,
+    "behavioral_outcome_is_not_an_endpoint": true
+  },
+  "reservoir": {
+    "selected_neurons": 4096,
+    "leak": 0.82,
+    "gain": 1.6,
+    "input_fanout": 4,
+    "topology_variants": [
+      "intact",
+      "rewire",
+      "random",
+      "leak_only",
+      "stateless"
+    ],
+    "leak_only_definition": "same per-unit leak and input projection, recurrent W=0",
+    "stateless_definition": "instantaneous tanh input response with no recurrent or leak memory"
+  },
+  "memory_probe": {
+    "lags_steps": [1, 2, 4, 8, 16, 32],
+    "target": "fixed random signed sketch of categorical ARC frame features",
+    "target_sketch_seed": 8801,
+    "target_sketch_dim": 128,
+    "ridge_alpha": 0.1,
+    "state_standardization": "train-fold featurewise z-score followed by division by sqrt(state_dim)",
+    "primary_metric": "mean over frozen lags of reservoir_R2 minus current_frame_input_R2",
+    "purpose_of_current_frame_baseline": "control for slow screen dynamics that make past frames predictable from the present without memory",
+    "cross_validation": "leave-one-reset-segment-out when >=2 usable segments; otherwise blocked folds with temporal purge",
+    "blocked_folds": 5,
+    "purge_steps": 32
+  },
+  "secondary_metrics": [
+    "next-frame sketch R2 and excess over current-frame baseline",
+    "current-frame sketch R2",
+    "state RMS",
+    "mean absolute state",
+    "fraction abs(state)>=0.95",
+    "within-segment state delta RMS",
+    "within-segment lag-1 state cosine",
+    "approximate participation-ratio effective dimension on deterministic 256-neuron body-ID hash subsample",
+    "rank needed for 95% variance on the same deterministic subsample"
+  ],
+  "marathon_defaults": {
+    "time_budget_hours": 6,
+    "projection_blocks": 4,
+    "rewires_per_projection": 16,
+    "randoms_per_projection": 8,
+    "base_projection_seed": 1701,
+    "projection_seed_stride": 10007,
+    "base_topology_seed": 2903,
+    "scheduling": "all anchor controls across projection blocks first, then topology nulls round-robin across blocks",
+    "resume_policy": "atomic per-job JSON; exact manifest required; completed jobs skipped"
+  },
+  "claim_boundaries": [
+    "This is a developmental representation study, not evidence that a fruit fly understands ARC.",
+    "The ARC-to-neuron input projection is engineered and not a natural sensory mapping.",
+    "Modeled reservoir states are not neural recordings.",
+    "A positive intact-versus-null descriptive separation on LS20 is hypothesis-generating only.",
+    "No leak, gain, reservoir size, projection schedule, target sketch, lag set, ridge strength, or primary metric may be changed because it improves the intact result.",
+    "Any confirmatory topology claim requires a new frozen multi-game evaluation manifest and held-out trajectories."
+  ],
+  "next_confirmatory_gate": "Freeze multiple ARC games and topology-independent trajectories before testing a predeclared effect on held-out games."
+}
