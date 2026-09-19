@@ -43,7 +43,10 @@ def _git_head() -> str | None:
 
 def _jsonable(value: Any) -> Any:
     if hasattr(value, "model_dump"):
-        return value.model_dump()
+        try:
+            return value.model_dump(mode="json")
+        except TypeError:
+            return value.model_dump()
     if isinstance(value, np.generic):
         return value.item()
     return value
@@ -242,6 +245,8 @@ def degree_preserving_rewire(
             continue
         a, b = int(sources[i]), int(targets[i])
         c, d = int(sources[j]), int(targets[j])
+        if a == c or b == d:
+            continue
         p1 = (a, d)
         p2 = (c, b)
         if a == d or c == b or p1 == p2:
