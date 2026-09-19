@@ -7,9 +7,9 @@ import math
 from pathlib import Path
 from typing import Any
 
-from matplotlib import animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import animation
 from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
 
