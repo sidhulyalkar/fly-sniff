@@ -6,6 +6,8 @@ on:
       - "src/fly_sniff/flyarc.py"
       - "src/fly_sniff/flyarc_prepare.py"
       - "src/fly_sniff/flyarc_render.py"
+      - "src/fly_sniff/flyarc_probes.py"
+      - "src/fly_sniff/flyarc_marathon.py"
       - "tests/test_flyarc*.py"
       - "authority/flyarc-*.json"
       - "scripts/*flyarc*.sh"
@@ -38,5 +40,7 @@ jobs:
       - run: fly-sniff-arc --help
       - run: fly-sniff-arc-prepare --help
       - run: fly-sniff-arc-render --help
-      - run: ruff check src/fly_sniff/flyarc.py src/fly_sniff/flyarc_prepare.py src/fly_sniff/flyarc_render.py tests/test_flyarc*.py
-      - run: pytest -q tests/test_flyarc.py tests/test_flyarc_prepare.py tests/test_flyarc_render.py tests/test_flyarc_live_runner.py
+      - run: fly-sniff-arc-probe --help
+      - run: fly-sniff-arc-marathon --help
+      - run: ruff check src/fly_sniff/flyarc.py src/fly_sniff/flyarc_prepare.py src/fly_sniff/flyarc_render.py src/fly_sniff/flyarc_probes.py src/fly_sniff/flyarc_marathon.py tests/test_flyarc*.py
+      - run: pytest -q tests/test_flyarc.py tests/test_flyarc_prepare.py tests/test_flyarc_render.py tests/test_flyarc_live_runner.py tests/test_flyarc_probes.py
