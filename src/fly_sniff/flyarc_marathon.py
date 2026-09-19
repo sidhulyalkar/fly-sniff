@@ -19,6 +19,7 @@ from .flyarc_probes import (
     DEFAULT_LAGS,
     PROBE_SCHEMA,
     ProbeConfig,
+    compute_input_baselines,
     encode_trajectory,
     frame_target_sketch,
     load_shared_trajectory,
@@ -512,6 +513,21 @@ def run_marathon(
         seed=config.target_sketch_seed,
         output_dim=config.target_sketch_dim,
     )
+    baseline_config = ProbeConfig(
+        max_nodes=config.max_nodes,
+        target_sketch_seed=config.target_sketch_seed,
+        target_sketch_dim=config.target_sketch_dim,
+        ridge_alpha=config.ridge_alpha,
+        lags=config.lags,
+        blocked_folds=config.blocked_folds,
+        purge=config.purge,
+    )
+    input_baselines = compute_input_baselines(
+        trajectory,
+        features,
+        targets,
+        config=baseline_config,
+    )
 
     deadline = None if config.hours <= 0 else time.monotonic() + config.hours * 3600.0
     completed_this_session = 0
@@ -537,6 +553,7 @@ def run_marathon(
                 core=core,
                 features=features,
                 targets=targets,
+                input_baselines=input_baselines,
             )
             payload["job_id"] = job.job_id
             payload["job_index"] = index
