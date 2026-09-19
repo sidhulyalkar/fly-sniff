@@ -422,7 +422,7 @@ def _write_receipt(root: Path) -> None:
         path
         for path in root.rglob("*")
         if path.is_file()
-        and path.name != "receipt.json"
+        and path.name not in {"receipt.json", "console.log"}
         and not path.name.endswith(".tmp")
     ]
     receipt = {
