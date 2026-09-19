@@ -705,6 +705,8 @@ def run_live_variant(
             novel = next_hash not in seen_frames
             seen_frames.add(next_hash)
             next_state = reservoir.step(encoder.encode(next_frame))
+            observation_index = len(frame_rows)
+            frame_rows.append(next_frame.astype(np.uint8, copy=True))
             state_label = _state_name(next_observation)
             previous_levels = int(getattr(observation, "levels_completed", 0))
             next_levels = int(getattr(next_observation, "levels_completed", 0))
@@ -730,7 +732,7 @@ def run_live_variant(
             observed_game_ids.add(game_id)
             row = {
                 "step": step,
-                "observation_index": step + 1,
+                "observation_index": observation_index,
                 "game_id": game_id,
                 "variant": variant,
                 "action": action_names[action_index],
@@ -748,7 +750,6 @@ def run_live_variant(
             }
             handle.write(json.dumps(row, sort_keys=True) + "\n")
             state_rows.append(next_state.astype(np.float32, copy=True))
-            frame_rows.append(next_frame.astype(np.uint8, copy=True))
             action_counts[action_names[action_index]] += 1
             total_reward += reward
             td_values.append(td)
@@ -772,6 +773,7 @@ def run_live_variant(
                 reservoir.reset()
                 reset_frame = _extract_frame(observation)
                 seen_frames.add(_frame_hash(reset_frame))
+                frame_rows.append(reset_frame.astype(np.uint8, copy=True))
                 state = reservoir.step(encoder.encode(reset_frame))
 
     states = (
