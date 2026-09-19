@@ -69,6 +69,7 @@ fly-sniff-dna02-threshold-distribution-review = "fly_sniff.dna02_threshold_distr
 fly-sniff-dna02-threshold-freeze = "fly_sniff.dna02_threshold_manifest:main"
 fly-sniff-dna02-threshold-freeze-v2 = "fly_sniff.dna02_threshold_manifest_v2:main"
 fly-sniff-arc = "fly_sniff.flyarc:main"
+fly-sniff-arc-prepare = "fly_sniff.flyarc_prepare:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fly_sniff"]
