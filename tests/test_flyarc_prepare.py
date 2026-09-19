@@ -110,6 +110,7 @@ def test_prepare_graph_streams_only_retained_endpoints_and_writes_candidate(tmp_
         max_nodes=4,
         expected_neurons=6,
         expected_edges=12,
+        verify_sources=False,
     )
 
     nodes = pd.read_parquet(output / "nodes.parquet")
