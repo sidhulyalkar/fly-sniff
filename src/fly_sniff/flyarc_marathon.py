@@ -29,6 +29,10 @@ from .graph import GraphBundle
 MARATHON_SCHEMA = "flyarc-representation-marathon-v1"
 
 
+def _json_config(config: MarathonConfig) -> dict[str, Any]:
+    return json.loads(json.dumps(asdict(config)))
+
+
 @dataclass(frozen=True)
 class MarathonConfig:
     hours: float = 6.0
@@ -264,7 +268,7 @@ def aggregate_results(
         "status": "development-descriptive",
         "completed_jobs": len(frame),
         "configured_jobs": len(build_schedule(config)),
-        "config": asdict(config),
+        "config": _json_config(config),
         "source_run": str(source_run),
         "source_receipt_sha256": _sha256(Path(source_run) / "receipt.json"),
         "graph_artifacts": _graph_artifact_hashes(graph_root),
@@ -396,7 +400,7 @@ def _plot_primary(root: Path, frame: pd.DataFrame) -> None:
         for variant in order
     ]
     figure, axis = plt.subplots(figsize=(8.5, 5.0))
-    axis.boxplot(values, tick_labels=order, showmeans=True)
+    axis.boxplot(values, labels=order, showmeans=True)
     axis.axhline(0.0, linewidth=1)
     axis.set_ylabel("mean excess memory R²")
     axis.set_title("FlyARC developmental topology-null distribution")
@@ -433,7 +437,7 @@ def _manifest(
         "schema": MARATHON_SCHEMA,
         "status": "development-preregistered",
         "git_head": _git_head(),
-        "config": asdict(config),
+        "config": _json_config(config),
         "configured_jobs": len(schedule),
         "schedule": [asdict(job) | {"job_id": job.job_id} for job in schedule],
         "graph_artifacts": _graph_artifact_hashes(graph_root),
