@@ -55,6 +55,81 @@
     };
   }
 
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, Number(value) || 0));
+  }
+
+  function drawFly(agent, color, selected) {
+    const left = clamp01(agent.left_odor);
+    const right = clamp01(agent.right_odor);
+    const pulse = 0.75 + 0.25 * Math.sin(state.frameIndex * 0.55);
+
+    arenaCtx.save();
+    arenaCtx.rotate(-agent.heading);
+    arenaCtx.lineCap = "round";
+    arenaCtx.lineJoin = "round";
+
+    // Wings stay translucent so the condition color reads as identity rather than anatomy.
+    arenaCtx.fillStyle = "rgba(210,232,245,.16)";
+    arenaCtx.strokeStyle = "rgba(210,232,245,.30)";
+    arenaCtx.lineWidth = 0.8;
+    for (const side of [-1, 1]) {
+      arenaCtx.beginPath();
+      arenaCtx.ellipse(-2, side * 5.2, 6.2, 2.8, side * 0.28, 0, Math.PI * 2);
+      arenaCtx.fill();
+      arenaCtx.stroke();
+    }
+
+    // Abdomen + thorax + head form a compact fly silhouette.
+    arenaCtx.shadowColor = color;
+    arenaCtx.shadowBlur = selected ? 16 : 5;
+    arenaCtx.fillStyle = color;
+    arenaCtx.beginPath();
+    arenaCtx.ellipse(-4.8, 0, 6.8, 3.5, 0, 0, Math.PI * 2);
+    arenaCtx.fill();
+    arenaCtx.beginPath();
+    arenaCtx.arc(1.7, 0, 3.8, 0, Math.PI * 2);
+    arenaCtx.fill();
+    arenaCtx.fillStyle = "#dceaf4";
+    arenaCtx.beginPath();
+    arenaCtx.arc(6.1, 0, 2.5, 0, Math.PI * 2);
+    arenaCtx.fill();
+
+    // Antennae are the live sensory cue. Their intensity comes only from replayed inputs.
+    for (const row of [
+      { y: -1.2, bend: -4.5, value: left },
+      { y: 1.2, bend: 4.5, value: right },
+    ]) {
+      const alpha = 0.28 + 0.72 * row.value;
+      arenaCtx.shadowColor = "#47c7f3";
+      arenaCtx.shadowBlur = row.value * 12 * pulse;
+      arenaCtx.strokeStyle = `rgba(71,199,243,${alpha})`;
+      arenaCtx.lineWidth = 1.1 + row.value * 1.4;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(7.7, row.y);
+      arenaCtx.quadraticCurveTo(11.2, row.bend * 0.45, 13.4, row.bend);
+      arenaCtx.stroke();
+      arenaCtx.fillStyle = `rgba(71,199,243,${alpha})`;
+      arenaCtx.beginPath();
+      arenaCtx.arc(13.4, row.bend, 1 + row.value * 1.5, 0, Math.PI * 2);
+      arenaCtx.fill();
+    }
+
+    // Turn command is a tiny local vector, useful when trajectories overlap.
+    const turn = Math.max(-1, Math.min(1, Number(agent.turn) || 0));
+    if (Math.abs(turn) > 0.04) {
+      arenaCtx.shadowBlur = 0;
+      arenaCtx.strokeStyle = turn >= 0 ? "rgba(158,140,255,.9)" : "rgba(245,191,66,.9)";
+      arenaCtx.lineWidth = 1.2;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(-2, 0);
+      arenaCtx.lineTo(-9, turn * 7);
+      arenaCtx.stroke();
+    }
+
+    arenaCtx.restore();
+  }
+
   function drawArena() {
     if (!state.data) return;
     const dims = fitCanvas(arenaCanvas, arenaCtx);
@@ -139,17 +214,7 @@
       const p = arenaPoint(agent.x, agent.y, dims);
       arenaCtx.save();
       arenaCtx.translate(p.x, p.y);
-      arenaCtx.rotate(-agent.heading);
-      arenaCtx.fillStyle = color;
-      arenaCtx.shadowColor = color;
-      arenaCtx.shadowBlur = condition.key === state.selected ? 15 : 4;
-      arenaCtx.beginPath();
-      arenaCtx.moveTo(10, 0);
-      arenaCtx.lineTo(-6, -5);
-      arenaCtx.lineTo(-3, 0);
-      arenaCtx.lineTo(-6, 5);
-      arenaCtx.closePath();
-      arenaCtx.fill();
+      drawFly(agent, color, condition.key === state.selected);
       arenaCtx.restore();
 
       if (condition.key === state.selected) {
@@ -194,6 +259,43 @@
       if (role === "steer_right") value = Math.max(value, agent?.dn_right || 0);
     }
     return Math.min(1, value);
+  }
+
+  function updateSignalReadout(agent) {
+    if (!agent) return;
+    const sensory = Math.max(clamp01(agent.left_odor), clamp01(agent.right_odor));
+    const bilateral = clamp01(Math.abs((Number(agent.right_odor) || 0) - (Number(agent.left_odor) || 0)));
+    const output = Math.max(
+      clamp01(Math.abs(Number(agent.turn) || 0)),
+      clamp01(Math.abs(Number(agent.dn_left) || 0)),
+      clamp01(Math.abs(Number(agent.dn_right) || 0))
+    );
+    const rows = [
+      ["signalSensory", "signalSensoryValue", sensory],
+      ["signalBilateral", "signalBilateralValue", bilateral],
+      ["signalOutput", "signalOutputValue", output],
+    ];
+    for (const [barId, valueId, value] of rows) {
+      const bar = qs(barId);
+      const label = qs(valueId);
+      if (bar) bar.style.transform = `scaleX(${value})`;
+      if (label) label.textContent = value.toFixed(2);
+    }
+  }
+
+  function setViewPreset(name) {
+    const presets = {
+      front: { yaw: 0, pitch: 0.05 },
+      oblique: { yaw: -0.55, pitch: 0.24 },
+      side: { yaw: -Math.PI / 2, pitch: 0.12 },
+    };
+    const preset = presets[name] || presets.oblique;
+    state.viewYaw = preset.yaw;
+    state.viewPitch = preset.pitch;
+    document.querySelectorAll(".view-button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.view === name);
+    });
+    drawConnectome();
   }
 
   function anatomyBounds() {
@@ -355,6 +457,7 @@
     const frame = state.data.frames[state.frameIndex];
     const selectedAgent = frame?.agents?.[state.selected] || null;
     const empty = qs("connectomeEmpty");
+    updateSignalReadout(selectedAgent);
 
     if (drawMeasuredAnatomy(dims, selectedAgent)) {
       empty.hidden = true;
@@ -528,6 +631,9 @@
   function selectCondition(key) {
     state.selected = key;
     qs("conditionSelect").value = key;
+    document.querySelectorAll(".legend-item").forEach((item) => {
+      item.dataset.selected = item.dataset.key === key ? "true" : "false";
+    });
     renderAll();
   }
 
@@ -634,6 +740,10 @@
     qs("showPlume").addEventListener("change", drawArena);
     qs("showSource").addEventListener("change", drawArena);
 
+    document.querySelectorAll(".view-button").forEach((button) => {
+      button.addEventListener("click", () => setViewPreset(button.dataset.view || "oblique"));
+    });
+
     connectomeCanvas.addEventListener("pointerdown", (event) => {
       state.dragging = true;
       state.dragX = event.clientX;
@@ -695,6 +805,7 @@
       qs("timeline").max = "1000";
       setupLegend();
       setupConditionSelect();
+      selectCondition(state.selected);
       setupOdorExplorer();
       configureEvidence();
       wireControls();
