@@ -33,5 +33,7 @@ jobs:
       - run: fly-sniff-arc --help
       - run: fly-sniff-arc-prepare --help
       - run: fly-sniff-arc-render --help
+      - run: fly-sniff-arc-probe --help
+      - run: fly-sniff-arc-marathon --help
       - run: ruff check src tests
       - run: pytest -q
