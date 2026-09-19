@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.ipc as ipc
+from pyarrow import ipc
 
 from .flyarc import SELECTION_POLICY
 
@@ -238,7 +238,7 @@ def selected_neurotransmitters(
     frame = pd.read_feather(path)
     body_col = _resolve_column(frame.columns, ("body", "bodyId"), "neurotransmitter body ID")
     frame[body_col] = frame[body_col].astype(np.int64)
-    selected = set(int(x) for x in selected_ids)
+    selected = {int(x) for x in selected_ids}
     frame = frame[frame[body_col].isin(selected)].copy()
     if frame.empty:
         raise ValueError("neurotransmitter table contains none of the selected neurons")
@@ -252,7 +252,7 @@ def selected_neurotransmitters(
                 f"conflicting transmitter assignments for body {int(body_id)}: {sorted(resolved)}"
             )
         if resolved:
-            nt, source = sorted(resolved)[0]
+            nt, source = min(resolved)
         else:
             nt, source = choices[0]
 
@@ -331,7 +331,7 @@ def prepare_graph(
         unresolved_sign=unresolved_sign,
     )
 
-    selected_set = set(int(x) for x in selected_ids)
+    selected_set = {int(x) for x in selected_ids}
     nodes = retained[retained["bodyId"].astype(int).isin(selected_set)].copy()
     order = {int(body_id): index for index, body_id in enumerate(selected_ids)}
     nodes["_flyarc_order"] = nodes["bodyId"].astype(int).map(order)
