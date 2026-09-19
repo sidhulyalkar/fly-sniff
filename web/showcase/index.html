@@ -7,7 +7,7 @@
   <title>fly-sniff experiment theater</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body data-view-mode="watch">
   <main class="shell">
     <header class="hero">
       <div>
@@ -31,7 +31,27 @@
       <div><b>Receipt first</b><span>browser replays frozen state</span></div>
     </section>
 
-    <section class="stage-grid">
+    <nav class="theater-nav" aria-label="Showcase mode">
+      <button class="theater-tab active" type="button" data-mode="watch">
+        <span>01</span><b>WATCH</b><small>odor → sensing → action</small>
+      </button>
+      <button class="theater-tab" type="button" data-mode="compare">
+        <span>02</span><b>COMPARE</b><small>paired counterfactuals</small>
+      </button>
+      <button class="theater-tab" type="button" data-mode="prove">
+        <span>03</span><b>PROVE</b><small>evidence + provenance</small>
+      </button>
+    </nav>
+
+    <section id="watchIntro" class="mode-intro">
+      <div>
+        <p class="kicker">LIVE REPLAY</p>
+        <h2>Follow one controller through the entire transformation.</h2>
+      </div>
+      <p>Plume contact, bilateral evidence, controller output, and steering stay locked to the same frozen frame.</p>
+    </section>
+
+    <section class="stage-grid mode-stage">
       <article class="panel arena-panel">
         <div class="panel-head">
           <div>
@@ -48,12 +68,18 @@
           <canvas id="arenaCanvas" aria-label="Synchronized fly movement in the odor arena"></canvas>
           <div class="arena-legend" id="arenaLegend"></div>
           <div class="viewer-note">odor/source overlays are viewer-only</div>
+          <div id="worldHud" class="world-hud">
+            <span id="hudCondition">selected controller</span>
+            <b id="hudDistance">—</b>
+            <small>distance to source</small>
+          </div>
         </div>
         <div id="signalReadout" class="replay-signal-strip" aria-label="Current replay signals">
           <div><span>ODOR MAX</span><i id="signalSensory"></i><b id="signalSensoryValue">0.00</b></div>
           <div><span>BILATERAL Δ</span><i id="signalBilateral"></i><b id="signalBilateralValue">0.00</b></div>
           <div><span>|TURN|</span><i id="signalOutput"></i><b id="signalOutputValue">0.00</b></div>
         </div>
+        <div id="eventStrip" class="event-strip" aria-label="Replay events"></div>
         <div class="playbar">
           <button id="playButton" class="play-button" type="button" aria-label="Pause replay">Ⅱ</button>
           <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Replay time">
@@ -64,7 +90,7 @@
       <article class="panel connectome-panel">
         <div class="panel-head">
           <div>
-            <p class="kicker">CONNECTOME VIEW</p>
+            <p id="circuitKicker" class="kicker">CIRCUIT / CONTROLLER VIEW</p>
             <h2 id="connectomeTitle">Topology / anatomy status</h2>
           </div>
           <div class="panel-actions">
@@ -86,7 +112,18 @@
       </article>
     </section>
 
-    <section class="telemetry-grid">
+    <section id="compareSummary" class="compare-summary" hidden>
+      <div class="compare-head">
+        <div>
+          <p class="kicker">PAIRED COUNTERFACTUALS</p>
+          <h2>What changes when only the intervention changes?</h2>
+        </div>
+        <p>Every card is evaluated at the same replay time against the same external plume realization.</p>
+      </div>
+      <div id="compareCards" class="compare-cards"></div>
+    </section>
+
+    <section class="telemetry-grid mode-telemetry">
       <article class="panel telemetry-panel">
         <div class="panel-head">
           <div>
@@ -125,7 +162,7 @@
         </div>
       </article>
 
-      <article class="panel evidence-panel">
+      <article class="panel evidence-panel prove-panel">
         <div class="panel-head">
           <div>
             <p class="kicker">EVIDENCE RAIL</p>
@@ -150,7 +187,15 @@
       </article>
     </section>
 
-    <section class="lower-grid">
+    <section id="proveIntro" class="mode-intro prove-intro" hidden>
+      <div>
+        <p class="kicker">EVIDENCE LAYER</p>
+        <h2>Every visual claim should have a source class and a failure boundary.</h2>
+      </div>
+      <p>Measured sensory data, modeled circuit state, anatomy, and browser presentation remain separate artifacts.</p>
+    </section>
+
+    <section class="lower-grid prove-grid">
       <article class="panel o002-panel">
         <div class="panel-head">
           <div>
