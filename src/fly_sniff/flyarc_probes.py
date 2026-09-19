@@ -6,10 +6,9 @@ import json
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
-import pandas as pd
 from scipy import sparse
 
 from .flyarc import (
@@ -506,7 +505,7 @@ def run_probe(
         index = _valid_lag_indices(trajectory.segment_ids, lag)
         if len(index) < 24:
             memory[str(lag)] = {
-                "samples": int(len(index)),
+                "samples": len(index),
                 "reservoir_r2": float("nan"),
                 "current_input_r2": float("nan"),
                 "excess_r2": float("nan"),
@@ -596,7 +595,7 @@ def run_probe(
         "health": health,
         "current_frame_sketch_r2": current_r2,
         "future_prediction": {
-            "samples": int(len(future_index)),
+            "samples": len(future_index),
             "reservoir_r2": future_reservoir_r2,
             "current_input_r2": future_current_r2,
             "excess_r2": future_reservoir_r2 - future_current_r2,
